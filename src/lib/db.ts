@@ -24,10 +24,7 @@ function getPrismaClient(): PrismaClient {
     })
     const adapter = new PrismaLibSql(libsql)
 
-    _db = new PrismaClient({
-      adapter,
-      datasources: { db: { url: 'libsql://dummy' } },
-    })
+    _db = new PrismaClient({ adapter })
   } else {
     _db = new PrismaClient({
       datasources: { db: { url: databaseUrl || 'file:./db/custom.db' } },
