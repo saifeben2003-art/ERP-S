@@ -18,10 +18,10 @@ function getPrismaClient(): PrismaClient {
     const adapterModule = require('@prisma/adapter-libsql')
 
     const createClient = libsqlModule.createClient
-    const PrismaLibSql = adapterModule.PrismaLibSql
+    const PrismaLibSQL = adapterModule.PrismaLibSQL
 
-    if (!createClient || !PrismaLibSql) {
-      throw new Error(`Missing exports: createClient=${!!createClient}, PrismaLibSql=${!!PrismaLibSql}, adapterKeys=${Object.keys(adapterModule).join(',')}`)
+    if (!createClient || !PrismaLibSQL) {
+      throw new Error(`Missing exports: createClient=${!!createClient}, PrismaLibSQL=${!!PrismaLibSQL}, adapterKeys=${Object.keys(adapterModule).join(',')}`)
     }
 
     const authToken = process.env.TURSO_AUTH_TOKEN || process.env.DATABASE_AUTH_TOKEN
@@ -30,7 +30,7 @@ function getPrismaClient(): PrismaClient {
       url: databaseUrl,
       authToken,
     })
-    const adapter = new PrismaLibSql(libsql)
+    const adapter = new PrismaLibSQL(libsql)
 
     _db = new PrismaClient({ adapter })
   } else {
