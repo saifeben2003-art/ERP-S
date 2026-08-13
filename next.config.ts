@@ -2,7 +2,7 @@ import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
   output: "standalone",
-  serverExternalPackages: [],
+  serverExternalPackages: ["@libsql/client", "@prisma/adapter-libsql"],
   typescript: {
     ignoreBuildErrors: true,
   },
