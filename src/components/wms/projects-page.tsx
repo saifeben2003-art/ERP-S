@@ -73,7 +73,8 @@ export function ProjectsPage() {
     try {
       const res = await fetch(`/api/projects?${params}`);
       const data: ProjectListResponse = await res.json();
-      setProjects(data.items);
+      if (!res.ok) { setProjects([]); return; }
+      setProjects(data.items || []);
     } catch {
       toast.error(t('projects.toast.fetchFailed'));
     } finally {

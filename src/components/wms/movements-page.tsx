@@ -69,7 +69,8 @@ export function MovementsPage() {
     try {
       const res = await fetch(`/api/movements?${params}`);
       const data: MovementListResponse = await res.json();
-      setMovements(data.items);
+      if (!res.ok) { setMovements([]); return; }
+      setMovements(data.items || []);
     } catch {
       toast.error(t('movements.toast.fetchFailed'));
     } finally {

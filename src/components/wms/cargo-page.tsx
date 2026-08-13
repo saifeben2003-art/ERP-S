@@ -84,7 +84,8 @@ export function CargoPage() {
     try {
       const res = await fetch(`/api/cargo?${params}`);
       const data: CargoListResponse = await res.json();
-      setCargo(data.items);
+      if (!res.ok) { setCargo([]); return; }
+      setCargo(data.items || []);
       setTotalPages(data.totalPages);
     } catch {
       toast.error(t('cargo.toast.fetchFailed'));

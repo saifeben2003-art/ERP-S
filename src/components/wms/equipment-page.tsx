@@ -91,7 +91,8 @@ export function EquipmentPage() {
     try {
       const res = await fetch(`/api/equipment?${params}`);
       const data: EquipmentListResponse = await res.json();
-      setEquipment(data.items);
+      if (!res.ok) { setEquipment([]); return; }
+      setEquipment(data.items || []);
     } catch {
       toast.error(t('equipment.toast.fetchFailed'));
     } finally {

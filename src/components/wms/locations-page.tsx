@@ -56,7 +56,8 @@ export function LocationsPage() {
     try {
       const res = await fetch(`/api/locations?${params}`);
       const data: LocationListResponse = await res.json();
-      setLocations(data.items);
+      if (!res.ok) { setLocations([]); return; }
+      setLocations(data.items || []);
     } catch {
       toast.error(t('locations.toast.fetchFailed'));
     } finally {
