@@ -8,7 +8,6 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Progress } from '@/components/ui/progress';
 import { Switch } from '@/components/ui/switch';
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter,
@@ -17,6 +16,7 @@ import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from '@/components/ui/select';
 import { toast } from 'sonner';
+import { useTranslation, translateLocationType } from '@/lib/translations';
 import type { Location, LocationType } from '@/types/wms';
 
 const typeStyles: Record<LocationType, string> = {
@@ -26,6 +26,8 @@ const typeStyles: Record<LocationType, string> = {
   STAGING: 'bg-orange-500/10 text-orange-400 border-orange-500/20',
   BERTH: 'bg-cyan-500/10 text-cyan-400 border-cyan-500/20',
 };
+
+const locationTypes: LocationType[] = ['YARD', 'WAREHOUSE', 'OPEN_AREA', 'STAGING', 'BERTH'];
 
 const emptyForm = {
   code: '', name: '', type: '' as string, zone: '',
@@ -46,6 +48,7 @@ export function LocationsPage() {
   const [deleting, setDeleting] = useState<Location | null>(null);
   const [form, setForm] = useState(emptyForm);
   const [submitting, setSubmitting] = useState(false);
+  const { t } = useTranslation();
 
   const fetchLocations = useCallback(async () => {
     setLoading(true);
@@ -55,11 +58,11 @@ export function LocationsPage() {
       const data: LocationListResponse = await res.json();
       setLocations(data.items);
     } catch {
-      toast.error('Failed to fetch locations');
+      toast.error(t('locations.toast.fetchFailed'));
     } finally {
       setLoading(false);
     }
-  }, [typeFilter]);
+  }, [typeFilter, t]);
 
   useEffect(() => { fetchLocations(); }, [fetchLocations]);
 
@@ -88,7 +91,7 @@ export function LocationsPage() {
         const err = await res.json();
         throw new Error(err.error || 'Failed to save');
       }
-      toast.success(editing ? 'Location updated' : 'Location created');
+      toast.success(editing ? t('locations.toast.updated') : t('locations.toast.created'));
       setShowAdd(false);
       setEditing(null);
       setForm(emptyForm);
@@ -108,11 +111,11 @@ export function LocationsPage() {
         const err = await res.json();
         throw new Error(err.error || 'Failed to delete');
       }
-      toast.success('Location deleted');
+      toast.success(t('locations.toast.deleted'));
       setDeleting(null);
       fetchLocations();
     } catch (e: unknown) {
-      toast.error(e instanceof Error ? e.message : 'Failed to delete location');
+      toast.error(e instanceof Error ? e.message : t('locations.toast.deleteFailed'));
     }
   };
 
@@ -142,32 +145,44 @@ export function LocationsPage() {
     <div className="space-y-6">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-slate-100">Locations</h1>
-          <p className="text-sm text-slate-500 mt-1">Manage warehouse and yard locations</p>
+          <h1 className="text-2xl font-bold text-slate-100">{t('locations.title')}</h1>
+          <p className="text-sm text-slate-500 mt-1">{t('locations.subtitle')}</p>
         </div>
         <Button onClick={() => { setForm(emptyForm); setShowAdd(true); }}
           className="bg-amber-500 hover:bg-amber-600 text-slate-900 font-medium">
-          <Plus className="h-4 w-4 mr-2" /> Add Location
+          <Plus className="h-4 w-4 ml-2" /> {t('locations.addLocation')}
         </Button>
       </div>
 
       {/* Type Filter */}
       <div className="flex flex-wrap gap-2">
-        {['', 'YARD', 'WAREHOUSE', 'OPEN_AREA', 'STAGING', 'BERTH'].map((t) => (
+        {locationTypes.map((lt) => (
           <Button
-            key={t}
-            variant={typeFilter === t ? 'default' : 'outline'}
+            key={lt}
+            variant={typeFilter === lt ? 'default' : 'outline'}
             size="sm"
-            onClick={() => setTypeFilter(t)}
+            onClick={() => setTypeFilter(typeFilter === lt ? '' : lt)}
             className={
-              typeFilter === t
+              typeFilter === lt
                 ? 'bg-amber-500/15 text-amber-400 border-amber-500/30 hover:bg-amber-500/20'
                 : 'border-slate-700 bg-slate-900/50 text-slate-400 hover:bg-slate-800 hover:text-slate-300'
             }
           >
-            {t ? t.replace(/_/g, ' ') : 'All Types'}
+            {translateLocationType(lt)}
           </Button>
         ))}
+        <Button
+          variant={typeFilter === '' ? 'default' : 'outline'}
+          size="sm"
+          onClick={() => setTypeFilter('')}
+          className={
+            typeFilter === ''
+              ? 'bg-amber-500/15 text-amber-400 border-amber-500/30 hover:bg-amber-500/20'
+              : 'border-slate-700 bg-slate-900/50 text-slate-400 hover:bg-slate-800 hover:text-slate-300'
+          }
+        >
+          {t('locations.allTypes')}
+        </Button>
       </div>
 
       {/* Location Cards Grid */}
@@ -183,7 +198,7 @@ export function LocationsPage() {
               </Card>
             ))
           : locations.length === 0
-            ? <div className="col-span-full text-center py-12 text-slate-500">No locations found</div>
+            ? <div className="col-span-full text-center py-12 text-slate-500">{t('locations.noLocationsFound')}</div>
             : locations.map((loc) => {
                 const pct = loadPct(loc);
                 return (
@@ -203,17 +218,17 @@ export function LocationsPage() {
                           </Button>
                         </div>
                       </div>
-                      <Badge variant="outline" className={`text-[10px] ${typeStyles[loc.type]}`}>{loc.type.replace(/_/g, ' ')}</Badge>
+                      <Badge variant="outline" className={`text-[10px] ${typeStyles[loc.type]}`}>{translateLocationType(loc.type)}</Badge>
                       <div className="grid grid-cols-2 gap-2 text-xs text-slate-400">
                         {loc.zone && <div className="flex items-center gap-1.5"><Layers className="h-3 w-3 text-slate-600" />{loc.zone}</div>}
-                        {loc.maxWeight && <div className="flex items-center gap-1.5"><Weight className="h-3 w-3 text-slate-600" />{loc.maxWeight}t</div>}
+                        {loc.maxWeight && <div className="flex items-center gap-1.5"><Weight className="h-3 w-3 text-slate-600" />{loc.maxWeight}{t('common.tonnes')}</div>}
                         {loc.area && <div className="flex items-center gap-1.5"><Maximize className="h-3 w-3 text-slate-600" />{loc.area}m²</div>}
-                        <div className="flex items-center gap-1.5"><MapPin className="h-3 w-3 text-slate-600" />{loc.currentLoad} items</div>
+                        <div className="flex items-center gap-1.5"><MapPin className="h-3 w-3 text-slate-600" />{loc.currentLoad} {t('common.items')}</div>
                       </div>
                       {loc.maxWeight && loc.maxWeight > 0 && (
                         <div className="space-y-1">
                           <div className="flex justify-between text-[11px]">
-                            <span className="text-slate-500">Load</span>
+                            <span className="text-slate-500">{t('common.load')}</span>
                             <span className={`font-medium ${pct >= 90 ? 'text-red-400' : pct >= 70 ? 'text-amber-400' : 'text-slate-400'}`}>{pct}%</span>
                           </div>
                           <div className="h-1.5 w-full overflow-hidden rounded-full bg-slate-800">
@@ -223,7 +238,7 @@ export function LocationsPage() {
                       )}
                       <div className="flex items-center gap-1.5">
                         <div className={`h-1.5 w-1.5 rounded-full ${loc.isActive ? 'bg-emerald-400' : 'bg-slate-600'}`} />
-                        <span className="text-[11px] text-slate-500">{loc.isActive ? 'Active' : 'Inactive'}</span>
+                        <span className="text-[11px] text-slate-500">{loc.isActive ? t('common.active') : t('common.inactive')}</span>
                       </div>
                     </CardContent>
                   </Card>
@@ -235,67 +250,67 @@ export function LocationsPage() {
       <Dialog open={showAdd || !!editing} onOpenChange={(open) => { if (!open) { setShowAdd(false); setEditing(null); setForm(emptyForm); } }}>
         <DialogContent className="border-slate-700 bg-slate-900 max-w-lg">
           <DialogHeader>
-            <DialogTitle className="text-slate-100">{editing ? 'Edit Location' : 'Add New Location'}</DialogTitle>
+            <DialogTitle className="text-slate-100">{editing ? t('locations.editLocation') : t('locations.addNewLocation')}</DialogTitle>
           </DialogHeader>
           <div className="grid gap-4 py-4">
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <Label className="text-slate-400">Code *</Label>
+                <Label className="text-slate-400">{t('locations.form.code')}</Label>
                 <Input value={form.code} onChange={(e) => setForm({ ...form, code: e.target.value })}
                   className="border-slate-700 bg-slate-800 text-slate-200 mt-1" />
               </div>
               <div>
-                <Label className="text-slate-400">Name *</Label>
+                <Label className="text-slate-400">{t('locations.form.name')}</Label>
                 <Input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })}
                   className="border-slate-700 bg-slate-800 text-slate-200 mt-1" />
               </div>
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <Label className="text-slate-400">Type *</Label>
+                <Label className="text-slate-400">{t('locations.form.type')}</Label>
                 <Select value={form.type} onValueChange={(v) => setForm({ ...form, type: v })}>
-                  <SelectTrigger className="border-slate-700 bg-slate-800 text-slate-200 mt-1"><SelectValue placeholder="Select..." /></SelectTrigger>
+                  <SelectTrigger className="border-slate-700 bg-slate-800 text-slate-200 mt-1"><SelectValue placeholder={t('common.select')} /></SelectTrigger>
                   <SelectContent className="border-slate-700 bg-slate-800">
-                    {(['YARD', 'WAREHOUSE', 'OPEN_AREA', 'STAGING', 'BERTH'] as LocationType[]).map((t) => (
-                      <SelectItem key={t} value={t} className="text-slate-200 focus:bg-slate-700">{t.replace(/_/g, ' ')}</SelectItem>
+                    {locationTypes.map((lt) => (
+                      <SelectItem key={lt} value={lt} className="text-slate-200 focus:bg-slate-700">{translateLocationType(lt)}</SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
               </div>
               <div>
-                <Label className="text-slate-400">Zone</Label>
+                <Label className="text-slate-400">{t('locations.form.zone')}</Label>
                 <Input value={form.zone} onChange={(e) => setForm({ ...form, zone: e.target.value })}
                   className="border-slate-700 bg-slate-800 text-slate-200 mt-1" />
               </div>
             </div>
             <div className="grid grid-cols-3 gap-4">
               <div>
-                <Label className="text-slate-400">Max Weight (t)</Label>
+                <Label className="text-slate-400">{t('locations.form.maxWeight')}</Label>
                 <Input type="number" value={form.maxWeight} onChange={(e) => setForm({ ...form, maxWeight: e.target.value })}
                   className="border-slate-700 bg-slate-800 text-slate-200 mt-1" />
               </div>
               <div>
-                <Label className="text-slate-400">Max Dimension</Label>
+                <Label className="text-slate-400">{t('locations.form.maxDimension')}</Label>
                 <Input value={form.maxDimension} onChange={(e) => setForm({ ...form, maxDimension: e.target.value })}
-                  className="border-slate-700 bg-slate-800 text-slate-200 mt-1" placeholder="e.g. 50×30×25" />
+                  className="border-slate-700 bg-slate-800 text-slate-200 mt-1" placeholder={t('locations.form.maxDimensionPlaceholder')} />
               </div>
               <div>
-                <Label className="text-slate-400">Area (m²)</Label>
+                <Label className="text-slate-400">{t('locations.form.area')}</Label>
                 <Input type="number" value={form.area} onChange={(e) => setForm({ ...form, area: e.target.value })}
                   className="border-slate-700 bg-slate-800 text-slate-200 mt-1" />
               </div>
             </div>
             <div className="flex items-center gap-3">
               <Switch checked={form.isActive} onCheckedChange={(v) => setForm({ ...form, isActive: v })} />
-              <Label className="text-slate-400">Active</Label>
+              <Label className="text-slate-400">{t('locations.form.active')}</Label>
             </div>
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => { setShowAdd(false); setEditing(null); setForm(emptyForm); }}
-              className="border-slate-700 text-slate-300 hover:bg-slate-800">Cancel</Button>
+              className="border-slate-700 text-slate-300 hover:bg-slate-800">{t('common.cancel')}</Button>
             <Button onClick={handleSubmit} disabled={submitting || !form.code || !form.name || !form.type}
               className="bg-amber-500 hover:bg-amber-600 text-slate-900">
-              {submitting ? 'Saving...' : editing ? 'Update' : 'Create'}
+              {submitting ? t('common.saving') : editing ? t('common.update') : t('common.create')}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -305,14 +320,14 @@ export function LocationsPage() {
       <Dialog open={!!deleting} onOpenChange={(open) => { if (!open) setDeleting(null); }}>
         <DialogContent className="border-slate-700 bg-slate-900 max-w-md">
           <DialogHeader>
-            <DialogTitle className="text-slate-100">Confirm Delete</DialogTitle>
+            <DialogTitle className="text-slate-100">{t('common.confirmDelete')}</DialogTitle>
           </DialogHeader>
           <p className="text-sm text-slate-400">
-            Delete location <span className="text-amber-400 font-medium">{deleting?.code}</span>? Locations with cargo items cannot be deleted.
+            {t('locations.delete.message')} <span className="text-amber-400 font-medium">{deleting?.code}</span>{t('locations.delete.warning')}
           </p>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setDeleting(null)} className="border-slate-700 text-slate-300 hover:bg-slate-800">Cancel</Button>
-            <Button variant="destructive" onClick={handleDelete} className="bg-red-600 hover:bg-red-700">Delete</Button>
+            <Button variant="outline" onClick={() => setDeleting(null)} className="border-slate-700 text-slate-300 hover:bg-slate-800">{t('common.cancel')}</Button>
+            <Button variant="destructive" onClick={handleDelete} className="bg-red-600 hover:bg-red-700">{t('common.delete')}</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

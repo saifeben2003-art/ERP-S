@@ -7,7 +7,6 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
-import { Separator } from '@/components/ui/separator';
 import { Switch } from '@/components/ui/switch';
 import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
@@ -16,6 +15,7 @@ import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from '@/components/ui/select';
 import { toast } from 'sonner';
+import { useTranslation, translateSyncStatus, translateSyncDirection } from '@/lib/translations';
 import type { SyncDirection, SyncStatus } from '@/types/wms';
 
 // Mock data for UI showcase
@@ -62,16 +62,17 @@ export function IntegrationPage() {
   });
 
   const [mappings, setMappings] = useState(mockEventMappings);
+  const { t } = useTranslation();
 
   const handleSaveConfig = () => {
-    toast.success('SAP configuration saved (demo)');
+    toast.success(t('integration.toast.configSaved'));
   };
 
   const toggleMapping = (index: number) => {
     const updated = [...mappings];
     updated[index].enabled = !updated[index].enabled;
     setMappings(updated);
-    toast.success(`Event mapping ${updated[index].enabled ? 'enabled' : 'disabled'}`);
+    toast.success(t('integration.toast.mappingToggled'));
   };
 
   const successCount = mockSyncLog.filter((l) => l.status === 'SUCCESS').length;
@@ -82,12 +83,12 @@ export function IntegrationPage() {
     <div className="space-y-6">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-slate-100">SAP Integration</h1>
-          <p className="text-sm text-slate-500 mt-1">Event-driven SAP connectivity configuration</p>
+          <h1 className="text-2xl font-bold text-slate-100">{t('integration.title')}</h1>
+          <p className="text-sm text-slate-500 mt-1">{t('integration.subtitle')}</p>
         </div>
         <Button onClick={handleSaveConfig}
           className="bg-amber-500 hover:bg-amber-600 text-slate-900 font-medium">
-          <Settings className="h-4 w-4 mr-2" /> Save Configuration
+          <Settings className="h-4 w-4 ml-2" /> {t('integration.saveConfiguration')}
         </Button>
       </div>
 
@@ -99,11 +100,9 @@ export function IntegrationPage() {
               <Zap className="h-4 w-4 text-amber-400" />
             </div>
             <div>
-              <h3 className="text-sm font-medium text-amber-300">Event-Driven Architecture</h3>
+              <h3 className="text-sm font-medium text-amber-300">{t('integration.eventDrivenTitle')}</h3>
               <p className="text-xs text-slate-400 mt-1 leading-relaxed">
-                The WMS uses an event-driven pattern to sync with SAP. Each cargo operation (receive, move, dispatch)
-                triggers an outbound event that is mapped to the corresponding SAP endpoint. This ensures real-time
-                data consistency between the warehouse management system and SAP ERP without batch processing delays.
+                {t('integration.eventDrivenDesc')}
               </p>
             </div>
           </div>
@@ -116,7 +115,7 @@ export function IntegrationPage() {
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-xs font-medium text-slate-500 uppercase tracking-wider">Sync Health</p>
+                <p className="text-xs font-medium text-slate-500 uppercase tracking-wider">{t('integration.syncHealth')}</p>
                 <p className="text-2xl font-bold text-slate-100 mt-1">{healthPct}%</p>
               </div>
               <div className={`flex h-10 w-10 items-center justify-center rounded-lg ${healthPct >= 80 ? 'bg-emerald-500/10' : healthPct >= 50 ? 'bg-amber-500/10' : 'bg-red-500/10'}`}>
@@ -129,7 +128,7 @@ export function IntegrationPage() {
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-xs font-medium text-slate-500 uppercase tracking-wider">Successful</p>
+                <p className="text-xs font-medium text-slate-500 uppercase tracking-wider">{t('integration.successful')}</p>
                 <p className="text-2xl font-bold text-emerald-400 mt-1">{successCount}</p>
               </div>
               <CheckCircle className="h-8 w-8 text-emerald-500/30" />
@@ -140,7 +139,7 @@ export function IntegrationPage() {
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-xs font-medium text-slate-500 uppercase tracking-wider">Failed</p>
+                <p className="text-xs font-medium text-slate-500 uppercase tracking-wider">{t('integration.failed')}</p>
                 <p className="text-2xl font-bold text-red-400 mt-1">{failedCount}</p>
               </div>
               <XCircle className="h-8 w-8 text-red-500/30" />
@@ -154,20 +153,20 @@ export function IntegrationPage() {
         <CardHeader className="pb-4">
           <div className="flex items-center gap-2">
             <Server className="h-5 w-5 text-amber-400" />
-            <CardTitle className="text-sm font-medium text-slate-200">SAP Connection Configuration</CardTitle>
+            <CardTitle className="text-sm font-medium text-slate-200">{t('integration.connectionConfig')}</CardTitle>
           </div>
-          <CardDescription className="text-slate-500 text-xs">Configure the connection to your SAP ERP system</CardDescription>
+          <CardDescription className="text-slate-500 text-xs">{t('integration.connectionConfigDesc')}</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="grid gap-4 sm:grid-cols-2">
             <div>
-              <Label className="text-slate-400">SAP Endpoint</Label>
+              <Label className="text-slate-400">{t('integration.form.endpoint')}</Label>
               <Input value={config.endpoint} onChange={(e) => setConfig({ ...config, endpoint: e.target.value })}
                 className="border-slate-700 bg-slate-800 text-slate-200 mt-1" />
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <Label className="text-slate-400">Auth Method</Label>
+                <Label className="text-slate-400">{t('integration.form.authMethod')}</Label>
                 <Select value={config.authMethod} onValueChange={(v) => setConfig({ ...config, authMethod: v })}>
                   <SelectTrigger className="border-slate-700 bg-slate-800 text-slate-200 mt-1"><SelectValue /></SelectTrigger>
                   <SelectContent className="border-slate-700 bg-slate-800">
@@ -178,7 +177,7 @@ export function IntegrationPage() {
                 </Select>
               </div>
               <div>
-                <Label className="text-slate-400">Protocol</Label>
+                <Label className="text-slate-400">{t('integration.form.protocol')}</Label>
                 <Select value={config.protocol} onValueChange={(v) => setConfig({ ...config, protocol: v })}>
                   <SelectTrigger className="border-slate-700 bg-slate-800 text-slate-200 mt-1"><SelectValue /></SelectTrigger>
                   <SelectContent className="border-slate-700 bg-slate-800">
@@ -191,18 +190,18 @@ export function IntegrationPage() {
               </div>
             </div>
             <div>
-              <Label className="text-slate-400">API Key</Label>
+              <Label className="text-slate-400">{t('integration.form.apiKey')}</Label>
               <Input type="password" value={config.apiKey} onChange={(e) => setConfig({ ...config, apiKey: e.target.value })}
                 className="border-slate-700 bg-slate-800 text-slate-200 mt-1" />
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <Label className="text-slate-400">SAP System ID</Label>
+                <Label className="text-slate-400">{t('integration.form.sapSystemId')}</Label>
                 <Input value={config.sapSystemId} onChange={(e) => setConfig({ ...config, sapSystemId: e.target.value })}
                   className="border-slate-700 bg-slate-800 text-slate-200 mt-1" />
               </div>
               <div>
-                <Label className="text-slate-400">Client</Label>
+                <Label className="text-slate-400">{t('integration.form.client')}</Label>
                 <Input value={config.client} onChange={(e) => setConfig({ ...config, client: e.target.value })}
                   className="border-slate-700 bg-slate-800 text-slate-200 mt-1" />
               </div>
@@ -210,7 +209,7 @@ export function IntegrationPage() {
           </div>
           <div className="flex items-center gap-3 pt-2">
             <Switch checked={config.enabled} onCheckedChange={(v) => setConfig({ ...config, enabled: v })} />
-            <Label className="text-slate-400">Enable SAP Synchronization</Label>
+            <Label className="text-slate-400">{t('integration.form.enableSync')}</Label>
           </div>
         </CardContent>
       </Card>
@@ -220,18 +219,18 @@ export function IntegrationPage() {
         <CardHeader className="pb-4">
           <div className="flex items-center gap-2">
             <ArrowRightLeft className="h-5 w-5 text-amber-400" />
-            <CardTitle className="text-sm font-medium text-slate-200">Event Mapping</CardTitle>
+            <CardTitle className="text-sm font-medium text-slate-200">{t('integration.eventMapping')}</CardTitle>
           </div>
-          <CardDescription className="text-slate-500 text-xs">Map WMS events to SAP endpoints</CardDescription>
+          <CardDescription className="text-slate-500 text-xs">{t('integration.eventMappingDesc')}</CardDescription>
         </CardHeader>
         <CardContent className="p-0">
           <Table>
             <TableHeader>
               <TableRow className="border-slate-800 hover:bg-transparent">
-                <TableHead className="text-xs text-slate-500">Event Type</TableHead>
-                <TableHead className="text-xs text-slate-500">SAP Endpoint</TableHead>
-                <TableHead className="text-xs text-slate-500 hidden sm:table-cell">Method</TableHead>
-                <TableHead className="text-xs text-slate-500">Enabled</TableHead>
+                <TableHead className="text-xs text-slate-500">{t('integration.table.eventType')}</TableHead>
+                <TableHead className="text-xs text-slate-500">{t('integration.table.sapEndpoint')}</TableHead>
+                <TableHead className="text-xs text-slate-500 hidden sm:table-cell">{t('integration.table.method')}</TableHead>
+                <TableHead className="text-xs text-slate-500">{t('integration.table.enabled')}</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -260,26 +259,26 @@ export function IntegrationPage() {
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
               <RefreshCw className="h-5 w-5 text-amber-400" />
-              <CardTitle className="text-sm font-medium text-slate-200">Sync Log</CardTitle>
+              <CardTitle className="text-sm font-medium text-slate-200">{t('integration.syncLog')}</CardTitle>
             </div>
             <Button variant="outline" size="sm"
               className="border-slate-700 text-slate-400 hover:bg-slate-800 hover:text-slate-300 text-xs"
-              onClick={() => toast.info('Sync log refreshed (demo)')}>
-              <RefreshCw className="h-3 w-3 mr-1" /> Refresh
+              onClick={() => toast.info(t('integration.toast.logRefreshed'))}>
+              <RefreshCw className="h-3 w-3 ml-1" /> {t('common.refresh')}
             </Button>
           </div>
-          <CardDescription className="text-slate-500 text-xs">Recent synchronization activity</CardDescription>
+          <CardDescription className="text-slate-500 text-xs">{t('integration.syncLogDesc')}</CardDescription>
         </CardHeader>
         <CardContent className="p-0">
           <div className="max-h-96 overflow-y-auto">
             <Table>
               <TableHeader>
                 <TableRow className="border-slate-800 hover:bg-transparent">
-                  <TableHead className="text-xs text-slate-500">Event</TableHead>
-                  <TableHead className="text-xs text-slate-500">Direction</TableHead>
-                  <TableHead className="text-xs text-slate-500">Status</TableHead>
-                  <TableHead className="text-xs text-slate-500 hidden sm:table-cell">Timestamp</TableHead>
-                  <TableHead className="text-xs text-slate-500 hidden sm:table-cell">Retries</TableHead>
+                  <TableHead className="text-xs text-slate-500">{t('integration.table.event')}</TableHead>
+                  <TableHead className="text-xs text-slate-500">{t('integration.table.direction')}</TableHead>
+                  <TableHead className="text-xs text-slate-500">{t('common.status')}</TableHead>
+                  <TableHead className="text-xs text-slate-500 hidden sm:table-cell">{t('integration.table.timestamp')}</TableHead>
+                  <TableHead className="text-xs text-slate-500 hidden sm:table-cell">{t('integration.table.retries')}</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -290,7 +289,7 @@ export function IntegrationPage() {
                     </TableCell>
                     <TableCell className="py-3">
                       <Badge variant="outline" className={`text-[10px] ${directionStyles[log.direction]}`}>
-                        {log.direction === 'OUTBOUND' ? 'WMS → SAP' : 'SAP → WMS'}
+                        {log.direction === 'OUTBOUND' ? t('integration.direction.outbound') : t('integration.direction.inbound')}
                       </Badge>
                     </TableCell>
                     <TableCell className="py-3">
@@ -300,7 +299,7 @@ export function IntegrationPage() {
                         {(log.status === 'PENDING' || log.status === 'RETRYING') && <Clock className="h-3.5 w-3.5 text-amber-400" />}
                         {log.status === 'SENT' && <Globe className="h-3.5 w-3.5 text-cyan-400" />}
                         <Badge variant="outline" className={`text-[10px] ${statusStyles[log.status]}`}>
-                          {log.status}
+                          {translateSyncStatus(log.status)}
                         </Badge>
                       </div>
                     </TableCell>

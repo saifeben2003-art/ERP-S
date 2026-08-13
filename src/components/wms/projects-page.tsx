@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState, useCallback } from 'react';
-import { Plus, Package, Ship, MapPin, Calendar, ArrowLeft, Weight, X } from 'lucide-react';
+import { Plus, Package, Ship, MapPin, ArrowRight, Weight } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -9,7 +9,6 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Progress } from '@/components/ui/progress';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Separator } from '@/components/ui/separator';
 import {
@@ -22,6 +21,7 @@ import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from '@/components/ui/table';
 import { toast } from 'sonner';
+import { useTranslation, translateStatus, translateCategory } from '@/lib/translations';
 import type { Project, ProjectStatus, CargoItem } from '@/types/wms';
 
 const projectStatusStyles: Record<ProjectStatus, string> = {
@@ -34,15 +34,15 @@ const projectStatusStyles: Record<ProjectStatus, string> = {
   COMPLETED: 'bg-teal-500/10 text-teal-400 border-teal-500/20',
 };
 
-const statusTabs: { value: string; label: string }[] = [
-  { value: '', label: 'All' },
-  { value: 'PLANNED', label: 'Planned' },
-  { value: 'RECEIVING', label: 'Receiving' },
-  { value: 'IN_STORAGE', label: 'Storage' },
-  { value: 'STAGING', label: 'Staging' },
-  { value: 'LOADED', label: 'Loaded' },
-  { value: 'SHIPPED', label: 'Shipped' },
-  { value: 'COMPLETED', label: 'Completed' },
+const statusTabsKeys = [
+  { value: '', key: 'common.all' },
+  { value: 'PLANNED', key: 'status.PLANNED' },
+  { value: 'RECEIVING', key: 'status.RECEIVING' },
+  { value: 'IN_STORAGE', key: 'status.IN_STORAGE' },
+  { value: 'STAGING', key: 'status.STAGING' },
+  { value: 'LOADED', key: 'status.LOADED' },
+  { value: 'SHIPPED', key: 'status.SHIPPED' },
+  { value: 'COMPLETED', key: 'status.COMPLETED' },
 ];
 
 const emptyForm = {
@@ -65,6 +65,7 @@ export function ProjectsPage() {
   const [cargoLoading, setCargoLoading] = useState(false);
   const [form, setForm] = useState(emptyForm);
   const [submitting, setSubmitting] = useState(false);
+  const { t } = useTranslation();
 
   const fetchProjects = useCallback(async () => {
     setLoading(true);
@@ -74,11 +75,11 @@ export function ProjectsPage() {
       const data: ProjectListResponse = await res.json();
       setProjects(data.items);
     } catch {
-      toast.error('Failed to fetch projects');
+      toast.error(t('projects.toast.fetchFailed'));
     } finally {
       setLoading(false);
     }
-  }, [statusFilter]);
+  }, [statusFilter, t]);
 
   useEffect(() => { fetchProjects(); }, [fetchProjects]);
 
@@ -104,26 +105,26 @@ export function ProjectsPage() {
         const err = await res.json();
         throw new Error(err.error || 'Failed to create project');
       }
-      toast.success('Project created');
+      toast.success(t('projects.toast.created'));
       setShowAdd(false);
       setForm(emptyForm);
       fetchProjects();
     } catch (e: unknown) {
-      toast.error(e instanceof Error ? e.message : 'Failed to create project');
+      toast.error(e instanceof Error ? e.message : t('projects.toast.createFailed'));
     } finally {
       setSubmitting(false);
     }
   };
 
   const openProjectDetail = async (project: Project) => {
- setSelectedProject(project);
+    setSelectedProject(project);
     setCargoLoading(true);
     try {
       const res = await fetch(`/api/cargo?projectId=${project.id}&limit=100`);
       const data = await res.json();
       setProjectCargo(data.items || []);
     } catch {
-      toast.error('Failed to fetch project cargo');
+      toast.error(t('projects.toast.cargoFetchFailed'));
     } finally {
       setCargoLoading(false);
     }
@@ -133,22 +134,22 @@ export function ProjectsPage() {
     <div className="space-y-6">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-slate-100">Projects</h1>
-          <p className="text-sm text-slate-500 mt-1">Track project cargo and shipments</p>
+          <h1 className="text-2xl font-bold text-slate-100">{t('projects.title')}</h1>
+          <p className="text-sm text-slate-500 mt-1">{t('projects.subtitle')}</p>
         </div>
         <Button onClick={() => { setForm(emptyForm); setShowAdd(true); }}
           className="bg-amber-500 hover:bg-amber-600 text-slate-900 font-medium">
-          <Plus className="h-4 w-4 mr-2" /> Add Project
+          <Plus className="h-4 w-4 ml-2" /> {t('projects.addProject')}
         </Button>
       </div>
 
       {/* Status Tabs */}
       <Tabs value={statusFilter} onValueChange={setStatusFilter}>
         <TabsList className="bg-slate-800/50 border border-slate-700/50 h-auto p-1 flex-wrap gap-1">
-          {statusTabs.map((tab) => (
+          {statusTabsKeys.map((tab) => (
             <TabsTrigger key={tab.value} value={tab.value}
               className="data-[state=active]:bg-amber-500/15 data-[state=active]:text-amber-400 text-slate-400 text-xs px-3 py-1.5">
-              {tab.label}
+              {t(tab.key)}
             </TabsTrigger>
           ))}
         </TabsList>
@@ -157,8 +158,8 @@ export function ProjectsPage() {
       {/* Project Detail View */}
       {selectedProject ? (
         <div className="space-y-4">
-          <Button variant="ghost" onClick={() => setSelectedProject(null)} className="text-slate-400 hover:text-slate-200 -ml-2">
-            <ArrowLeft className="h-4 w-4 mr-2" /> Back to Projects
+          <Button variant="ghost" onClick={() => setSelectedProject(null)} className="text-slate-400 hover:text-slate-200 -mr-2">
+            <ArrowRight className="h-4 w-4 ml-2" /> {t('projects.backToProjects')}
           </Button>
           <Card className="border-slate-800 bg-slate-900/50">
             <CardContent className="p-6">
@@ -168,26 +169,26 @@ export function ProjectsPage() {
                   <p className="text-sm text-slate-400 mt-1">{selectedProject.projectCode}</p>
                 </div>
                 <Badge variant="outline" className={`self-start ${projectStatusStyles[selectedProject.status]}`}>
-                  {selectedProject.status.replace(/_/g, ' ')}
+                  {translateStatus(selectedProject.status)}
                 </Badge>
               </div>
               <Separator className="my-4 bg-slate-800" />
               <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4 text-sm">
                 <div className="flex items-center gap-2 text-slate-400">
                   <Package className="h-4 w-4 text-amber-500" />
-                  <span>{selectedProject.totalItems} items</span>
+                  <span>{selectedProject.totalItems} {t('common.items')}</span>
                 </div>
                 <div className="flex items-center gap-2 text-slate-400">
                   <Weight className="h-4 w-4 text-amber-500" />
-                  <span>{selectedProject.totalWeight.toLocaleString()} tonnes</span>
+                  <span>{selectedProject.totalWeight.toLocaleString()} {t('common.tonnes')}</span>
                 </div>
                 <div className="flex items-center gap-2 text-slate-400">
                   <MapPin className="h-4 w-4 text-amber-500" />
-                  <span className="truncate">{selectedProject.destination || 'TBD'}</span>
+                  <span className="truncate">{selectedProject.destination || t('projects.tbd')}</span>
                 </div>
                 <div className="flex items-center gap-2 text-slate-400">
                   <Ship className="h-4 w-4 text-amber-500" />
-                  <span className="truncate">{selectedProject.vesselName || 'TBD'}</span>
+                  <span className="truncate">{selectedProject.vesselName || t('projects.tbd')}</span>
                 </div>
               </div>
               {(selectedProject.etd || selectedProject.eta) && (
@@ -201,17 +202,17 @@ export function ProjectsPage() {
 
           <Card className="border-slate-800 bg-slate-900/50">
             <CardContent className="p-4">
-              <h3 className="text-sm font-medium text-slate-300 mb-3">Cargo Items</h3>
+              <h3 className="text-sm font-medium text-slate-300 mb-3">{t('projects.cargoItems')}</h3>
               <div className="max-h-96 overflow-y-auto">
                 <Table>
                   <TableHeader>
                     <TableRow className="border-slate-800 hover:bg-transparent">
-                      <TableHead className="text-xs text-slate-500">Code</TableHead>
-                      <TableHead className="text-xs text-slate-500">Description</TableHead>
-                      <TableHead className="text-xs text-slate-500">Weight (kg)</TableHead>
-                      <TableHead className="text-xs text-slate-500">Category</TableHead>
-                      <TableHead className="text-xs text-slate-500">Status</TableHead>
-                      <TableHead className="text-xs text-slate-500">Location</TableHead>
+                      <TableHead className="text-xs text-slate-500">{t('projects.table.code')}</TableHead>
+                      <TableHead className="text-xs text-slate-500">{t('projects.table.description')}</TableHead>
+                      <TableHead className="text-xs text-slate-500">{t('projects.table.weight')}</TableHead>
+                      <TableHead className="text-xs text-slate-500">{t('projects.table.category')}</TableHead>
+                      <TableHead className="text-xs text-slate-500">{t('projects.table.status')}</TableHead>
+                      <TableHead className="text-xs text-slate-500">{t('projects.table.location')}</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -224,14 +225,14 @@ export function ProjectsPage() {
                           </TableRow>
                         ))
                       : projectCargo.length === 0
-                        ? <TableRow className="border-slate-800 hover:bg-transparent"><TableCell colSpan={6} className="text-center py-6 text-slate-500">No cargo items</TableCell></TableRow>
+                        ? <TableRow className="border-slate-800 hover:bg-transparent"><TableCell colSpan={6} className="text-center py-6 text-slate-500">{t('projects.noCargoItems')}</TableCell></TableRow>
                         : projectCargo.map((c) => (
                           <TableRow key={c.id} className="border-slate-800 hover:bg-slate-800/50">
                             <TableCell className="py-2 text-xs font-mono text-amber-400/80">{c.cargoCode}</TableCell>
                             <TableCell className="py-2 text-xs text-slate-300 max-w-[200px] truncate">{c.description}</TableCell>
                             <TableCell className="py-2 text-xs text-slate-400">{c.weight.toLocaleString()}</TableCell>
-                            <TableCell className="py-2"><Badge variant="outline" className="text-[10px] bg-slate-700/50 text-slate-300 border-slate-600">{c.liftCategory.replace(/_/g, ' ')}</Badge></TableCell>
-                            <TableCell className="py-2"><Badge variant="outline" className="text-[10px] bg-emerald-500/10 text-emerald-400 border-emerald-500/20">{c.status.replace(/_/g, ' ')}</Badge></TableCell>
+                            <TableCell className="py-2"><Badge variant="outline" className="text-[10px] bg-slate-700/50 text-slate-300 border-slate-600">{translateCategory(c.liftCategory)}</Badge></TableCell>
+                            <TableCell className="py-2"><Badge variant="outline" className="text-[10px] bg-emerald-500/10 text-emerald-400 border-emerald-500/20">{translateStatus(c.status)}</Badge></TableCell>
                             <TableCell className="py-2 text-xs text-slate-400">{c.location?.code || '—'}</TableCell>
                           </TableRow>
                         ))}
@@ -256,7 +257,7 @@ export function ProjectsPage() {
                 </Card>
               ))
             : projects.length === 0
-              ? <div className="col-span-full text-center py-12 text-slate-500">No projects found</div>
+              ? <div className="col-span-full text-center py-12 text-slate-500">{t('projects.noProjectsFound')}</div>
               : projects.map((p) => {
                   const received = p.cargoItems?.filter((c) => c.status === 'RECEIVED' || c.status === 'IN_YARD' || c.status === 'IN_WAREHOUSE' || c.status === 'STAGING').length || 0;
                   const total = p.totalItems || 0;
@@ -274,17 +275,17 @@ export function ProjectsPage() {
                             <p className="text-[11px] font-mono text-slate-600 mt-0.5">{p.projectCode}</p>
                           </div>
                           <Badge variant="outline" className={`shrink-0 text-[10px] ${projectStatusStyles[p.status]}`}>
-                            {p.status.replace(/_/g, ' ')}
+                            {translateStatus(p.status)}
                           </Badge>
                         </div>
                         <div className="grid grid-cols-2 gap-2 text-xs text-slate-400">
                           <div className="flex items-center gap-1.5"><MapPin className="h-3 w-3 text-slate-600" />{p.clientName}</div>
-                          <div className="flex items-center gap-1.5"><Ship className="h-3 w-3 text-slate-600" />{p.vesselName || 'TBD'}</div>
+                          <div className="flex items-center gap-1.5"><Ship className="h-3 w-3 text-slate-600" />{p.vesselName || t('projects.tbd')}</div>
                         </div>
                         <div className="grid grid-cols-3 gap-2 text-xs">
-                          <div><span className="text-slate-600">Items:</span> <span className="text-slate-300 font-medium">{total}</span></div>
-                          <div><span className="text-slate-600">Weight:</span> <span className="text-slate-300 font-medium">{p.totalWeight}t</span></div>
-                          <div><span className="text-slate-600">Vol:</span> <span className="text-slate-300 font-medium">{p.totalVolume}m³</span></div>
+                          <div><span className="text-slate-600">{t('projects.card.itemsLabel')}</span> <span className="text-slate-300 font-medium">{total}</span></div>
+                          <div><span className="text-slate-600">{t('projects.card.weightLabel')}</span> <span className="text-slate-300 font-medium">{p.totalWeight}{t('projects.card.weight')}</span></div>
+                          <div><span className="text-slate-600">{t('projects.card.volLabel')}</span> <span className="text-slate-300 font-medium">{p.totalVolume}m³</span></div>
                         </div>
                         {(p.etd || p.eta) && (
                           <div className="flex gap-3 text-[11px] text-slate-500">
@@ -294,7 +295,7 @@ export function ProjectsPage() {
                         )}
                         <div className="space-y-1">
                           <div className="flex justify-between text-[11px]">
-                            <span className="text-slate-500">Progress</span>
+                            <span className="text-slate-500">{t('common.progress')}</span>
                             <span className="text-slate-400">{received}/{total} ({pct}%)</span>
                           </div>
                           <div className="h-1.5 w-full overflow-hidden rounded-full bg-slate-800">
@@ -312,56 +313,56 @@ export function ProjectsPage() {
       <Dialog open={showAdd} onOpenChange={(open) => { if (!open) { setShowAdd(false); setForm(emptyForm); } }}>
         <DialogContent className="border-slate-700 bg-slate-900 max-w-lg">
           <DialogHeader>
-            <DialogTitle className="text-slate-100">Add New Project</DialogTitle>
+            <DialogTitle className="text-slate-100">{t('projects.addNewProject')}</DialogTitle>
           </DialogHeader>
           <div className="grid gap-4 py-4">
             <div>
-              <Label className="text-slate-400">Project Name *</Label>
+              <Label className="text-slate-400">{t('projects.form.projectName')}</Label>
               <Input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })}
                 className="border-slate-700 bg-slate-800 text-slate-200 mt-1" />
             </div>
             <div>
-              <Label className="text-slate-400">Description</Label>
+              <Label className="text-slate-400">{t('projects.form.description')}</Label>
               <Textarea value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })}
                 className="border-slate-700 bg-slate-800 text-slate-200 mt-1 min-h-[60px]" />
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <Label className="text-slate-400">Client Name *</Label>
+                <Label className="text-slate-400">{t('projects.form.clientName')}</Label>
                 <Input value={form.clientName} onChange={(e) => setForm({ ...form, clientName: e.target.value })}
                   className="border-slate-700 bg-slate-800 text-slate-200 mt-1" />
               </div>
               <div>
-                <Label className="text-slate-400">Client Contact</Label>
+                <Label className="text-slate-400">{t('projects.form.clientContact')}</Label>
                 <Input value={form.clientContact} onChange={(e) => setForm({ ...form, clientContact: e.target.value })}
                   className="border-slate-700 bg-slate-800 text-slate-200 mt-1" />
               </div>
             </div>
             <div>
-              <Label className="text-slate-400">Destination</Label>
+              <Label className="text-slate-400">{t('projects.form.destination')}</Label>
               <Input value={form.destination} onChange={(e) => setForm({ ...form, destination: e.target.value })}
                 className="border-slate-700 bg-slate-800 text-slate-200 mt-1" />
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <Label className="text-slate-400">Shipping Line</Label>
+                <Label className="text-slate-400">{t('projects.form.shippingLine')}</Label>
                 <Input value={form.shippingLine} onChange={(e) => setForm({ ...form, shippingLine: e.target.value })}
                   className="border-slate-700 bg-slate-800 text-slate-200 mt-1" />
               </div>
               <div>
-                <Label className="text-slate-400">Vessel Name</Label>
+                <Label className="text-slate-400">{t('projects.form.vesselName')}</Label>
                 <Input value={form.vesselName} onChange={(e) => setForm({ ...form, vesselName: e.target.value })}
                   className="border-slate-700 bg-slate-800 text-slate-200 mt-1" />
               </div>
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <Label className="text-slate-400">ETD</Label>
+                <Label className="text-slate-400">{t('projects.form.etd')}</Label>
                 <Input type="date" value={form.etd} onChange={(e) => setForm({ ...form, etd: e.target.value })}
                   className="border-slate-700 bg-slate-800 text-slate-200 mt-1" />
               </div>
               <div>
-                <Label className="text-slate-400">ETA</Label>
+                <Label className="text-slate-400">{t('projects.form.eta')}</Label>
                 <Input type="date" value={form.eta} onChange={(e) => setForm({ ...form, eta: e.target.value })}
                   className="border-slate-700 bg-slate-800 text-slate-200 mt-1" />
               </div>
@@ -369,10 +370,10 @@ export function ProjectsPage() {
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => { setShowAdd(false); setForm(emptyForm); }}
-              className="border-slate-700 text-slate-300 hover:bg-slate-800">Cancel</Button>
+              className="border-slate-700 text-slate-300 hover:bg-slate-800">{t('common.cancel')}</Button>
             <Button onClick={handleCreate} disabled={submitting || !form.name || !form.clientName}
               className="bg-amber-500 hover:bg-amber-600 text-slate-900">
-              {submitting ? 'Creating...' : 'Create Project'}
+              {submitting ? t('common.creating') : t('common.create')}
             </Button>
           </DialogFooter>
         </DialogContent>

@@ -11,10 +11,12 @@ import { MovementsPage } from '@/components/wms/movements-page';
 import { IntegrationPage } from '@/components/wms/integration-page';
 import type { WmsPage } from '@/types/wms';
 import { cn } from '@/lib/utils';
+import { useTranslation } from '@/lib/translations';
 
 export default function WmsApp() {
   const [activePage, setActivePage] = useState<WmsPage>('dashboard');
   const [seeded, setSeeded] = useState(false);
+  const { t } = useTranslation();
 
   useEffect(() => {
     let mounted = true;
@@ -24,28 +26,38 @@ export default function WmsApp() {
     return () => { mounted = false; };
   }, []);
 
+  const headerMap: Record<WmsPage, string> = {
+    dashboard: t('header.dashboard'),
+    cargo: t('header.cargoManagement'),
+    projects: t('header.projectCargo'),
+    locations: t('header.locations'),
+    equipment: t('header.equipmentLifting'),
+    movements: t('header.movementLog'),
+    integration: t('header.sapIntegration'),
+  };
+
   const renderPage = () => {
     switch (activePage) {
-      case 'dashboard': return <DashboardPage />;
+      case 'dashboard': return <DashboardPage onNavigate={setActivePage} />;
       case 'cargo': return <CargoPage />;
       case 'projects': return <ProjectsPage />;
       case 'locations': return <LocationsPage />;
       case 'equipment': return <EquipmentPage />;
       case 'movements': return <MovementsPage />;
       case 'integration': return <IntegrationPage />;
-      default: return <DashboardPage />;
+      default: return <DashboardPage onNavigate={setActivePage} />;
     }
   };
 
   return (
-    <div className="min-h-screen flex bg-[#0e1019]">
+    <div className="min-h-screen flex bg-[#0e1019]" dir="rtl">
       <AppSidebar activePage={activePage} onPageChange={setActivePage} />
       
       {/* Main content area */}
       <main
         className={cn(
           'flex-1 min-h-screen transition-all duration-300',
-          'lg:ml-64'
+          'lg:mr-64'
         )}
       >
         {/* Mobile top padding for fixed header */}
@@ -56,19 +68,13 @@ export default function WmsApp() {
           <div className="flex h-14 items-center justify-between px-6">
             <div>
               <h1 className="text-lg font-semibold text-slate-100">
-                {activePage === 'dashboard' && 'Dashboard'}
-                {activePage === 'cargo' && 'Cargo Management'}
-                {activePage === 'projects' && 'Project Cargo'}
-                {activePage === 'locations' && 'Locations'}
-                {activePage === 'equipment' && 'Equipment & Lifting Gear'}
-                {activePage === 'movements' && 'Movement Log'}
-                {activePage === 'integration' && 'SAP / ERP Integration'}
+                {headerMap[activePage]}
               </h1>
             </div>
             <div className="flex items-center gap-3">
               <div className="hidden sm:flex items-center gap-2 rounded-full bg-slate-800/50 px-3 py-1.5">
                 <div className="h-2 w-2 rounded-full bg-emerald-400 animate-pulse" />
-                <span className="text-xs font-medium text-slate-400">System Online</span>
+                <span className="text-xs font-medium text-slate-400">{t('common.systemOnline')}</span>
               </div>
             </div>
           </div>
@@ -80,7 +86,7 @@ export default function WmsApp() {
             <div className="flex items-center justify-center min-h-[60vh]">
               <div className="text-center">
                 <div className="h-8 w-8 border-2 border-amber-400 border-t-transparent rounded-full animate-spin mx-auto mb-4" />
-                <p className="text-sm text-slate-400">Initializing WMS System...</p>
+                <p className="text-sm text-slate-400">{t('init.wmsSystem')}</p>
               </div>
             </div>
           )}
@@ -89,8 +95,8 @@ export default function WmsApp() {
         {/* Footer */}
         <footer className="mt-auto border-t border-slate-800/60 bg-[#0e1019]/80 backdrop-blur-md">
           <div className="flex h-12 items-center justify-between px-6">
-            <p className="text-[11px] text-slate-600">CL WMS v1.0 — Heavy Lift & Project Cargo Operations</p>
-            <p className="text-[11px] text-slate-600">Combi Lift © {new Date().getFullYear()}</p>
+            <p className="text-[11px] text-slate-600">{t('footer.left')}</p>
+            <p className="text-[11px] text-slate-600">{t('footer.right')}</p>
           </div>
         </footer>
       </main>
