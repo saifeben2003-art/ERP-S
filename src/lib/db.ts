@@ -12,9 +12,17 @@ function getPrismaClient(): PrismaClient {
   const databaseUrl = process.env.DATABASE_URL || ''
 
   if (databaseUrl.startsWith('libsql://')) {
-    // Dynamic import for Vercel serverless compatibility
-    const { createClient } = require('@libsql/client')
-    const { PrismaLibSql } = require('@prisma/adapter-libsql')
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const libsqlModule = require('@libsql/client')
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const adapterModule = require('@prisma/adapter-libsql')
+
+    const createClient = libsqlModule.createClient
+    const PrismaLibSql = adapterModule.PrismaLibSql
+
+    if (!createClient || !PrismaLibSql) {
+      throw new Error(`Missing exports: createClient=${!!createClient}, PrismaLibSql=${!!PrismaLibSql}, adapterKeys=${Object.keys(adapterModule).join(',')}`)
+    }
 
     const authToken = process.env.TURSO_AUTH_TOKEN || process.env.DATABASE_AUTH_TOKEN
 
@@ -47,6 +55,5 @@ export const db = new Proxy({} as PrismaClient, {
 })
 
 if (process.env.NODE_ENV !== 'production') {
-  // In dev, eagerly initialize for better error messages
   getPrismaClient()
 }
