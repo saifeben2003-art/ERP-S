@@ -56,3 +56,22 @@ Stage Summary:
 - All 584 translation keys utilized correctly
 - Welcome guide with 5 clickable navigation cards on dashboard
 - No modifications to translations.ts, prisma schema, API routes, or types
+---
+Task ID: 1
+Agent: Main Agent
+Task: Fix cargo creation failure on production ("Failed to create cargo item")
+
+Work Log:
+- Identified root cause: `_none` value from project Select dropdown being sent as foreign key ID
+- Fixed cargo-page.tsx handleSubmit: `projectId: form.projectId && form.projectId !== '_none' ? form.projectId : null`
+- Fixed cargo API route: server-side `_none` defense for both locationId and projectId
+- Fixed cargo form button: now requires weight/length/width/height to be filled (not just description, category, commodity)
+- Improved ALL 23 API catch blocks across 9 route files to return actual error messages
+- Verified fix locally with browser automation: 2 successful cargo creations (with project and without)
+- Pushed to GitHub, Vercel auto-deploys from there
+
+Stage Summary:
+- Root cause: Select component value `_none` for "بدون" (None) was sent as string ID to Prisma, causing FK constraint violation
+- Fix: Double defense - frontend filters `_none` before sending, API also strips `_none` server-side
+- All 23 API error responses now include actual error.message for better debugging
+- Cargo form now properly requires all 6 fields: description, weight, L, W, H, liftCategory, commodityType
