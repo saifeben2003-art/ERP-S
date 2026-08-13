@@ -30,7 +30,8 @@ export async function GET(
     return NextResponse.json({ data: cargo });
   } catch (error) {
     console.error('Error fetching cargo item:', error);
-    return NextResponse.json({ error: 'Failed to fetch cargo item' }, { status: 500 });
+    const message = error instanceof Error ? error.message : 'Failed to fetch cargo item';
+    return NextResponse.json({ error: message }, { status: 500 });
   }
 }
 
@@ -86,7 +87,8 @@ export async function PUT(
     return NextResponse.json({ data: cargo });
   } catch (error) {
     console.error('Error updating cargo item:', error);
-    return NextResponse.json({ error: 'Failed to update cargo item' }, { status: 500 });
+    const message = error instanceof Error ? error.message : 'Failed to update cargo item';
+    return NextResponse.json({ error: message }, { status: 500 });
   }
 }
 
@@ -114,6 +116,7 @@ export async function DELETE(
     return NextResponse.json({ data: cargo, message: 'Cargo item soft-deleted (status set to DISPATCHED)' });
   } catch (error) {
     console.error('Error deleting cargo item:', error);
-    return NextResponse.json({ error: 'Failed to delete cargo item' }, { status: 500 });
+    const message = error instanceof Error ? error.message : 'Failed to delete cargo item';
+    return NextResponse.json({ error: message }, { status: 500 });
   }
 }

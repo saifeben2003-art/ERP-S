@@ -27,7 +27,8 @@ export async function GET(
     return NextResponse.json({ data: location });
   } catch (error) {
     console.error('Error fetching location:', error);
-    return NextResponse.json({ error: 'Failed to fetch location' }, { status: 500 });
+    const message = error instanceof Error ? error.message : 'Failed to fetch location';
+    return NextResponse.json({ error: message }, { status: 500 });
   }
 }
 
@@ -80,7 +81,8 @@ export async function PUT(
     return NextResponse.json({ data: location });
   } catch (error) {
     console.error('Error updating location:', error);
-    return NextResponse.json({ error: 'Failed to update location' }, { status: 500 });
+    const message = error instanceof Error ? error.message : 'Failed to update location';
+    return NextResponse.json({ error: message }, { status: 500 });
   }
 }
 
@@ -113,6 +115,7 @@ export async function DELETE(
     return NextResponse.json({ message: 'Location deleted successfully' });
   } catch (error) {
     console.error('Error deleting location:', error);
-    return NextResponse.json({ error: 'Failed to delete location' }, { status: 500 });
+    const message = error instanceof Error ? error.message : 'Failed to delete location';
+    return NextResponse.json({ error: message }, { status: 500 });
   }
 }

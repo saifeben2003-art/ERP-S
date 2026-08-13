@@ -129,7 +129,7 @@ export function CargoPage() {
       blReference: form.blReference || null,
       centerOfGravity: form.centerOfGravity || null,
       liftingPoints: form.liftingPoints ? parseInt(form.liftingPoints) : null,
-      projectId: form.projectId || null,
+      projectId: form.projectId && form.projectId !== '_none' ? form.projectId : null,
     };
 
     try {
@@ -440,7 +440,7 @@ export function CargoPage() {
           <DialogFooter>
             <Button variant="outline" onClick={() => { setShowAdd(false); setEditing(null); setForm(emptyForm); }}
               className="border-slate-700 text-slate-300 hover:bg-slate-800">{t('common.cancel')}</Button>
-            <Button onClick={handleSubmit} disabled={submitting || !form.description || !form.liftCategory || !form.commodityType}
+            <Button onClick={handleSubmit} disabled={submitting || !form.description || !form.weight || !form.length || !form.width || !form.height || !form.liftCategory || !form.commodityType}
               className="bg-amber-500 hover:bg-amber-600 text-slate-900">
               {submitting ? t('common.saving') : editing ? t('common.update') : t('common.create')}
             </Button>

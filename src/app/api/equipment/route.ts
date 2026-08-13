@@ -34,7 +34,8 @@ export async function GET(request: NextRequest) {
     });
   } catch (error) {
     console.error('Error fetching equipment:', error);
-    return NextResponse.json({ error: 'Failed to fetch equipment' }, { status: 500 });
+    const message = error instanceof Error ? error.message : 'Failed to fetch equipment';
+    return NextResponse.json({ error: message }, { status: 500 });
   }
 }
 
@@ -88,6 +89,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ data: equipment }, { status: 201 });
   } catch (error) {
     console.error('Error creating equipment:', error);
-    return NextResponse.json({ error: 'Failed to create equipment' }, { status: 500 });
+    const message = error instanceof Error ? error.message : 'Failed to create equipment';
+    return NextResponse.json({ error: message }, { status: 500 });
   }
 }

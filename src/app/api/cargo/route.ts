@@ -52,7 +52,8 @@ export async function GET(request: NextRequest) {
     });
   } catch (error) {
     console.error('Error fetching cargo items:', error);
-    return NextResponse.json({ error: 'Failed to fetch cargo items' }, { status: 500 });
+    const message = error instanceof Error ? error.message : 'Failed to fetch cargo items';
+    return NextResponse.json({ error: message }, { status: 500 });
   }
 }
 
@@ -105,8 +106,8 @@ export async function POST(request: NextRequest) {
         specialHandling: body.specialHandling || null,
         hazardClass: body.hazardClass || null,
         status: body.status || 'IN_TRANSIT',
-        locationId: body.locationId || null,
-        projectId: body.projectId || null,
+        locationId: body.locationId && body.locationId !== '_none' ? body.locationId : null,
+        projectId: body.projectId && body.projectId !== '_none' ? body.projectId : null,
         clientName: body.clientName || null,
         poReference: body.poReference || null,
         blReference: body.blReference || null,
@@ -122,6 +123,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ data: cargo }, { status: 201 });
   } catch (error) {
     console.error('Error creating cargo item:', error);
-    return NextResponse.json({ error: 'Failed to create cargo item' }, { status: 500 });
+    const message = error instanceof Error ? error.message : 'Failed to create cargo item';
+    return NextResponse.json({ error: message }, { status: 500 });
   }
 }

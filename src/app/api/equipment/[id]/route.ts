@@ -19,7 +19,8 @@ export async function GET(
     return NextResponse.json({ data: equipment });
   } catch (error) {
     console.error('Error fetching equipment:', error);
-    return NextResponse.json({ error: 'Failed to fetch equipment' }, { status: 500 });
+    const message = error instanceof Error ? error.message : 'Failed to fetch equipment';
+    return NextResponse.json({ error: message }, { status: 500 });
   }
 }
 
@@ -70,7 +71,8 @@ export async function PUT(
     return NextResponse.json({ data: equipment });
   } catch (error) {
     console.error('Error updating equipment:', error);
-    return NextResponse.json({ error: 'Failed to update equipment' }, { status: 500 });
+    const message = error instanceof Error ? error.message : 'Failed to update equipment';
+    return NextResponse.json({ error: message }, { status: 500 });
   }
 }
 
@@ -92,6 +94,7 @@ export async function DELETE(
     return NextResponse.json({ message: 'Equipment deleted successfully' });
   } catch (error) {
     console.error('Error deleting equipment:', error);
-    return NextResponse.json({ error: 'Failed to delete equipment' }, { status: 500 });
+    const message = error instanceof Error ? error.message : 'Failed to delete equipment';
+    return NextResponse.json({ error: message }, { status: 500 });
   }
 }

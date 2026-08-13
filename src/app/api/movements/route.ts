@@ -64,7 +64,8 @@ export async function GET(request: NextRequest) {
     });
   } catch (error) {
     console.error('Error fetching movements:', error);
-    return NextResponse.json({ error: 'Failed to fetch movements' }, { status: 500 });
+    const message = error instanceof Error ? error.message : 'Failed to fetch movements';
+    return NextResponse.json({ error: message }, { status: 500 });
   }
 }
 
@@ -232,6 +233,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ data: result }, { status: 201 });
   } catch (error) {
     console.error('Error creating movement:', error);
-    return NextResponse.json({ error: 'Failed to create movement' }, { status: 500 });
+    const message = error instanceof Error ? error.message : 'Failed to create movement';
+    return NextResponse.json({ error: message }, { status: 500 });
   }
 }

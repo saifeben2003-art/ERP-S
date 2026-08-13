@@ -33,7 +33,8 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ items: data, totalPages: 1 });
   } catch (error) {
     console.error('Error fetching locations:', error);
-    return NextResponse.json({ error: 'Failed to fetch locations' }, { status: 500 });
+    const message = error instanceof Error ? error.message : 'Failed to fetch locations';
+    return NextResponse.json({ error: message }, { status: 500 });
   }
 }
 
@@ -76,6 +77,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ data: location }, { status: 201 });
   } catch (error) {
     console.error('Error creating location:', error);
-    return NextResponse.json({ error: 'Failed to create location' }, { status: 500 });
+    const message = error instanceof Error ? error.message : 'Failed to create location';
+    return NextResponse.json({ error: message }, { status: 500 });
   }
 }
