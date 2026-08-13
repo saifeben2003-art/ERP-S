@@ -1,16 +1,21 @@
 import { PrismaClient } from '@prisma/client'
-import { createClient } from '@libsql/client'
-import { PrismaLibSql } from '@prisma/adapter-libsql'
 
 const globalForPrisma = globalThis as unknown as {
   prisma: PrismaClient | undefined
 }
 
-function createPrismaClient(): PrismaClient {
+let _db: PrismaClient | undefined
+
+function getPrismaClient(): PrismaClient {
+  if (_db) return _db
+
   const databaseUrl = process.env.DATABASE_URL || ''
 
-  // Use libsql adapter for Turso cloud database
   if (databaseUrl.startsWith('libsql://')) {
+    // Dynamic import for Vercel serverless compatibility
+    const { createClient } = require('@libsql/client')
+    const { PrismaLibSql } = require('@prisma/adapter-libsql')
+
     const authToken = process.env.TURSO_AUTH_TOKEN || process.env.DATABASE_AUTH_TOKEN
 
     const libsql = createClient({
@@ -19,19 +24,32 @@ function createPrismaClient(): PrismaClient {
     })
     const adapter = new PrismaLibSql(libsql)
 
-    return new PrismaClient({
+    _db = new PrismaClient({
       adapter,
       datasources: { db: { url: 'libsql://dummy' } },
     })
+  } else {
+    _db = new PrismaClient({
+      datasources: { db: { url: databaseUrl || 'file:./db/custom.db' } },
+    })
   }
 
-  // Local SQLite file
-  return new PrismaClient({
-    log: ['query'],
-    datasources: { db: { url: databaseUrl || 'file:./db/custom.db' } },
-  })
+  return _db
 }
 
-export const db = globalForPrisma.prisma ?? createPrismaClient()
+// Lazy initialization via Proxy
+export const db = new Proxy({} as PrismaClient, {
+  get(_target, prop) {
+    const client = getPrismaClient()
+    const value = (client as any)[prop]
+    if (typeof value === 'function') {
+      return value.bind(client)
+    }
+    return value
+  },
+})
 
-if (process.env.NODE_ENV !== 'production') globalForPrisma.prisma = db
+if (process.env.NODE_ENV !== 'production') {
+  // In dev, eagerly initialize for better error messages
+  getPrismaClient()
+}
