@@ -1,28 +1,36 @@
 import { NextResponse } from "next/server";
-import { createClient } from '@libsql/client';
-import { PrismaLibSQL } from '@prisma/adapter-libsql';
-import { PrismaClient } from '@/generated/client';
 
 export async function GET() {
   const dbUrl = process.env.DATABASE_URL || 'NOT_SET';
   const authToken = process.env.TURSO_AUTH_TOKEN || process.env.DATABASE_AUTH_TOKEN;
 
-  // Step 1: Create adapter
-  const libsql = createClient({ url: dbUrl, authToken });
-  const adapter = new PrismaLibSQL(libsql);
+  let result: Record<string, string> = {};
 
-  // Step 2: Create PrismaClient with adapter
-  let step2 = 'not_run';
   try {
-    const client = new PrismaClient({ adapter });
-    step2 = 'client_created';
+    // Dynamic imports only
+    const { createClient } = await import('@libsql/client');
+    const { PrismaLibSQL } = await import('@prisma/adapter-libsql');
+    const { PrismaClient } = await import('@/generated/client');
 
-    // Step 3: Run a query
-    const count = await client.cargoItem.count();
-    step2 = 'ok:' + count;
+    result.step1 = 'imports_ok';
+
+    const libsql = createClient({ url: dbUrl, authToken });
+    const adapter = new PrismaLibSQL(libsql);
+    result.step2 = 'adapter_ok:' + adapter.adapterName + ',' + adapter.provider;
+
+    const client = new (PrismaClient as any)({ adapter });
+    result.step3 = 'client_created';
+
+    // Try to connect
+    await (client as any).$connect();
+    result.step4 = 'connected';
+
+    const count = await (client as any).cargoItem.count();
+    result.step5 = 'count:' + count;
   } catch (e: any) {
-    step2 = 'err:' + e.message?.substring(0, 400);
+    result.error = e.message?.substring(0, 400);
+    result.stack = e.stack?.substring(0, 200);
   }
 
-  return NextResponse.json({ step2 });
+  return NextResponse.json(result);
 }
