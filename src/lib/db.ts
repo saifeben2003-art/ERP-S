@@ -1,4 +1,4 @@
-import { PrismaClient } from '@prisma/client'
+import { PrismaClient } from '@/generated/client'
 
 let _db: PrismaClient | null = null
 
