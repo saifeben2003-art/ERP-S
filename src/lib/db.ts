@@ -1,59 +1,47 @@
 import { PrismaClient } from '@prisma/client'
 
-const globalForPrisma = globalThis as unknown as {
-  prisma: PrismaClient | undefined
-}
+let _db: PrismaClient | null = null
 
-let _db: PrismaClient | undefined
+export function getDb(): PrismaClient {
+  if (!_db) {
+    const databaseUrl = process.env.DATABASE_URL || ''
+    console.log('[db] DATABASE_URL:', databaseUrl ? databaseUrl.substring(0, 30) + '...' : 'EMPTY')
+    console.log('[db] TURSO_AUTH_TOKEN:', process.env.TURSO_AUTH_TOKEN ? 'SET' : 'NOT_SET')
 
-function getPrismaClient(): PrismaClient {
-  if (_db) return _db
+    if (databaseUrl.startsWith('libsql://')) {
+      // eslint-disable-next-line @typescript-eslint/no-require-imports
+      const { createClient } = require('@libsql/client')
+      // eslint-disable-next-line @typescript-eslint/no-require-imports
+      const adapterModule = require('@prisma/adapter-libsql')
+      console.log('[db] adapter exports:', Object.keys(adapterModule))
 
-  const databaseUrl = process.env.DATABASE_URL || ''
+      const AdapterClass = adapterModule.PrismaLibSQL || adapterModule.PrismaLibSql
+      console.log('[db] Adapter class:', AdapterClass?.name || 'NOT FOUND')
 
-  if (databaseUrl.startsWith('libsql://')) {
-    // eslint-disable-next-line @typescript-eslint/no-require-imports
-    const libsqlModule = require('@libsql/client')
-    // eslint-disable-next-line @typescript-eslint/no-require-imports
-    const adapterModule = require('@prisma/adapter-libsql')
+      if (!AdapterClass) throw new Error('No adapter class found in @prisma/adapter-libsql')
 
-    const createClient = libsqlModule.createClient
-    const PrismaLibSQL = adapterModule.PrismaLibSQL
+      const libsql = createClient({ url: databaseUrl, authToken: process.env.TURSO_AUTH_TOKEN || process.env.DATABASE_AUTH_TOKEN })
+      const adapter = new AdapterClass(libsql)
+      console.log('[db] Adapter created:', adapter?.constructor?.name)
 
-    if (!createClient || !PrismaLibSQL) {
-      throw new Error(`Missing exports: createClient=${!!createClient}, PrismaLibSQL=${!!PrismaLibSQL}, adapterKeys=${Object.keys(adapterModule).join(',')}`)
+      _db = new PrismaClient({ adapter })
+      console.log('[db] PrismaClient created with adapter')
+    } else {
+      _db = new PrismaClient({
+        datasources: { db: { url: databaseUrl || 'file:./db/custom.db' } },
+      })
+      console.log('[db] PrismaClient created with datasource')
     }
-
-    const authToken = process.env.TURSO_AUTH_TOKEN || process.env.DATABASE_AUTH_TOKEN
-
-    const libsql = createClient({
-      url: databaseUrl,
-      authToken,
-    })
-    const adapter = new PrismaLibSQL(libsql)
-
-    _db = new PrismaClient({ adapter })
-  } else {
-    _db = new PrismaClient({
-      datasources: { db: { url: databaseUrl || 'file:./db/custom.db' } },
-    })
   }
-
   return _db
 }
 
-// Lazy initialization via Proxy
+// Proxy for backward compatibility
 export const db = new Proxy({} as PrismaClient, {
-  get(_target, prop) {
-    const client = getPrismaClient()
-    const value = (client as any)[prop]
-    if (typeof value === 'function') {
-      return value.bind(client)
-    }
+  get(_target, prop, receiver) {
+    const client = getDb()
+    const value = Reflect.get(client, prop, receiver)
+    if (typeof value === 'function') return value.bind(client)
     return value
   },
 })
-
-if (process.env.NODE_ENV !== 'production') {
-  getPrismaClient()
-}
