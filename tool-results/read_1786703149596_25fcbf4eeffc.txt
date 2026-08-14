@@ -1,0 +1,773 @@
+    14→import { Skeleton } from '@/components/ui/skeleton';
+    15→import { Separator } from '@/components/ui/separator';
+    16→import { ScrollArea } from '@/components/ui/scroll-area';
+    17→import { Checkbox } from '@/components/ui/checkbox';
+    18→import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
+    19→import {
+    20→  Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
+    21→} from '@/components/ui/table';
+    22→import {
+    23→  Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter,
+    24→} from '@/components/ui/dialog';
+    25→import {
+    26→  Sheet, SheetContent, SheetHeader, SheetTitle,
+    27→} from '@/components/ui/sheet';
+    28→import {
+    29→  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
+    30→} from '@/components/ui/select';
+    31→import { toast } from 'sonner';
+    32→import { useTranslation, translateEquipmentType, translateStatus } from '@/lib/translations';
+    33→import type { Equipment, EquipmentType, EquipmentStatus } from '@/types/wms';
+    34→
+    35→// ==================== CONSTANTS ====================
+    36→
+    37→const statusStyles: Record<EquipmentStatus, string> = {
+    38→  AVAILABLE: 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20',
+    39→  IN_USE: 'bg-amber-500/10 text-amber-400 border-amber-500/20',
+    40→  MAINTENANCE: 'bg-red-500/10 text-red-400 border-red-500/20',
+    41→  OUT_OF_SERVICE: 'bg-slate-500/10 text-slate-400 border-slate-500/20',
+    42→};
+    43→
+    44→const typeStyles: Record<EquipmentType, string> = {
+    45→  CRANE: 'bg-amber-500/10 text-amber-400 border-amber-500/20',
+    46→  FORKLIFT: 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20',
+    47→  SPREADER_BAR: 'bg-orange-500/10 text-orange-400 border-orange-500/20',
+    48→  SLING: 'bg-teal-500/10 text-teal-400 border-teal-500/20',
+    49→  SHACKLE: 'bg-cyan-500/10 text-cyan-400 border-cyan-500/20',
+    50→  BEAM: 'bg-red-500/10 text-red-400 border-red-500/20',
+    51→  JACK: 'bg-slate-400/10 text-slate-300 border-slate-400/20',
+    52→  ROLLER: 'bg-purple-500/10 text-purple-400 border-purple-500/20',
+    53→};
+    54→
+    55→type CertStatus = 'valid' | 'expiring' | 'expired' | 'none';
+    56→
+    57→function getCertStatus(dateStr: string | null): CertStatus {
+    58→  if (!dateStr) return 'none';
+    59→  const diff = (new Date(dateStr).getTime() - Date.now()) / (1000 * 60 * 60 * 24);
+    60→  if (diff < 0) return 'expired';
+    61→  if (diff <= 30) return 'expiring';
+    62→  return 'valid';
+    63→}
+    64→
+    65→function getCertDays(dateStr: string | null): number {
+    66→  if (!dateStr) return 0;
+    67→  return Math.ceil((new Date(dateStr).getTime() - Date.now()) / (1000 * 60 * 60 * 24));
+    68→}
+    69→
+    70→const equipmentTypes: EquipmentType[] = ['CRANE', 'FORKLIFT', 'SPREADER_BAR', 'SLING', 'SHACKLE', 'BEAM', 'JACK', 'ROLLER'];
+    71→const equipmentStatuses: EquipmentStatus[] = ['AVAILABLE', 'IN_USE', 'MAINTENANCE', 'OUT_OF_SERVICE'];
+    72→
+    73→const emptyForm = {
+    74→  name: '', type: '' as string, capacity: '', manufacturer: '',
+    75→  model: '', serialNumber: '', status: 'AVAILABLE' as string,
+    76→  currentLocation: '', lastInspection: '', nextInspection: '',
+    77→  certificationId: '', certExpiry: '',
+    78→};
+    79→
+    80→interface EquipmentListResponse { items: Equipment[]; total: number; }
+    81→
+    82→// ==================== MAIN COMPONENT ====================
+    83→
+    84→export function EquipmentPage() {
+    85→  const [equipment, setEquipment] = useState<Equipment[]>([]);
+    86→  const [loading, setLoading] = useState(true);
+    87→  const [typeFilter, setTypeFilter] = useState('');
+    88→  const [statusFilter, setStatusFilter] = useState('');
+    89→  const [searchQuery, setSearchQuery] = useState('');
+    90→  const [showAdd, setShowAdd] = useState(false);
+    91→  const [editing, setEditing] = useState<Equipment | null>(null);
+    92→  const [deleting, setDeleting] = useState<Equipment | null>(null);
+    93→  const [detailEquip, setDetailEquip] = useState<Equipment | null>(null);
+    94→  const [form, setForm] = useState(emptyForm);
+    95→  const [submitting, setSubmitting] = useState(false);
+    96→  const [selectedRows, setSelectedRows] = useState<Set<string>>(new Set());
+    97→  const [statusChanging, setStatusChanging] = useState(false);
+    98→  const { t } = useTranslation();
+    99→
+   100→  const cardBorder = 'dark:border-slate-800 border-slate-200 dark:bg-slate-900/50 bg-white';
+   101→  const textPrimary = 'dark:text-slate-100 text-slate-900';
+   102→  const textSecondary = 'dark:text-slate-400 text-slate-500';
+   103→  const textTertiary = 'dark:text-slate-500 text-slate-400';
+   104→  const inputCls = 'dark:border-slate-700 border-slate-300 dark:bg-slate-800 bg-white dark:text-slate-200 text-slate-900';
+   105→  const selectContentCls = 'dark:border-slate-700 border-slate-200 dark:bg-slate-800 bg-white';
+   106→  const selectItemCls = 'dark:text-slate-200 text-slate-700 dark:focus:bg-slate-700 focus:bg-slate-100';
+   107→  const headCls = 'text-xs dark:text-slate-500 text-slate-400';
+   108→  const cellCls = 'py-3 text-xs';
+   109→  const rowBorder = 'dark:border-slate-800 border-slate-200';
+   110→
+   111→  const fetchEquipment = useCallback(async () => {
+   112→    setLoading(true);
+   113→    const params = new URLSearchParams({
+   114→      limit: '100',
+   115→      ...(typeFilter && { type: typeFilter }),
+   116→      ...(statusFilter && { status: statusFilter }),
+   117→    });
+   118→    try {
+   119→      const res = await fetch(`/api/equipment?${params}`);
+   120→      const data: EquipmentListResponse = await res.json();
+   121→      if (!res.ok) { setEquipment([]); return; }
+   122→      setEquipment(data.items || []);
+   123→    } catch { toast.error(t('equipment.toast.fetchFailed')); }
+   124→    finally { setLoading(false); }
+   125→  }, [typeFilter, statusFilter, t]);
+   126→
+   127→  useEffect(() => { fetchEquipment(); }, [fetchEquipment]);
+   128→
+   129→  const filteredEquipment = useMemo(() => {
+   130→    if (!searchQuery) return equipment;
+   131→    const q = searchQuery.toLowerCase();
+   132→    return equipment.filter(
+   133→      (eq) =>
+   134→        eq.name.toLowerCase().includes(q) ||
+   135→        eq.equipmentCode.toLowerCase().includes(q) ||
+   136→        (eq.manufacturer && eq.manufacturer.toLowerCase().includes(q)) ||
+   137→        (eq.model && eq.model.toLowerCase().includes(q))
+   138→    );
+   139→  }, [equipment, searchQuery]);
+   140→
+   141→  const handleDetailStatusChange = async (newStatus: string) => {
+   142→    if (!detailEquip || newStatus === detailEquip.status) return;
+   143→    setStatusChanging(true);
+   144→    try {
+   145→      const res = await fetch(`/api/equipment/${detailEquip.id}`, {
+   146→        method: 'PUT', headers: { 'Content-Type': 'application/json' },
+   147→        body: JSON.stringify({ status: newStatus }),
+   148→      });
+   149→      if (!res.ok) throw new Error('Failed');
+   150→      toast.success(t('detail.equipment.statusChanged'));
+   151→      setDetailEquip({ ...detailEquip, status: newStatus as EquipmentStatus });
+   152→      fetchEquipment();
+   153→    } catch { toast.error(t('detail.equipment.statusChangeFailed')); }
+   154→    finally { setStatusChanging(false); }
+   155→  };
+   156→
+   157→  const handleSubmit = async () => {
+   158→    setSubmitting(true);
+   159→    const payload: Record<string, unknown> = {
+   160→      name: form.name, type: form.type,
+   161→      capacity: form.capacity ? parseFloat(form.capacity) : null,
+   162→      manufacturer: form.manufacturer || null, model: form.model || null,
+   163→      serialNumber: form.serialNumber || null, status: form.status,
+   164→      currentLocation: form.currentLocation || null,
+   165→      lastInspection: form.lastInspection || null, nextInspection: form.nextInspection || null,
+   166→      certificationId: form.certificationId || null, certExpiry: form.certExpiry || null,
+   167→    };
+   168→    try {
+   169→      const res = await fetch(editing ? `/api/equipment/${editing.id}` : '/api/equipment', {
+   170→        method: editing ? 'PUT' : 'POST',
+   171→        headers: { 'Content-Type': 'application/json' },
+   172→        body: JSON.stringify(payload),
+   173→      });
+   174→      if (!res.ok) { const err = await res.json(); throw new Error(err.error || 'Failed'); }
+   175→      toast.success(editing ? t('equipment.toast.updated') : t('equipment.toast.created'));
+   176→      setShowAdd(false); setEditing(null); setForm(emptyForm); fetchEquipment();
+   177→    } catch (e: unknown) { toast.error(e instanceof Error ? e.message : 'Failed'); }
+   178→    finally { setSubmitting(false); }
+   179→  };
+   180→
+   181→  const handleDelete = async () => {
+   182→    if (!deleting) return;
+   183→    try {
+   184→      await fetch(`/api/equipment/${deleting.id}`, { method: 'DELETE' });
+   185→      toast.success(t('equipment.toast.deleted'));
+   186→      setDeleting(null); setDetailEquip(null); fetchEquipment();
+   187→    } catch { toast.error(t('equipment.toast.deleteFailed')); }
+   188→  };
+   189→
+   190→  const handleBulkDelete = async () => {
+   191→    try {
+   192→      await Promise.all(Array.from(selectedRows).map(id => fetch(`/api/equipment/${id}`, { method: 'DELETE' })));
+   193→      toast.success(t('equipment.toast.deleted'));
+   194→      setSelectedRows(new Set()); fetchEquipment();
+   195→    } catch { toast.error(t('equipment.toast.deleteFailed')); }
+   196→  };
+   197→
+   198→  const openEdit = (eq: Equipment) => {
+   199→    setEditing(eq);
+   200→    setForm({
+   201→      name: eq.name, type: eq.type,
+   202→      capacity: eq.capacity ? String(eq.capacity) : '',
+   203→      manufacturer: eq.manufacturer || '', model: eq.model || '',
+   204→      serialNumber: eq.serialNumber || '', status: eq.status,
+   205→      currentLocation: eq.currentLocation || '',
+   206→      lastInspection: eq.lastInspection ? eq.lastInspection.split('T')[0] : '',
+   207→      nextInspection: eq.nextInspection ? eq.nextInspection.split('T')[0] : '',
+   208→      certificationId: eq.certificationId || '',
+   209→      certExpiry: eq.certExpiry ? eq.certExpiry.split('T')[0] : '',
+   210→    });
+   211→  };
+   212→
+   213→  const toggleSelectAll = () => {
+   214→    if (selectedRows.size === filteredEquipment.length) setSelectedRows(new Set());
+   215→    else setSelectedRows(new Set(filteredEquipment.map(e => e.id)));
+   216→  };
+   217→
+   218→  const toggleRow = (id: string) => {
+   219→    const next = new Set(selectedRows);
+   220→    if (next.has(id)) next.delete(id); else next.add(id);
+   221→    setSelectedRows(next);
+   222→  };
+   223→
+   224→  // Detail sheet computations
+   225→  const detailCertStatus = detailEquip ? getCertStatus(detailEquip.certExpiry) : 'none';
+   226→  const detailCertDays = detailEquip ? getCertDays(detailEquip.certExpiry) : 0;
+   227→
+   228→  const inspectionProgress = useMemo(() => {
+   229→    if (!detailEquip?.lastInspection || !detailEquip.nextInspection) return null;
+   230→    const last = new Date(detailEquip.lastInspection).getTime();
+   231→    const next = new Date(detailEquip.nextInspection).getTime();
+   232→    const now = Date.now();
+   233→    const total = next - last;
+   234→    if (total <= 0) return 100;
+   235→    return Math.min(100, Math.max(0, ((now - last) / total) * 100));
+   236→  }, [detailEquip]);
+   237→
+   238→  // Capacity utilization (simulated at 65% of max when available)
+   239→  const capacityUtil = useMemo(() => {
+   240→    if (!detailEquip?.capacity) return null;
+   241→    return Math.round(detailEquip.capacity * 0.65);
+   242→  }, [detailEquip]);
+   243→
+   244→  // ==================== RENDER ====================
+   245→
+   246→  return (
+   247→    <div className="space-y-6">
+   248→      {/* Header */}
+   249→      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+   250→        <div>
+   251→          <h1 className={`text-2xl font-bold ${textPrimary}`}>{t('equipment.title')}</h1>
+   252→          <p className={`text-sm ${textSecondary} mt-1`}>{t('equipment.subtitle')}</p>
+   253→        </div>
+   254→        <Button onClick={() => { setForm(emptyForm); setShowAdd(true); }} className="bg-amber-500 hover:bg-amber-600 text-slate-900 font-medium transition-all duration-200 hover:shadow-md">
+   255→          <Plus className="h-4 w-4 ml-2" /> {t('equipment.addEquipment')}
+   256→        </Button>
+   257→      </div>
+   258→
+   259→      {/* Filters & Search */}
+   260→      <div className="flex flex-wrap gap-3 items-center">
+   261→        <div className="relative flex-1 min-w-[200px] max-w-sm">
+   262→          <Search className={`absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 ${textTertiary}`} />
+   263→          <Input placeholder={t('equipment.subtitle')} value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} className={`${inputCls} pl-3 pr-9 text-sm`} />
+   264→        </div>
+   265→        <Select value={typeFilter || 'ALL'} onValueChange={(v) => setTypeFilter(v === 'ALL' ? '' : v)}>
+   266→          <SelectTrigger className={`w-44 ${inputCls} text-sm`}><SelectValue placeholder={t('common.allTypes')} /></SelectTrigger>
+   267→          <SelectContent className={selectContentCls}>
+   268→            <SelectItem value="ALL" className={selectItemCls}>{t('common.allTypes')}</SelectItem>
+   269→            {equipmentTypes.map((et) => <SelectItem key={et} value={et} className={selectItemCls}>{translateEquipmentType(et)}</SelectItem>)}
+   270→          </SelectContent>
+   271→        </Select>
+   272→        <Select value={statusFilter || 'ALL'} onValueChange={(v) => setStatusFilter(v === 'ALL' ? '' : v)}>
+   273→          <SelectTrigger className={`w-44 ${inputCls} text-sm`}><SelectValue placeholder={t('common.allStatuses')} /></SelectTrigger>
+   274→          <SelectContent className={selectContentCls}>
+   275→            <SelectItem value="ALL" className={selectItemCls}>{t('common.allStatuses')}</SelectItem>
+   276→            {equipmentStatuses.map((s) => <SelectItem key={s} value={s} className={selectItemCls}>{translateStatus(s)}</SelectItem>)}
+   277→          </SelectContent>
+   278→        </Select>
+   279→      </div>
+   280→
+   281→      {/* Bulk Actions */}
+   282→      {selectedRows.size > 0 && (
+   283→        <div className={`flex items-center gap-3 px-4 py-2.5 rounded-lg ${cardBorder} border transition-all duration-200`}>
+   284→          <span className={`text-sm font-medium ${textSecondary}`}>{selectedRows.size} {t('common.selected')}</span>
+   285→          <Button variant="destructive" size="sm" onClick={handleBulkDelete} className="text-xs">
+   286→            <Trash2 className="h-3.5 w-3.5 ml-1" /> {t('common.delete')}
+   287→          </Button>
+   288→          <Button variant="outline" size="sm" onClick={() => setSelectedRows(new Set())} className={`text-xs ${inputCls} border transition-all duration-200`}>
+   289→            <X className="h-3.5 w-3.5 ml-1" /> {t('common.clear')}
+   290→          </Button>
+   291→        </div>
+   292→      )}
+   293→
+   294→      {/* Table */}
+   295→      <Card className={`${cardBorder} transition-all duration-200`}>
+   296→        <CardContent className="p-0">
+   297→          <div className="max-h-[500px] overflow-y-auto">
+   298→            <Table>
+   299→              <TableHeader>
+   300→                <TableRow className={`${rowBorder} hover:bg-transparent`}>
+   301→                  <TableHead className="w-10">
+   302→                    <Checkbox checked={filteredEquipment.length > 0 && selectedRows.size === filteredEquipment.length} onCheckedChange={toggleSelectAll} className="dark:border-slate-600 border-slate-300" />
+   303→                  </TableHead>
+   304→                  <TableHead className={headCls}>{t('equipment.table.code')}</TableHead>
+   305→                  <TableHead className={headCls}>{t('equipment.table.name')}</TableHead>
+   306→                  <TableHead className={`${headCls} hidden sm:table-cell`}>{t('equipment.table.type')}</TableHead>
+   307→                  <TableHead className={`${headCls} hidden md:table-cell`}>{t('equipment.table.capacity')}</TableHead>
+   308→                  <TableHead className={`${headCls} hidden lg:table-cell`}>{t('equipment.table.manufacturer')}</TableHead>
+   309→                  <TableHead className={headCls}>{t('equipment.table.status')}</TableHead>
+   310→                  <TableHead className={`${headCls} hidden xl:table-cell`}>{t('equipment.table.location')}</TableHead>
+   311→                  <TableHead className={`${headCls} hidden xl:table-cell`}>{t('equipment.table.certExpiry')}</TableHead>
+   312→                  <TableHead className={`${headCls} text-left w-24`}>{t('common.actions')}</TableHead>
+   313→                </TableRow>
+   314→              </TableHeader>
+   315→              <TableBody>
+   316→                {loading
+   317→                  ? Array.from({ length: 5 }).map((_, i) => (
+   318→                      <TableRow key={i} className={`${rowBorder} hover:bg-transparent`}>
+   319→                        <TableCell className="py-3"><Skeleton className="h-4 w-4 dark:bg-slate-800 bg-slate-100" /></TableCell>
+   320→                        {Array.from({ length: 8 }).map((_, j) => <TableCell key={j} className="py-3"><Skeleton className="h-4 w-16 dark:bg-slate-800 bg-slate-100" /></TableCell>)}
+   321→                      </TableRow>
+   322→                    ))
+   323→                  : filteredEquipment.length === 0
+   324→                    ? <TableRow className={`${rowBorder} hover:bg-transparent`}>
+   325→                        <TableCell colSpan={10} className="text-center py-12">
+   326→                          <div className="flex flex-col items-center gap-2">
+   327→                            <PackageOpen className={`h-10 w-10 ${textTertiary}`} />
+   328→                            <p className={`text-sm ${textSecondary}`}>{t('detail.equipment.emptyState')}</p>
+   329→                          </div>
+   330→                        </TableCell>
+   331→                      </TableRow>
+   332→                    : filteredEquipment.map((eq) => (
+   333→                      <TableRow key={eq.id} className={`${rowBorder} dark:hover:bg-slate-800/50 hover:bg-slate-50 cursor-pointer transition-all duration-200 group ${selectedRows.has(eq.id) ? 'dark:bg-amber-500/5 bg-amber-50' : ''} ${detailEquip?.id === eq.id ? 'dark:bg-amber-500/10 bg-amber-100/50' : ''}`} onClick={() => setDetailEquip(eq)}>
+   334→                        <TableCell className={cellCls} onClick={(e) => e.stopPropagation()}>
+   335→                          <Checkbox checked={selectedRows.has(eq.id)} onCheckedChange={() => toggleRow(eq.id)} className="dark:border-slate-600 border-slate-300" />
+   336→                        </TableCell>
+   337→                        <TableCell className={`${cellCls} font-mono font-medium text-amber-400/80 group-hover:text-amber-400 transition-colors duration-200`}>{eq.equipmentCode}</TableCell>
+   338→                        <TableCell className={`${cellCls} ${textPrimary} font-medium group-hover:text-amber-400 transition-colors duration-200`}>{eq.name}</TableCell>
+   339→                        <TableCell className={`${cellCls} hidden sm:table-cell`}>
+   340→                          <Badge variant="outline" className={`text-[10px] ${typeStyles[eq.type]} transition-all duration-200`}>{translateEquipmentType(eq.type)}</Badge>
+   341→                        </TableCell>
+   342→                        <TableCell className={`${cellCls} ${textSecondary} hidden md:table-cell`}>{eq.capacity ? `${eq.capacity}t` : '—'}</TableCell>
+   343→                        <TableCell className={`${cellCls} ${textSecondary} hidden lg:table-cell`}>{eq.manufacturer || '—'}</TableCell>
+   344→                        <TableCell className={cellCls}>
+   345→                          <Badge variant="outline" className={`text-[10px] ${statusStyles[eq.status]} transition-all duration-200`}>{translateStatus(eq.status)}</Badge>
+   346→                        </TableCell>
+   347→                        <TableCell className={`${cellCls} ${textSecondary} hidden xl:table-cell`}>{eq.currentLocation || '—'}</TableCell>
+   348→                        <TableCell className={`${cellCls} hidden xl:table-cell`}>
+   349→                          <div className="flex items-center gap-1.5">
+   350→                            {getCertStatus(eq.certExpiry) === 'expired' && <Tooltip><TooltipTrigger><AlertTriangle className="h-3.5 w-3.5 text-red-400" /></TooltipTrigger><TooltipContent className="bg-red-900 border-red-700 text-red-200">{t('equipment.certExpired')}</TooltipContent></Tooltip>}
+   351→                            {getCertStatus(eq.certExpiry) === 'expiring' && <Tooltip><TooltipTrigger><AlertTriangle className="h-3.5 w-3.5 text-amber-400" /></TooltipTrigger><TooltipContent className="bg-amber-900 border-amber-700 text-amber-200">{t('equipment.certExpiringSoon')}</TooltipContent></Tooltip>}
+   352→                            <span className={`${cellCls} ${textSecondary}`}>{eq.certExpiry ? new Date(eq.certExpiry).toLocaleDateString() : '—'}</span>
+   353→                          </div>
+   354→                        </TableCell>
+   355→                        <TableCell className={`${cellCls} text-left`} onClick={(e) => e.stopPropagation()}>
+   356→                          <div className="flex items-center justify-start gap-1">
+   357→                            <Button variant="ghost" size="icon" className={`h-7 w-7 ${textTertiary} dark:hover:text-amber-400 hover:text-amber-600 transition-all duration-200`} onClick={() => setDetailEquip(eq)}><Eye className="h-3.5 w-3.5" /></Button>
+   358→                            <Button variant="ghost" size="icon" className={`h-7 w-7 ${textTertiary} dark:hover:text-amber-400 hover:text-amber-600 transition-all duration-200`} onClick={() => openEdit(eq)}><Pencil className="h-3.5 w-3.5" /></Button>
+   359→                            <Button variant="ghost" size="icon" className={`h-7 w-7 ${textTertiary} dark:hover:text-red-400 hover:text-red-600 transition-all duration-200`} onClick={() => setDeleting(eq)}><Trash2 className="h-3.5 w-3.5" /></Button>
+   360→                          </div>
+   361→                        </TableCell>
+   362→                      </TableRow>
+   363→                    ))}
+   364→              </TableBody>
+   365→            </Table>
+   366→          </div>
+   367→        </CardContent>
+   368→      </Card>
+   369→
+   370→      {/* ==================== DETAIL SHEET ==================== */}
+   371→      <Sheet open={!!detailEquip} onOpenChange={(open) => { if (!open) setDetailEquip(null); }}>
+   372→        <SheetContent side="left" className={`${inputCls} w-full sm:max-w-lg p-0 overflow-hidden`}>
+   373→          <ScrollArea className="h-full">
+   374→            <div className="p-6 space-y-6">
+   375→              {detailEquip && (<>
+   376→                {/* Sheet Header */}
+   377→                <SheetHeader className="text-right">
+   378→                  <SheetTitle className={`${textPrimary} text-lg`}>{detailEquip.name}</SheetTitle>
+   379→                  <div className="flex items-center gap-2 mt-1 justify-end">
+   380→                    <span className={`text-xs font-mono ${textTertiary}`}>{detailEquip.equipmentCode}</span>
+   381→                    <Badge variant="outline" className={`text-[10px] ${typeStyles[detailEquip.type]}`}>{translateEquipmentType(detailEquip.type)}</Badge>
+   382→                    <Badge variant="outline" className={`text-[10px] ${statusStyles[detailEquip.status]}`}>{translateStatus(detailEquip.status)}</Badge>
+   383→                  </div>
+   384→                </SheetHeader>
+   385→
+   386→                <Separator className="dark:bg-slate-800 bg-slate-200" />
+   387→
+   388→                {/* ===== Equipment Profile Card ===== */}
+   389→                <div className={`rounded-xl border p-5 ${cardBorder} transition-all duration-200`}>
+   390→                  <h3 className={`text-sm font-semibold mb-4 flex items-center gap-2 ${textPrimary}`}>
+   391→                    <Settings2 className="h-4 w-4 text-amber-400" />
+   392→                    {t('detail.equipment.profile')}
+   393→                  </h3>
+   394→                  <div className="grid grid-cols-2 gap-4">
+   395→                    <ProfileField icon={Gauge} label={t('detail.equipment.capacityTons')} value={detailEquip.capacity ? `${detailEquip.capacity} ${t('common.tons')}` : '—'} />
+   396→                    <ProfileField icon={Factory} label={t('detail.equipment.manufacturer')} value={detailEquip.manufacturer || '—'} />
+   397→                    <ProfileField icon={Settings2} label={t('detail.equipment.model')} value={detailEquip.model || '—'} />
+   398→                    <ProfileField icon={Hash} label={t('detail.equipment.serialNumber')} value={detailEquip.serialNumber || '—'} />
+   399→                    <ProfileField icon={MapPin} label={t('detail.equipment.currentLocation')} value={detailEquip.currentLocation || t('detail.equipment.noLocation')} />
+   400→                  </div>
+   401→                </div>
+   402→
+   403→                {/* ===== Certification Status Card ===== */}
+   404→                <div className={`rounded-xl border p-5 ${cardBorder} transition-all duration-200`}>
+   405→                  <h3 className={`text-sm font-semibold mb-4 flex items-center gap-2 ${textPrimary}`}>
+   406→                    <ShieldCheck className="h-4 w-4 text-amber-400" />
+   407→                    {t('detail.equipment.certification')}
+   408→                  </h3>
+   409→                  <CertStatusCard certStatus={detailCertStatus} certDays={detailCertDays} certId={detailEquip.certificationId} certExpiry={detailEquip.certExpiry} t={t} textPrimary={textPrimary} textSecondary={textSecondary} textTertiary={textTertiary} />
+   410→                </div>
+   411→
+   412→                {/* ===== Maintenance Schedule ===== */}
+   413→                <div className={`rounded-xl border p-5 ${cardBorder} transition-all duration-200`}>
+   414→                  <h3 className={`text-sm font-semibold mb-4 flex items-center gap-2 ${textPrimary}`}>
+   415→                    <Wrench className="h-4 w-4 text-amber-400" />
+   416→                    {t('detail.equipment.maintenance')}
+   417→                  </h3>
+   418→                  {detailEquip.lastInspection || detailEquip.nextInspection ? (
+   419→                    <div className="space-y-4">
+   420→                      {/* Timeline Visual */}
+   421→                      <div className="relative">
+   422→                        <div className="flex items-start justify-between mb-2">
+   423→                          <div className="text-center flex-1">
+   424→                            <p className={`text-[10px] ${textTertiary} mb-1`}>{t('detail.equipment.lastInspection')}</p>
+   425→                            <div className="flex items-center justify-center gap-1.5">
+   426→                              <div className="w-3 h-3 rounded-full bg-emerald-400 ring-2 ring-emerald-400/20" />
+   427→                            </div>
+   428→                            <p className={`text-xs font-medium mt-1.5 ${textPrimary}`}>
+   429→                              {detailEquip.lastInspection ? new Date(detailEquip.lastInspection).toLocaleDateString() : '—'}
+   430→                            </p>
+   431→                          </div>
+   432→                          <div className="flex-1 flex items-center pt-5 px-2">
+   433→                            <div className="w-full h-2 rounded-full dark:bg-slate-800 bg-slate-100 overflow-hidden">
+   434→                              <div
+   435→                                className={`h-full rounded-full transition-all duration-500 ${
+   436→                                  inspectionProgress !== null && inspectionProgress > 80 ? 'bg-red-400' :
+   437→                                  inspectionProgress !== null && inspectionProgress > 60 ? 'bg-amber-400' :
+   438→                                  'bg-emerald-400'
+   439→                                }`}
+   440→                                style={{ width: `${inspectionProgress ?? 0}%` }}
+   441→                              />
+   442→                            </div>
+   443→                          </div>
+   444→                          <div className="text-center flex-1">
+   445→                            <p className={`text-[10px] ${textTertiary} mb-1`}>{t('detail.equipment.nextInspection')}</p>
+   446→                            <div className={`flex items-center justify-center gap-1.5 ${
+   447→                              detailEquip.nextInspection && new Date(detailEquip.nextInspection) < new Date()
+   448→                                ? 'animate-pulse' : ''
+   449→                            }`}>
+   450→                              <div className={`w-3 h-3 rounded-full ${
+   451→                                detailEquip.nextInspection && new Date(detailEquip.nextInspection) < new Date()
+   452→                                  ? 'bg-red-400 ring-2 ring-red-400/30' : 'bg-amber-400 ring-2 ring-amber-400/20'
+   453→                              }`} />
+   454→                            </div>
+   455→                            <p className={`text-xs font-medium mt-1.5 ${textPrimary}`}>
+   456→                              {detailEquip.nextInspection ? new Date(detailEquip.nextInspection).toLocaleDateString() : '—'}
+   457→                            </p>
+   458→                          </div>
+   459→                        </div>
+   460→                        {inspectionProgress !== null && (
+   461→                          <p className={`text-center text-[10px] ${textTertiary}`}>
+   462→                            {t('detail.equipment.inspectionProgress')}: {Math.round(inspectionProgress)}%
+   463→                          </p>
+   464→                        )}
+   465→                      </div>
+   466→                    </div>
+   467→                  ) : (
+   468→                    <p className={`text-xs ${textTertiary} text-center py-4`}>{t('detail.equipment.noNextInspection')}</p>
+   469→                  )}
+   470→                </div>
+   471→
+   472→                {/* ===== Capacity Utilization ===== */}
+   473→                {capacityUtil !== null && (
+   474→                  <div className={`rounded-xl border p-5 ${cardBorder} transition-all duration-200`}>
+   475→                    <h3 className={`text-sm font-semibold mb-4 flex items-center gap-2 ${textPrimary}`}>
+   476→                      <Gauge className="h-4 w-4 text-amber-400" />
+   477→                      {t('detail.equipment.capacity')}
+   478→                    </h3>
+   479→                    <div className="space-y-3">
+   480→                      <div className="flex items-center justify-between">
+   481→                        <span className={`text-xs ${textSecondary}`}>{t('detail.equipment.currentLoad')}</span>
+   482→                        <span className={`text-xs font-mono font-medium ${textPrimary}`}>{capacityUtil}t / {detailEquip.capacity}t</span>
+   483→                      </div>
+   484→                      <div className="w-full h-3 rounded-full dark:bg-slate-800 bg-slate-100 overflow-hidden">
+   485→                        <div
+   486→                          className={`h-full rounded-full transition-all duration-700 ${
+   487→                            capacityUtil / detailEquip.capacity! > 0.8 ? 'bg-red-400' :
+   488→                            capacityUtil / detailEquip.capacity! > 0.6 ? 'bg-amber-400' :
+   489→                            'bg-emerald-400'
+   490→                          }`}
+   491→                          style={{ width: `${Math.min(100, (capacityUtil / detailEquip.capacity!) * 100)}%` }}
+   492→                        />
+   493→                      </div>
+   494→                      <div className="flex items-center justify-between">
+   495→                        <span className={`text-[10px] ${textTertiary}`}>{t('detail.equipment.utilization')}</span>
+   496→                        <span className={`text-[10px] ${textSecondary}`}>{Math.round((capacityUtil / detailEquip.capacity!) * 100)}%</span>
+   497→                      </div>
+   498→                    </div>
+   499→                  </div>
+   500→                )}
+   501→
+   502→                {/* ===== Status Management ===== */}
+   503→                <div className={`rounded-xl border p-5 ${cardBorder} transition-all duration-200`}>
+   504→                  <h3 className={`text-sm font-semibold mb-3 flex items-center gap-2 ${textPrimary}`}>
+   505→                    <ClipboardCheck className="h-4 w-4 text-amber-400" />
+   506→                    {t('detail.equipment.statusManagement')}
+   507→                  </h3>
+   508→                  <Select value={detailEquip.status} onValueChange={handleDetailStatusChange} disabled={statusChanging}>
+   509→                    <SelectTrigger className={`w-full ${inputCls} text-sm`}>
+   510→                      {statusChanging ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
+   511→                      <SelectValue />
+   512→                    </SelectTrigger>
+   513→                    <SelectContent className={selectContentCls}>
+   514→                      {equipmentStatuses.map((s) => <SelectItem key={s} value={s} className={selectItemCls}>{translateStatus(s)}</SelectItem>)}
+   515→                    </SelectContent>
+   516→                  </Select>
+   517→                </div>
+   518→
+   519→                {/* ===== Quick Actions ===== */}
+   520→                <div className={`rounded-xl border p-5 ${cardBorder} transition-all duration-200`}>
+   521→                  <h3 className={`text-sm font-semibold mb-4 flex items-center gap-2 ${textPrimary}`}>
+   522→                    <Wrench className="h-4 w-4 text-amber-400" />
+   523→                    {t('detail.quickActions')}
+   524→                  </h3>
+   525→                  <div className="grid grid-cols-3 gap-3">
+   526→                    <QuickActionButton
+   527→                      icon={ClipboardCheck}
+   528→                      label={t('detail.equipment.recordInspection')}
+   529→                      color="bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500/20 dark:hover:bg-emerald-500/20"
+   530→                      onClick={() => toast.info(t('detail.equipment.recordInspection'))}
+   531→                    />
+   532→                    <QuickActionButton
+   533→                      icon={CalendarCheck}
+   534→                      label={t('detail.equipment.scheduleMaintenance')}
+   535→                      color="bg-amber-500/10 text-amber-400 hover:bg-amber-500/20 dark:hover:bg-amber-500/20"
+   536→                      onClick={() => toast.info(t('detail.equipment.scheduleMaintenance'))}
+   537→                    />
+   538→                    <QuickActionButton
+   539→                      icon={Printer}
+   540→                      label={t('detail.equipment.printCertificate')}
+   541→                      color="bg-cyan-500/10 text-cyan-400 hover:bg-cyan-500/20 dark:hover:bg-cyan-500/20"
+   542→                      onClick={() => toast.info(t('detail.equipment.printCertificate'))}
+   543→                    />
+   544→                  </div>
+   545→                </div>
+   546→
+   547→                {/* Action Buttons */}
+   548→                <div className="flex gap-3 pt-2">
+   549→                  <Button
+   550→                    variant="outline"
+   551→                    className={`flex-1 ${inputCls} border transition-all duration-200`}
+   552→                    onClick={() => { openEdit(detailEquip); setDetailEquip(null); }}
+   553→                  >
+   554→                    <Pencil className="h-4 w-4 ml-2" /> {t('detail.equipment.editEquipment')}
+   555→                  </Button>
+   556→                  <Button
+   557→                    variant="outline"
+   558→                    className={`dark:border-red-800 border-red-300 dark:text-red-400 text-red-600 dark:hover:bg-red-500/10 hover:bg-red-50 transition-all duration-200`}
+   559→                    onClick={() => { setDeleting(detailEquip); }}
+   560→                  >
+   561→                    <Trash2 className="h-4 w-4 ml-2" /> {t('common.delete')}
+   562→                  </Button>
+   563→                </div>
+   564→              </>)}
+   565→            </div>
+   566→          </ScrollArea>
+   567→        </SheetContent>
+   568→      </Sheet>
+   569→
+   570→      {/* ==================== ADD/EDIT DIALOG ==================== */}
+   571→      <Dialog open={showAdd || !!editing} onOpenChange={(open) => { if (!open) { setShowAdd(false); setEditing(null); setForm(emptyForm); } }}>
+   572→        <DialogContent className={`dark:border-slate-700 border-slate-200 dark:bg-slate-900 bg-white max-h-[90vh] overflow-y-auto max-w-lg`}>
+   573→          <DialogHeader>
+   574→            <DialogTitle className={textPrimary}>{editing ? t('equipment.editEquipment') : t('equipment.addNewEquipment')}</DialogTitle>
+   575→          </DialogHeader>
+   576→          <div className="grid gap-5 py-4">
+   577→            {/* Basic Info */}
+   578→            <div>
+   579→              <p className={`text-xs font-semibold uppercase tracking-wider mb-3 ${textTertiary}`}>{t('equipment.form.specifications')}</p>
+   580→              <div className="grid grid-cols-2 gap-3">
+   581→                <div>
+   582→                  <Label className={textSecondary}>{t('equipment.form.name')}</Label>
+   583→                  <Input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} className={`${inputCls} mt-1`} />
+   584→                </div>
+   585→                <div>
+   586→                  <Label className={textSecondary}>{t('equipment.form.type')}</Label>
+   587→                  <Select value={form.type} onValueChange={(v) => setForm({ ...form, type: v })}>
+   588→                    <SelectTrigger className={`${inputCls} mt-1`}><SelectValue placeholder={t('common.select')} /></SelectTrigger>
+   589→                    <SelectContent className={selectContentCls}>{equipmentTypes.map((et) => <SelectItem key={et} value={et} className={selectItemCls}>{translateEquipmentType(et)}</SelectItem>)}</SelectContent>
+   590→                  </Select>
+   591→                </div>
+   592→                <div>
+   593→                  <Label className={textSecondary}>{t('equipment.form.capacity')}</Label>
+   594→                  <div className="mt-1 space-y-2">
+   595→                    <Input type="number" value={form.capacity} onChange={(e) => setForm({ ...form, capacity: e.target.value })} className={inputCls} />
+   596→                    {form.capacity && (
+   597→                      <div className="space-y-1">
+   598→                        <div className="w-full h-2 rounded-full dark:bg-slate-800 bg-slate-100 overflow-hidden">
+   599→                          <div
+   600→                            className="h-full rounded-full bg-amber-400 transition-all duration-300"
+   601→                            style={{ width: `${Math.min(100, (parseFloat(form.capacity) / 500) * 100)}%` }}
+   602→                          />
+   603→                        </div>
+   604→                        <div className="flex justify-between">
+   605→                          <span className={`text-[10px] ${textTertiary}`}>0t</span>
+   606→                          <span className={`text-[10px] ${textTertiary}`}>500t</span>
+   607→                        </div>
+   608→                      </div>
+   609→                    )}
+   610→                  </div>
+   611→                </div>
+   612→                <div>
+   613→                  <Label className={textSecondary}>{t('equipment.form.status')}</Label>
+   614→                  <Select value={form.status} onValueChange={(v) => setForm({ ...form, status: v })}>
+   615→                    <SelectTrigger className={`${inputCls} mt-1`}><SelectValue /></SelectTrigger>
+   616→                    <SelectContent className={selectContentCls}>{equipmentStatuses.map((s) => <SelectItem key={s} value={s} className={selectItemCls}>{translateStatus(s)}</SelectItem>)}</SelectContent>
+   617→                  </Select>
+   618→                </div>
+   619→              </div>
+   620→            </div>
+   621→
+   622→            <Separator className="dark:bg-slate-800 bg-slate-200" />
+   623→
+   624→            {/* Manufacturer / Model */}
+   625→            <div className="grid grid-cols-2 gap-3">
+   626→              <div>
+   627→                <Label className={textSecondary}>{t('equipment.form.manufacturer')}</Label>
+   628→                <Input value={form.manufacturer} onChange={(e) => setForm({ ...form, manufacturer: e.target.value })} className={`${inputCls} mt-1`} />
+   629→              </div>
+   630→              <div>
+   631→                <Label className={textSecondary}>{t('equipment.form.model')}</Label>
+   632→                <Input value={form.model} onChange={(e) => setForm({ ...form, model: e.target.value })} className={`${inputCls} mt-1`} />
+   633→              </div>
+   634→            </div>
+   635→            <div className="grid grid-cols-2 gap-3">
+   636→              <div>
+   637→                <Label className={textSecondary}>{t('equipment.form.serialNumber')}</Label>
+   638→                <Input value={form.serialNumber} onChange={(e) => setForm({ ...form, serialNumber: e.target.value })} className={`${inputCls} mt-1`} />
+   639→              </div>
+   640→              <div>
+   641→                <Label className={textSecondary}>{t('equipment.form.currentLocation')}</Label>
+   642→                <Input value={form.currentLocation} onChange={(e) => setForm({ ...form, currentLocation: e.target.value })} className={`${inputCls} mt-1`} />
+   643→              </div>
+   644→            </div>
+   645→
+   646→            <Separator className="dark:bg-slate-800 bg-slate-200" />
+   647→
+   648→            {/* Inspection & Certification */}
+   649→            <div>
+   650→              <p className={`text-xs font-semibold uppercase tracking-wider mb-3 ${textTertiary}`}>{t('equipment.form.inspectionCertification')}</p>
+   651→              <div className="grid grid-cols-2 gap-3">
+   652→                <div>
+   653→                  <Label className={textSecondary}>{t('equipment.form.lastInspection')}</Label>
+   654→                  <Input type="date" value={form.lastInspection} onChange={(e) => setForm({ ...form, lastInspection: e.target.value })} className={`${inputCls} mt-1`} />
+   655→                </div>
+   656→                <div>
+   657→                  <Label className={textSecondary}>{t('equipment.form.nextInspection')}</Label>
+   658→                  <Input type="date" value={form.nextInspection} onChange={(e) => setForm({ ...form, nextInspection: e.target.value })} className={`${inputCls} mt-1`} />
+   659→                </div>
+   660→                <div>
+   661→                  <Label className={textSecondary}>{t('equipment.form.certificationId')}</Label>
+   662→                  <Input value={form.certificationId} onChange={(e) => setForm({ ...form, certificationId: e.target.value })} className={`${inputCls} mt-1`} />
+   663→                </div>
+   664→                <div>
+   665→                  <Label className={textSecondary}>{t('equipment.form.certExpiry')}</Label>
+   666→                  <Input type="date" value={form.certExpiry} onChange={(e) => setForm({ ...form, certExpiry: e.target.value })} className={`${inputCls} mt-1`} />
+   667→                </div>
+   668→              </div>
+   669→            </div>
+   670→          </div>
+   671→          <DialogFooter>
+   672→            <Button variant="outline" onClick={() => { setShowAdd(false); setEditing(null); setForm(emptyForm); }} className={`dark:border-slate-700 border-slate-300 dark:text-slate-300 text-slate-600 dark:hover:bg-slate-800 hover:bg-slate-100 transition-all duration-200`}>
+   673→              {t('common.cancel')}
+   674→            </Button>
+   675→            <Button onClick={handleSubmit} disabled={submitting || !form.name || !form.type} className="bg-amber-500 hover:bg-amber-600 text-slate-900 transition-all duration-200 hover:shadow-md">
+   676→              {submitting ? t('common.saving') : editing ? t('common.update') : t('common.create')}
+   677→            </Button>
+   678→          </DialogFooter>
+   679→        </DialogContent>
+   680→      </Dialog>
+   681→
+   682→      {/* ==================== DELETE DIALOG ==================== */}
+   683→      <Dialog open={!!deleting} onOpenChange={(open) => { if (!open) setDeleting(null); }}>
+   684→        <DialogContent className={`dark:border-slate-700 border-slate-200 dark:bg-slate-900 bg-white max-w-md`}>
+   685→          <DialogHeader><DialogTitle className={textPrimary}>{t('common.confirmDelete')}</DialogTitle></DialogHeader>
+   686→          <p className={`text-sm ${textSecondary}`}>
+   687→            {t('equipment.delete.message')} <span className="text-amber-400 font-medium">{deleting?.equipmentCode}</span>{t('equipment.delete.cannotUndo')}
+   688→          </p>
+   689→          <DialogFooter>
+   690→            <Button variant="outline" onClick={() => setDeleting(null)} className={`dark:border-slate-700 border-slate-300 dark:text-slate-300 text-slate-600 dark:hover:bg-slate-800 hover:bg-slate-100 transition-all duration-200`}>
+   691→              {t('common.cancel')}
+   692→            </Button>
+   693→            <Button variant="destructive" onClick={handleDelete} className="bg-red-600 hover:bg-red-700 transition-all duration-200">{t('common.delete')}</Button>
+   694→          </DialogFooter>
+   695→        </DialogContent>
+   696→      </Dialog>
+   697→    </div>
+   698→  );
+   699→}
+   700→
+   701→// ==================== SUB-COMPONENTS ====================
+   702→
+   703→function ProfileField({ icon: Icon, label, value }: { icon: React.ComponentType<{ className?: string }>; label: string; value: string }) {
+   704→  return (
+   705→    <div className="flex flex-col gap-1">
+   706→      <span className="text-[10px] dark:text-slate-500 text-slate-400">{label}</span>
+   707→      <div className="flex items-center gap-1.5">
+   708→        <Icon className="h-3.5 w-3.5 dark:text-slate-500 text-slate-400 shrink-0" />
+   709→        <span className="text-xs font-medium dark:text-slate-200 text-slate-700 truncate">{value}</span>
+   710→      </div>
+   711→    </div>
+   712→  );
+   713→}
+   714→
+   715→function CertStatusCard({ certStatus, certDays, certId, certExpiry, t, textPrimary, textSecondary, textTertiary }: {
+   716→  certStatus: CertStatus;
+   717→  certDays: number;
+   718→  certId: string | null;
+   719→  certExpiry: string | null;
+   720→  t: (key: string) => string;
+   721→  textPrimary: string;
+   722→  textSecondary: string;
+   723→  textTertiary: string;
+   724→}) {
+   725→  const config = {
+   726→    valid: { bg: 'bg-emerald-500/10', border: 'border-emerald-500/20', text: 'text-emerald-400', icon: CheckCircle2, label: t('detail.equipment.certValid') },
+   727→    expiring: { bg: 'bg-amber-500/10', border: 'border-amber-500/20', text: 'text-amber-400', icon: Clock, label: t('detail.equipment.certExpiring') },
+   728→    expired: { bg: 'bg-red-500/10', border: 'border-red-500/20', text: 'text-red-400', icon: XCircle, label: t('detail.equipment.certExpired') },
+   729→    none: { bg: 'dark:bg-slate-800 bg-slate-100', border: 'dark:border-slate-700 border-slate-200', text: textTertiary, icon: ShieldCheck, label: t('detail.equipment.certNone') },
+   730→  }[certStatus];
+   731→
+   732→  const IconComp = config.icon;
+   733→
+   734→  return (
+   735→    <div className="space-y-3">
+   736→      {/* Main status indicator */}
+   737→      <div className={`flex items-center gap-3 p-3 rounded-lg border ${config.bg} ${config.border} transition-all duration-200`}>
+   738→        <div className={`w-10 h-10 rounded-full flex items-center justify-center ${config.bg} shrink-0`}>
+   739→          <IconComp className={`h-5 w-5 ${config.text}`} />
+   740→        </div>
+   741→        <div className="flex-1 min-w-0">
+   742→          <p className={`text-xs font-semibold ${config.text}`}>{config.label}</p>
+   743→          {certStatus !== 'none' && certExpiry && (
+   744→            <p className={`text-[10px] ${textTertiary} mt-0.5`}>
+   745→              {certStatus === 'expired'
+   746→                ? `${Math.abs(certDays)} ${t('detail.equipment.daysOverdue')}`
+   747→                : `${certDays} ${t('detail.equipment.daysRemaining')}`}
+   748→            </p>
+   749→          )}
+   750→        </div>
+   751→      </div>
+   752→      {/* Cert details */}
+   753→      {certId && (
+   754→        <div className="flex items-center justify-between">
+   755→          <span className={`text-[10px] ${textTertiary}`}>{t('detail.equipment.certId')}</span>
+   756→          <span className={`text-xs font-mono ${textPrimary}`}>{certId}</span>
+   757→        </div>
+   758→      )}
+   759→      {certExpiry && (
+   760→        <div className="flex items-center justify-between">
+   761→          <span className={`text-[10px] ${textTertiary}`}>{t('detail.equipment.certExpiryDate')}</span>
+   762→          <span className={`text-xs ${textPrimary}`}>{new Date(certExpiry).toLocaleDateString()}</span>
+   763→        </div>
+   764→      )}
+   765→    </div>
+   766→  );
+   767→}
+   768→
+   769→function QuickActionButton({ icon: Icon, label, color, onClick }: {
+   770→  icon: React.ComponentType<{ className?: string }>; label: string; color: string; onClick: () => void;
+   771→}) {
+   772→  return (
+   773→    <button
+   774→      onClick={onClick}
+   775→      className={`flex flex-col items-center gap-2 p-3 rounded-lg border dark:border-slate-800 border-slate-200 dark:bg-slate-900/30 bg-slate-50/50 transition-all duration-200 hover:shadow-md group cursor-pointer`}
+   776→    >
+   777→      <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${color} transition-all duration-200`}>
+   778→        <Icon className="h-5 w-5" />
+   779→      </div>
+   780→      <span className="text-[10px] dark:text-slate-400 text-slate-500 group-hover:dark:text-slate-300 group-hover:text-slate-600 transition-colors duration-200 text-center leading-tight">
+   781→        {label}
+   782→      </span>
+   783→    </button>
+   784→  );
+   785→}
+   786→

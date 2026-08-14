@@ -1,0 +1,446 @@
+     1→'use client';
+     2→
+     3→import { useEffect, useState, useCallback } from 'react';
+     4→import { Plus, Package, Ship, MapPin, ArrowRight, Weight, Volume2, Users, Calendar, Loader2, Eye, Pencil } from 'lucide-react';
+     5→import { Card, CardContent } from '@/components/ui/card';
+     6→import { Button } from '@/components/ui/button';
+     7→import { Input } from '@/components/ui/input';
+     8→import { Label } from '@/components/ui/label';
+     9→import { Textarea } from '@/components/ui/textarea';
+    10→import { Badge } from '@/components/ui/badge';
+    11→import { Skeleton } from '@/components/ui/skeleton';
+    12→import { Separator } from '@/components/ui/separator';
+    13→import { ScrollArea } from '@/components/ui/scroll-area';
+    14→import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
+    15→import {
+    16→  Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter,
+    17→} from '@/components/ui/dialog';
+    18→import {
+    19→  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
+    20→} from '@/components/ui/select';
+    21→import {
+    22→  Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
+    23→} from '@/components/ui/table';
+    24→import { toast } from 'sonner';
+    25→import { useTranslation, translateStatus, translateCategory } from '@/lib/translations';
+    26→import type { Project, ProjectStatus, CargoItem, Movement } from '@/types/wms';
+    27→
+    28→const projectStatusStyles: Record<ProjectStatus, string> = {
+    29→  PLANNED: 'bg-slate-500/10 text-slate-400 border-slate-500/20',
+    30→  RECEIVING: 'bg-amber-500/10 text-amber-400 border-amber-500/20',
+    31→  IN_STORAGE: 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20',
+    32→  STAGING: 'bg-orange-500/10 text-orange-400 border-orange-500/20',
+    33→  LOADED: 'bg-yellow-600/10 text-yellow-500 border-yellow-600/20',
+    34→  SHIPPED: 'bg-cyan-500/10 text-cyan-400 border-cyan-500/20',
+    35→  COMPLETED: 'bg-teal-500/10 text-teal-400 border-teal-500/20',
+    36→};
+    37→
+    38→const PROJECT_STATUSES: ProjectStatus[] = ['PLANNED', 'RECEIVING', 'IN_STORAGE', 'STAGING', 'LOADED', 'SHIPPED', 'COMPLETED'];
+    39→
+    40→const PROJECT_WORKFLOW: Record<ProjectStatus, ProjectStatus[]> = {
+    41→  PLANNED: ['RECEIVING'],
+    42→  RECEIVING: ['IN_STORAGE', 'STAGING'],
+    43→  IN_STORAGE: ['STAGING', 'LOADED'],
+    44→  STAGING: ['LOADED', 'IN_STORAGE'],
+    45→  LOADED: ['SHIPPED', 'STAGING'],
+    46→  SHIPPED: ['COMPLETED'],
+    47→  COMPLETED: [],
+    48→};
+    49→
+    50→const cargoStatusStyles: Record<string, string> = {
+    51→  IN_YARD: 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20',
+    52→  IN_TRANSIT: 'bg-amber-500/10 text-amber-400 border-amber-500/20',
+    53→  DISPATCHED: 'bg-slate-500/10 text-slate-400 border-slate-500/20',
+    54→  RECEIVED: 'bg-cyan-500/10 text-cyan-400 border-cyan-500/20',
+    55→  IN_WAREHOUSE: 'bg-teal-500/10 text-teal-400 border-teal-500/20',
+    56→  DELIVERED: 'bg-slate-400/10 text-slate-500 border-slate-400/20',
+    57→  STAGING: 'bg-orange-500/10 text-orange-400 border-orange-500/20',
+    58→};
+    59→
+    60→const statusTabsKeys = [
+    61→  { value: '', key: 'common.all' },
+    62→  { value: 'PLANNED', key: 'status.PLANNED' },
+    63→  { value: 'RECEIVING', key: 'status.RECEIVING' },
+    64→  { value: 'IN_STORAGE', key: 'status.IN_STORAGE' },
+    65→  { value: 'STAGING', key: 'status.STAGING' },
+    66→  { value: 'LOADED', key: 'status.LOADED' },
+    67→  { value: 'SHIPPED', key: 'status.SHIPPED' },
+    68→  { value: 'COMPLETED', key: 'status.COMPLETED' },
+    69→];
+    70→
+    71→const emptyForm = {
+    72→  name: '', description: '', clientName: '', clientContact: '',
+    73→  destination: '', shippingLine: '', vesselName: '', etd: '', eta: '',
+    74→};
+    75→
+    76→interface ProjectListResponse { items: Project[]; total: number; }
+    77→
+    78→export function ProjectsPage() {
+    79→  const [projects, setProjects] = useState<Project[]>([]);
+    80→  const [loading, setLoading] = useState(true);
+    81→  const [statusFilter, setStatusFilter] = useState('');
+    82→  const [showAdd, setShowAdd] = useState(false);
+    83→  const [selectedProject, setSelectedProject] = useState<Project | null>(null);
+    84→  const [projectCargo, setProjectCargo] = useState<CargoItem[]>([]);
+    85→  const [projectMovements, setProjectMovements] = useState<Movement[]>([]);
+    86→  const [detailLoading, setDetailLoading] = useState(false);
+    87→  const [statusChanging, setStatusChanging] = useState(false);
+    88→  const [form, setForm] = useState(emptyForm);
+    89→  const [submitting, setSubmitting] = useState(false);
+    90→  const { t } = useTranslation();
+    91→
+    92→  const fetchProjects = useCallback(async () => {
+    93→    setLoading(true);
+    94→    const params = new URLSearchParams({ limit: '100', ...(statusFilter && { status: statusFilter }) });
+    95→    try {
+    96→      const res = await fetch(`/api/projects?${params}`);
+    97→      const data: ProjectListResponse = await res.json();
+    98→      if (!res.ok) { setProjects([]); return; }
+    99→      setProjects(data.items || []);
+   100→    } catch { toast.error(t('projects.toast.fetchFailed')); } finally { setLoading(false); }
+   101→  }, [statusFilter, t]);
+   102→
+   103→  useEffect(() => { fetchProjects(); }, [fetchProjects]);
+   104→
+   105→  const handleCreate = async () => {
+   106→    setSubmitting(true);
+   107→    try {
+   108→      const res = await fetch('/api/projects', {
+   109→        method: 'POST', headers: { 'Content-Type': 'application/json' },
+   110→        body: JSON.stringify({ name: form.name, description: form.description || null, clientName: form.clientName, clientContact: form.clientContact || null, destination: form.destination || null, shippingLine: form.shippingLine || null, vesselName: form.vesselName || null, etd: form.etd || null, eta: form.eta || null }),
+   111→      });
+   112→      if (!res.ok) { const err = await res.json(); throw new Error(err.error || 'Failed'); }
+   113→      toast.success(t('projects.toast.created')); setShowAdd(false); setForm(emptyForm); fetchProjects();
+   114→    } catch (e: unknown) { toast.error(e instanceof Error ? e.message : t('projects.toast.createFailed')); } finally { setSubmitting(false); }
+   115→  };
+   116→
+   117→  const openProjectDetail = async (project: Project) => {
+   118→    setSelectedProject(project);
+   119→    setDetailLoading(true);
+   120→    try {
+   121→      const [cargoRes, moveRes] = await Promise.all([
+   122→        fetch(`/api/cargo?projectId=${project.id}&limit=200`),
+   123→        fetch(`/api/movements?limit=100`),
+   124→      ]);
+   125→      const cargoData = await cargoRes.json();
+   126→      const moveData = await moveRes.json();
+   127→      const allMoves: Movement[] = moveData.items || [];
+   128→      const cargoIds = new Set((cargoData.items || []).map((c: CargoItem) => c.id));
+   129→      setProjectCargo(cargoData.items || []);
+   130→      setProjectMovements(allMoves.filter((m) => cargoIds.has(m.cargoItemId)));
+   131→    } catch { toast.error(t('projects.toast.cargoFetchFailed')); } finally { setDetailLoading(false); }
+   132→  };
+   133→
+   134→  const handleProjectStatusChange = async (newStatus: ProjectStatus) => {
+   135→    if (!selectedProject) return;
+   136→    setStatusChanging(true);
+   137→    try {
+   138→      const res = await fetch(`/api/projects/${selectedProject.id}/status`, {
+   139→        method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ status: newStatus }),
+   140→      });
+   141→      if (!res.ok) { const err = await res.json(); throw new Error(err.error || 'Failed'); }
+   142→      toast.success(t('detail.project.statusChanged'));
+   143→      const data = await res.json();
+   144→      setSelectedProject(data.data);
+   145→      fetchProjects();
+   146→    } catch (e: unknown) { toast.error(e instanceof Error ? e.message : t('detail.statusChangeFailed')); } finally { setStatusChanging(false); }
+   147→  };
+   148→
+   149→  const currentStep = selectedProject ? PROJECT_STATUSES.indexOf(selectedProject.status) : -1;
+   150→
+   151→  const cargoStatusCounts = projectCargo.reduce((acc, c) => { acc[c.status] = (acc[c.status] || 0) + 1; return acc; }, {} as Record<string, number>);
+   152→
+   153→  return (
+   154→    <div className="space-y-6">
+   155→      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+   156→        <div>
+   157→          <h1 className="text-2xl font-bold text-slate-100">{t('projects.title')}</h1>
+   158→          <p className="text-sm text-slate-500 mt-1">{t('projects.subtitle')}</p>
+   159→        </div>
+   160→        <Button onClick={() => { setForm(emptyForm); setShowAdd(true); }} className="bg-amber-500 hover:bg-amber-600 text-slate-900 font-medium">
+   161→          <Plus className="h-4 w-4 ml-2" /> {t('projects.addProject')}
+   162→        </Button>
+   163→      </div>
+   164→
+   165→      {/* Status Tabs */}
+   166→      <Tabs value={statusFilter} onValueChange={setStatusFilter}>
+   167→        <TabsList className="bg-slate-800/50 border border-slate-700/50 h-auto p-1 flex-wrap gap-1">
+   168→          {statusTabsKeys.map((tab) => (
+   169→            <TabsTrigger key={tab.value} value={tab.value} className="data-[state=active]:bg-amber-500/15 data-[state=active]:text-amber-400 text-slate-400 text-xs px-3 py-1.5">{t(tab.key)}</TabsTrigger>
+   170→          ))}
+   171→        </TabsList>
+   172→      </Tabs>
+   173→
+   174→      {/* ========== PROJECT DETAIL VIEW ========== */}
+   175→      {selectedProject ? (
+   176→        <div className="space-y-4">
+   177→          <Button variant="ghost" onClick={() => setSelectedProject(null)} className="text-slate-400 hover:text-slate-200 -mr-2">
+   178→            <ArrowRight className="h-4 w-4 ml-2" /> {t('projects.backToProjects')}
+   179→          </Button>
+   180→
+   181→          {/* Project Header Card */}
+   182→          <Card className="border-slate-800 bg-slate-900/50">
+   183→            <CardContent className="p-6">
+   184→              <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+   185→                <div className="min-w-0">
+   186→                  <h2 className="text-lg font-bold text-slate-100">{selectedProject.name}</h2>
+   187→                  <p className="text-sm font-mono text-slate-600 mt-0.5">{selectedProject.projectCode}</p>
+   188→                  {selectedProject.description && <p className="text-xs text-slate-400 mt-2 max-w-lg">{selectedProject.description}</p>}
+   189→                </div>
+   190→                <Badge variant="outline" className={`shrink-0 text-xs ${projectStatusStyles[selectedProject.status]}`}>{translateStatus(selectedProject.status)}</Badge>
+   191→              </div>
+   192→
+   193→              {/* Project Status Workflow */}
+   194→              <div className="mt-5 rounded-xl border border-slate-800 bg-slate-900/60 p-3">
+   195→                <div className="flex items-center justify-between mb-2">
+   196→                  <h3 className="text-xs font-semibold text-slate-400">{t('detail.project.statusManagement')}</h3>
+   197→                </div>
+   198→                <div className="flex items-center gap-1 overflow-x-auto pb-1">
+   199→                  {PROJECT_STATUSES.map((s, idx) => {
+   200→                    const isCompleted = idx <= currentStep;
+   201→                    const isCurrent = idx === currentStep;
+   202→                    const isNext = PROJECT_WORKFLOW[selectedProject.status]?.includes(s);
+   203→                    return (
+   204→                      <div key={s} className="flex items-center shrink-0">
+   205→                        <button
+   206→                          disabled={!isNext || statusChanging}
+   207→                          onClick={() => isNext && handleProjectStatusChange(s)}
+   208→                          className={`flex flex-col items-center gap-1 px-2.5 py-1.5 rounded-lg transition-all min-w-[60px] ${
+   209→                            isCurrent ? 'bg-amber-500/15 ring-1 ring-amber-500/40' :
+   210→                            isCompleted ? 'opacity-50' :
+   211→                            isNext ? 'hover:bg-slate-800 cursor-pointer' : 'opacity-25'
+   212→                          }`}
+   213→                        >
+   214→                          <div className={`h-2.5 w-2.5 rounded-full ${isCurrent ? 'bg-amber-400' : isCompleted ? 'bg-emerald-400' : 'bg-slate-700'}`} />
+   215→                          <span className={`text-[9px] leading-tight text-center ${isCurrent ? 'text-amber-400 font-semibold' : 'text-slate-500'}`}>{translateStatus(s)}</span>
+   216→                        </button>
+   217→                        {idx < PROJECT_STATUSES.length - 1 && (
+   218→                          <div className={`w-6 h-px mx-0.5 ${idx < currentStep ? 'bg-emerald-400/50' : 'bg-slate-800'}`} />
+   219→                        )}
+   220→                      </div>
+   221→                    );
+   222→                  })}
+   223→                </div>
+   224→              </div>
+   225→
+   226→              {/* Project Info Grid */}
+   227→              <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4 mt-5">
+   228→                <div className="rounded-lg border border-slate-800 bg-slate-900/60 p-3">
+   229→                  <div className="flex items-center gap-2 text-slate-500 mb-1"><Package className="h-3.5 w-3.5" /><span className="text-[10px] uppercase tracking-wider">{t('detail.project.stats.totalItems')}</span></div>
+   230→                  <p className="text-xl font-bold text-slate-100">{selectedProject.totalItems}</p>
+   231→                </div>
+   232→                <div className="rounded-lg border border-slate-800 bg-slate-900/60 p-3">
+   233→                  <div className="flex items-center gap-2 text-slate-500 mb-1"><Weight className="h-3.5 w-3.5" /><span className="text-[10px] uppercase tracking-wider">{t('detail.project.stats.totalWeight')}</span></div>
+   234→                  <p className="text-xl font-bold text-slate-100">{selectedProject.totalWeight.toLocaleString()}<span className="text-sm font-normal text-slate-500 mr-1">{t('common.tonnes')}</span></p>
+   235→                </div>
+   236→                <div className="rounded-lg border border-slate-800 bg-slate-900/60 p-3">
+   237→                  <div className="flex items-center gap-2 text-slate-500 mb-1"><Volume2 className="h-3.5 w-3.5" /><span className="text-[10px] uppercase tracking-wider">{t('detail.project.stats.totalVolume')}</span></div>
+   238→                  <p className="text-xl font-bold text-slate-100">{selectedProject.totalVolume}<span className="text-sm font-normal text-slate-500 mr-1">m³</span></p>
+   239→                </div>
+   240→                <div className="rounded-lg border border-slate-800 bg-slate-900/60 p-3">
+   241→                  <div className="flex items-center gap-2 text-slate-500 mb-1"><MapPin className="h-3.5 w-3.5" /><span className="text-[10px] uppercase tracking-wider">{t('common.location')}</span></div>
+   242→                  <p className="text-sm font-medium text-slate-200 truncate mt-0.5">{selectedProject.destination || t('projects.tbd')}</p>
+   243→                </div>
+   244→              </div>
+   245→
+   246→              {/* Shipping Info */}
+   247→              <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4 mt-4 text-sm">
+   248→                <div className="flex items-center gap-2 text-slate-400"><Users className="h-4 w-4 text-amber-500/60" /><div><p className="text-[10px] text-slate-600">{t('detail.project.overview.client')}</p><p className="text-slate-200">{selectedProject.clientName}</p></div></div>
+   249→                <div className="flex items-center gap-2 text-slate-400"><Ship className="h-4 w-4 text-amber-500/60" /><div><p className="text-[10px] text-slate-600">{t('detail.project.overview.vessel')}</p><p className="text-slate-200">{selectedProject.vesselName || t('projects.tbd')}</p></div></div>
+   250→                {(selectedProject.etd || selectedProject.eta) && (
+   251→                  <div className="flex items-center gap-2 text-slate-400"><Calendar className="h-4 w-4 text-amber-500/60" /><div><p className="text-[10px] text-slate-600">ETD / ETA</p><p className="text-slate-200">{selectedProject.etd ? new Date(selectedProject.etd).toLocaleDateString() : '—'} / {selectedProject.eta ? new Date(selectedProject.eta).toLocaleDateString() : '—'}</p></div></div>
+   252→                )}
+   253→                {selectedProject.shippingLine && (
+   254→                  <div className="flex items-center gap-2 text-slate-400"><Ship className="h-4 w-4 text-amber-500/60" /><div><p className="text-[10px] text-slate-600">{t('detail.project.overview.shippingLine')}</p><p className="text-slate-200">{selectedProject.shippingLine}</p></div></div>
+   255→                )}
+   256→              </div>
+   257→            </CardContent>
+   258→          </Card>
+   259→
+   260→          {/* Cargo Status Breakdown + Progress */}
+   261→          <div className="grid gap-4 lg:grid-cols-3">
+   262→            <Card className="border-slate-800 bg-slate-900/50 lg:col-span-2">
+   263→              <CardContent className="p-4">
+   264→                <div className="flex items-center justify-between mb-3">
+   265→                  <h3 className="text-sm font-medium text-slate-300">{t('projects.cargoItems')}</h3>
+   266→                  <span className="text-xs text-slate-500">{projectCargo.length} {t('common.items')}</span>
+   267→                </div>
+   268→                {detailLoading ? (
+   269→                  <div className="space-y-2">{Array.from({ length: 4 }).map((_, i) => <Skeleton key={i} className="h-10 bg-slate-800" />)}</div>
+   270→                ) : projectCargo.length === 0 ? (
+   271→                  <p className="text-center text-sm text-slate-500 py-8">{t('projects.noCargoItems')}</p>
+   272→                ) : (
+   273→                  <div className="max-h-[400px] overflow-y-auto">
+   274→                    <Table>
+   275→                      <TableHeader>
+   276→                        <TableRow className="border-slate-800 hover:bg-transparent">
+   277→                          <TableHead className="text-xs text-slate-500">{t('projects.table.code')}</TableHead>
+   278→                          <TableHead className="text-xs text-slate-500">{t('cargo.table.description')}</TableHead>
+   279→                          <TableHead className="text-xs text-slate-500 hidden sm:table-cell">{t('cargo.table.weight')}</TableHead>
+   280→                          <TableHead className="text-xs text-slate-500 hidden md:table-cell">{t('cargo.table.category')}</TableHead>
+   281→                          <TableHead className="text-xs text-slate-500">{t('cargo.table.status')}</TableHead>
+   282→                          <TableHead className="text-xs text-slate-500 hidden lg:table-cell">{t('cargo.table.location')}</TableHead>
+   283→                        </TableRow>
+   284→                      </TableHeader>
+   285→                      <TableBody>
+   286→                        {projectCargo.map((c) => (
+   287→                          <TableRow key={c.id} className="border-slate-800 hover:bg-slate-800/50 cursor-pointer">
+   288→                            <TableCell className="py-2 text-xs font-mono text-amber-400/80">{c.cargoCode}</TableCell>
+   289→                            <TableCell className="py-2 text-xs text-slate-300 max-w-[180px] truncate">{c.description}</TableCell>
+   290→                            <TableCell className="py-2 text-xs text-slate-400 hidden sm:table-cell">{c.weight.toLocaleString()}</TableCell>
+   291→                            <TableCell className="py-2 hidden md:table-cell"><Badge variant="outline" className="text-[10px] bg-slate-700/50 text-slate-300 border-slate-600">{translateCategory(c.liftCategory)}</Badge></TableCell>
+   292→                            <TableCell className="py-2"><Badge variant="outline" className={`text-[10px] ${cargoStatusStyles[c.status] || 'bg-slate-700/50 text-slate-400 border-slate-600'}`}>{translateStatus(c.status)}</Badge></TableCell>
+   293→                            <TableCell className="py-2 text-xs text-slate-400 hidden lg:table-cell">{c.location?.code || '—'}</TableCell>
+   294→                          </TableRow>
+   295→                        ))}
+   296→                      </TableBody>
+   297→                    </Table>
+   298→                  </div>
+   299→                )}
+   300→              </CardContent>
+   301→            </Card>
+   302→
+   303→            {/* Status Breakdown */}
+   304→            <Card className="border-slate-800 bg-slate-900/50">
+   305→              <CardContent className="p-4">
+   306→                <h3 className="text-sm font-medium text-slate-300 mb-4">{t('detail.project.stats.byStatus')}</h3>
+   307→                <div className="space-y-3">
+   308→                  {Object.entries(cargoStatusCounts).sort((a, b) => b[1] - a[1]).map(([status, count]) => {
+   309→                    const pct = Math.round((count / projectCargo.length) * 100);
+   310→                    return (
+   311→                      <div key={status} className="space-y-1.5">
+   312→                        <div className="flex items-center justify-between">
+   313→                          <Badge variant="outline" className={`text-[10px] ${cargoStatusStyles[status] || 'bg-slate-700/50 text-slate-400 border-slate-600'}`}>{translateStatus(status)}</Badge>
+   314→                          <span className="text-xs text-slate-400">{count} <span className="text-slate-600">({pct}%)</span></span>
+   315→                        </div>
+   316→                        <div className="h-1.5 w-full overflow-hidden rounded-full bg-slate-800">
+   317→                          <div className="h-full rounded-full bg-gradient-to-r from-amber-500 to-orange-500 transition-all duration-500" style={{ width: `${pct}%` }} />
+   318→                        </div>
+   319→                      </div>
+   320→                    );
+   321→                  })}
+   322→                </div>
+   323→              </CardContent>
+   324→            </Card>
+   325→          </div>
+   326→
+   327→          {/* Recent Project Movements */}
+   328→          <Card className="border-slate-800 bg-slate-900/50">
+   329→            <CardContent className="p-4">
+   330→              <h3 className="text-sm font-medium text-slate-300 mb-3">{t('detail.movementHistory')}</h3>
+   331→              {projectMovements.length === 0 ? (
+   332→                <p className="text-xs text-slate-500 text-center py-4">{t('detail.noMovements')}</p>
+   333→              ) : (
+   334→                <div className="max-h-60 overflow-y-auto">
+   335→                  <Table>
+   336→                    <TableHeader>
+   337→                      <TableRow className="border-slate-800 hover:bg-transparent">
+   338→                        <TableHead className="text-xs text-slate-500">{t('movements.table.ref')}</TableHead>
+   339→                        <TableHead className="text-xs text-slate-500">{t('movements.table.cargo')}</TableHead>
+   340→                        <TableHead className="text-xs text-slate-500">{t('movements.table.type')}</TableHead>
+   341→                        <TableHead className="text-xs text-slate-500 hidden sm:table-cell">{t('movements.table.from')}</TableHead>
+   342→                        <TableHead className="text-xs text-slate-500 hidden sm:table-cell">{t('movements.table.to')}</TableHead>
+   343→                        <TableHead className="text-xs text-slate-500">{t('common.date')}</TableHead>
+   344→                      </TableRow>
+   345→                    </TableHeader>
+   346→                    <TableBody>
+   347→                      {projectMovements.slice(0, 20).map((m) => (
+   348→                        <TableRow key={m.id} className="border-slate-800 hover:bg-slate-800/50">
+   349→                          <TableCell className="py-2 text-xs font-mono text-amber-400/80">{m.movementRef}</TableCell>
+   350→                          <TableCell className="py-2 text-xs text-slate-300 font-mono">{m.cargoCode}</TableCell>
+   351→                          <TableCell className="py-2"><Badge variant="outline" className={`text-[10px] ${cargoStatusStyles[m.type] || 'bg-slate-700/50 text-slate-400 border-slate-600'}`}>{translateStatus(m.type)}</Badge></TableCell>
+   352→                          <TableCell className="py-2 text-xs text-slate-400 hidden sm:table-cell">{m.fromLocation?.code || '—'}</TableCell>
+   353→                          <TableCell className="py-2 text-xs text-slate-400 hidden sm:table-cell">{m.toLocation?.code || '—'}</TableCell>
+   354→                          <TableCell className="py-2 text-xs text-slate-500">{new Date(m.createdAt).toLocaleDateString()}</TableCell>
+   355→                        </TableRow>
+   356→                      ))}
+   357→                    </TableBody>
+   358→                  </Table>
+   359→                </div>
+   360→              )}
+   361→            </CardContent>
+   362→          </Card>
+   363→        </div>
+   364→      ) : (
+   365→        /* ========== PROJECT CARDS GRID ========== */
+   366→        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+   367→          {loading ? Array.from({ length: 6 }).map((_, i) => (
+   368→            <Card key={i} className="border-slate-800 bg-slate-900/50"><CardContent className="p-5 space-y-3"><Skeleton className="h-5 w-3/4 bg-slate-800" /><Skeleton className="h-4 w-1/2 bg-slate-800" /><Skeleton className="h-4 w-full bg-slate-800" /><Skeleton className="h-2 w-full bg-slate-800" /></CardContent></Card>
+   369→          )) : projects.length === 0 ? (
+   370→            <div className="col-span-full text-center py-12 text-slate-500">{t('projects.noProjectsFound')}</div>
+   371→          ) : projects.map((p) => {
+   372→            const received = p.cargoItems?.filter((c) => c.status === 'RECEIVED' || c.status === 'IN_YARD' || c.status === 'IN_WAREHOUSE' || c.status === 'STAGING').length || 0;
+   373→            const total = p.totalItems || 0;
+   374→            const pct = total > 0 ? Math.round((received / total) * 100) : 0;
+   375→            return (
+   376→              <Card key={p.id} className="border-slate-800 bg-slate-900/50 cursor-pointer hover:border-slate-700 hover:bg-slate-900/80 transition-all duration-200 group" onClick={() => openProjectDetail(p)}>
+   377→                <CardContent className="p-5 space-y-3">
+   378→                  <div className="flex items-start justify-between">
+   379→                    <div className="min-w-0">
+   380→                      <h3 className="text-sm font-semibold text-slate-100 truncate group-hover:text-amber-400 transition-colors">{p.name}</h3>
+   381→                      <p className="text-[11px] font-mono text-slate-600 mt-0.5">{p.projectCode}</p>
+   382→                    </div>
+   383→                    <Badge variant="outline" className={`shrink-0 text-[10px] ${projectStatusStyles[p.status]}`}>{translateStatus(p.status)}</Badge>
+   384→                  </div>
+   385→                  <div className="grid grid-cols-2 gap-2 text-xs text-slate-400">
+   386→                    <div className="flex items-center gap-1.5"><MapPin className="h-3 w-3 text-slate-600" />{p.clientName}</div>
+   387→                    <div className="flex items-center gap-1.5"><Ship className="h-3 w-3 text-slate-600" />{p.vesselName || t('projects.tbd')}</div>
+   388→                  </div>
+   389→                  <div className="grid grid-cols-3 gap-2 text-xs">
+   390→                    <div><span className="text-slate-600">{t('projects.card.itemsLabel')}</span> <span className="text-slate-300 font-medium">{total}</span></div>
+   391→                    <div><span className="text-slate-600">{t('projects.card.weightLabel')}</span> <span className="text-slate-300 font-medium">{p.totalWeight}{t('projects.card.weight')}</span></div>
+   392→                    <div><span className="text-slate-600">{t('projects.card.volLabel')}</span> <span className="text-slate-300 font-medium">{p.totalVolume}m³</span></div>
+   393→                  </div>
+   394→                  {(p.etd || p.eta) && (
+   395→                    <div className="flex gap-3 text-[11px] text-slate-500">
+   396→                      {p.etd && <span>ETD {new Date(p.etd).toLocaleDateString()}</span>}
+   397→                      {p.eta && <span>ETA {new Date(p.eta).toLocaleDateString()}</span>}
+   398→                    </div>
+   399→                  )}
+   400→                  <div className="space-y-1">
+   401→                    <div className="flex justify-between text-[11px]">
+   402→                      <span className="text-slate-500">{t('common.progress')}</span>
+   403→                      <span className="text-slate-400">{received}/{total} ({pct}%)</span>
+   404→                    </div>
+   405→                    <div className="h-1.5 w-full overflow-hidden rounded-full bg-slate-800">
+   406→                      <div className="h-full rounded-full bg-gradient-to-r from-amber-500 to-orange-500 transition-all" style={{ width: `${pct}%` }} />
+   407→                    </div>
+   408→                  </div>
+   409→                </CardContent>
+   410→              </Card>
+   411→            );
+   412→          })}
+   413→        </div>
+   414→      )}
+   415→
+   416→      {/* Add Project Dialog */}
+   417→      <Dialog open={showAdd} onOpenChange={(open) => { if (!open) { setShowAdd(false); setForm(emptyForm); } }}>
+   418→        <DialogContent className="border-slate-700 bg-slate-900 max-w-lg">
+   419→          <DialogHeader><DialogTitle className="text-slate-100">{t('projects.addNewProject')}</DialogTitle></DialogHeader>
+   420→          <div className="grid gap-4 py-4">
+   421→            <div><Label className="text-slate-400">{t('projects.form.projectName')}</Label><Input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} className="border-slate-700 bg-slate-800 text-slate-200 mt-1" /></div>
+   422→            <div><Label className="text-slate-400">{t('projects.form.description')}</Label><Textarea value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} className="border-slate-700 bg-slate-800 text-slate-200 mt-1 min-h-[60px]" /></div>
+   423→            <div className="grid grid-cols-2 gap-4">
+   424→              <div><Label className="text-slate-400">{t('projects.form.clientName')}</Label><Input value={form.clientName} onChange={(e) => setForm({ ...form, clientName: e.target.value })} className="border-slate-700 bg-slate-800 text-slate-200 mt-1" /></div>
+   425→              <div><Label className="text-slate-400">{t('projects.form.clientContact')}</Label><Input value={form.clientContact} onChange={(e) => setForm({ ...form, clientContact: e.target.value })} className="border-slate-700 bg-slate-800 text-slate-200 mt-1" /></div>
+   426→            </div>
+   427→            <div><Label className="text-slate-400">{t('projects.form.destination')}</Label><Input value={form.destination} onChange={(e) => setForm({ ...form, destination: e.target.value })} className="border-slate-700 bg-slate-800 text-slate-200 mt-1" /></div>
+   428→            <div className="grid grid-cols-2 gap-4">
+   429→              <div><Label className="text-slate-400">{t('projects.form.shippingLine')}</Label><Input value={form.shippingLine} onChange={(e) => setForm({ ...form, shippingLine: e.target.value })} className="border-slate-700 bg-slate-800 text-slate-200 mt-1" /></div>
+   430→              <div><Label className="text-slate-400">{t('projects.form.vesselName')}</Label><Input value={form.vesselName} onChange={(e) => setForm({ ...form, vesselName: e.target.value })} className="border-slate-700 bg-slate-800 text-slate-200 mt-1" /></div>
+   431→            </div>
+   432→            <div className="grid grid-cols-2 gap-4">
+   433→              <div><Label className="text-slate-400">{t('projects.form.etd')}</Label><Input type="date" value={form.etd} onChange={(e) => setForm({ ...form, etd: e.target.value })} className="border-slate-700 bg-slate-800 text-slate-200 mt-1" /></div>
+   434→              <div><Label className="text-slate-400">{t('projects.form.eta')}</Label><Input type="date" value={form.eta} onChange={(e) => setForm({ ...form, eta: e.target.value })} className="border-slate-700 bg-slate-800 text-slate-200 mt-1" /></div>
+   435→            </div>
+   436→          </div>
+   437→          <DialogFooter>
+   438→            <Button variant="outline" onClick={() => { setShowAdd(false); setForm(emptyForm); }} className="border-slate-700 text-slate-300 hover:bg-slate-800">{t('common.cancel')}</Button>
+   439→            <Button onClick={handleCreate} disabled={submitting || !form.name || !form.clientName} className="bg-amber-500 hover:bg-amber-600 text-slate-900">{submitting ? t('common.creating') : t('common.create')}</Button>
+   440→          </DialogFooter>
+   441→        </DialogContent>
+   442→      </Dialog>
+   443→    </div>
+   444→  );
+   445→}
+   446→
