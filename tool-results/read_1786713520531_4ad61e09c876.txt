@@ -1,3 +1,39 @@
+     1→import { NextRequest, NextResponse } from 'next/server';
+     2→import { db } from '@/lib/db';
+     3→
+     4→// POST /api/seed - Seed realistic demo data for a Middle East heavy lift warehouse
+     5→export async function POST(request: NextRequest) {
+     6→  try {
+     7→    let forceReseed = false;
+     8→    try {
+     9→      const body = await request.json();
+    10→      forceReseed = body.force === true;
+    11→    } catch {
+    12→      // No body or invalid JSON - that's fine, seed normally
+    13→    }
+    14→
+    15→    // Check if data already exists
+    16→    const existingCargo = await db.cargoItem.count();
+    17→    if (existingCargo > 0 && !forceReseed) {
+    18→      return NextResponse.json(
+    19→        { error: 'Database already has data. Use { "force": true } to reseed.', existingCargo },
+    20→        { status: 409 }
+    21→      );
+    22→    }
+    23→
+    24→    // Clear existing data if force reseed
+    25→    if (forceReseed && existingCargo > 0) {
+    26→      await db.$transaction([
+    27→        db.movement.deleteMany(),
+    28→        db.cargoItem.deleteMany(),
+    29→        db.project.deleteMany(),
+    30→        db.equipment.deleteMany(),
+    31→        db.location.deleteMany(),
+    32→      ]);
+    33→    }
+    34→
+    35→    // ==================== LOCATIONS ====================
+    36→    const locations = await Promise.all([
     37→      db.location.create({ data: { code: 'YARD-A1', name: 'Yard A1 - Heavy Lift Zone', type: 'YARD', zone: 'A', maxWeight: 25000, maxDimension: '30m x 10m x 10m', area: 2400, isActive: true, currentLoad: 0 } }),
     38→      db.location.create({ data: { code: 'YARD-A2', name: 'Yard A2 - Oversize Zone', type: 'YARD', zone: 'A', maxWeight: 15000, maxDimension: '40m x 8m x 6m', area: 3200, isActive: true, currentLoad: 0 } }),
     39→      db.location.create({ data: { code: 'YARD-A3', name: 'Yard A3 - General Storage', type: 'YARD', zone: 'A', maxWeight: 10000, maxDimension: '20m x 5m x 5m', area: 2000, isActive: true, currentLoad: 0 } }),
@@ -162,67 +198,5 @@
    198→      // Inspection
    199→      db.movement.create({ data: { movementRef: 'MOV-2024-017', cargoItemId: cargoMap['CL-2024-001'], cargoCode: 'CL-2024-001', type: 'INSPECT', fromLocationId: locMap['STG-S1'], toLocationId: locMap['STG-S1'], equipmentUsed: null, liftMethod: null, operatorName: 'QC-Hassan Ali', actualWeight: null, remarks: 'Pre-load inspection completed. All lifting lugs verified. COG markings confirmed. No damage observed.', performedBy: 'QC-Team' } }),
    200→      db.movement.create({ data: { movementRef: 'MOV-2024-018', cargoItemId: cargoMap['CL-2024-007'], cargoCode: 'CL-2024-007', type: 'INSPECT', fromLocationId: locMap['YARD-A1'], toLocationId: locMap['YARD-A1'], equipmentUsed: null, liftMethod: null, operatorName: 'QC-Khalid Omar', actualWeight: null, remarks: 'Compressor package inspection. Alignment bolts torqued. Nameplate verified. Oil level checked.', performedBy: 'QC-Team' } }),
-   201→
-   202→      // Inspection of pipe bundle (received 2 weeks ago - routine check)
-   203→      db.movement.create({ data: { movementRef: 'MOV-2024-019', cargoItemId: cargoMap['CL-2024-016'], cargoCode: 'CL-2024-016', type: 'INSPECT', fromLocationId: locMap['OA-C1'], toLocationId: locMap['OA-C1'], equipmentUsed: null, liftMethod: null, operatorName: 'QC-Rashid Ahmad', actualWeight: null, remarks: 'Routine 14-day inspection of pipe bundle. Coating condition verified - no damage. Pipe ends protected.', performedBy: 'QC-Team' } }),
-   204→      db.movement.create({ data: { movementRef: 'MOV-2024-020', cargoItemId: cargoMap['CL-2024-017'], cargoCode: 'CL-2024-017', type: 'INSPECT', fromLocationId: locMap['YARD-A1'], toLocationId: locMap['YARD-A1'], equipmentUsed: null, liftMethod: null, operatorName: 'QC-Fatima Al-Zaabi', actualWeight: null, remarks: 'Transformer pre-dispatch inspection. Bushings checked, oil sample taken, gasket condition verified.', performedBy: 'QC-Team' } }),
-   205→    ]);
-   206→
-   207→    // Update location currentLoad counts to match actual cargo
-   208→    // Also update cargo items that were moved to staging (CL-2024-001, CL-2024-003)
-   209→    await db.$transaction([
-   210→      db.location.update({ where: { code: 'YARD-A1' }, data: { currentLoad: 3 } }),
-   211→      db.location.update({ where: { code: 'YARD-A2' }, data: { currentLoad: 2 } }),
-   212→      db.location.update({ where: { code: 'YARD-A3' }, data: { currentLoad: 1 } }),
-   213→      db.location.update({ where: { code: 'WH-W1' }, data: { currentLoad: 1 } }),
-   214→      db.location.update({ where: { code: 'WH-W2' }, data: { currentLoad: 2 } }),
-   215→      db.location.update({ where: { code: 'STG-S1' }, data: { currentLoad: 2 } }),
-   216→      db.location.update({ where: { code: 'BERTH-B1' }, data: { currentLoad: 0 } }),
-   217→      db.location.update({ where: { code: 'OA-C1' }, data: { currentLoad: 1 } }),
-   218→      // Update cargo items that were moved to staging
-   219→      db.cargoItem.update({ where: { cargoCode: 'CL-2024-001' }, data: { locationId: locMap['STG-S1'], status: 'IN_YARD' } }),
-   220→      db.cargoItem.update({ where: { cargoCode: 'CL-2024-003' }, data: { locationId: locMap['STG-S1'], status: 'IN_YARD' } }),
-   221→    ]);
-   222→
-   223→    return NextResponse.json({
-   224→      message: 'Demo data seeded successfully',
-   225→      summary: {
-   226→        locations: locations.length,
-   227→        projects: projects.length,
-   228→        equipment: equipment.length,
-   229→        cargoItems: cargoItems.length,
-   230→        movements: 20,
-   231→      },
-   232→    }, { status: 201 });
-   233→  } catch (error) {
-   234→    console.error('Error seeding data:', error);
-   235→    return NextResponse.json({ error: 'Failed to seed demo data' }, { status: 500 });
-   236→  }
-   237→}
-   238→
-   239→// GET /api/seed - Check if data exists and reseed
-   240→export async function GET() {
-   241→  try {
-   242→    const [cargoCount, projectCount, locationCount, equipmentCount, movementCount] = await Promise.all([
-   243→      db.cargoItem.count(),
-   244→      db.project.count(),
-   245→      db.location.count(),
-   246→      db.equipment.count(),
-   247→      db.movement.count(),
-   248→    ]);
-   249→
-   250→    const hasData = cargoCount > 0 || projectCount > 0;
-   251→
-   252→    return NextResponse.json({
-   253→      hasData,
-   254→      counts: { cargoItems: cargoCount, projects: projectCount, locations: locationCount, equipment: equipmentCount, movements: movementCount },
-   255→      message: hasData
-   256→        ? 'Database has existing data. POST with { "force": true } to clear and reseed.'
-   257→        : 'Database is empty. POST to /api/seed to populate demo data.',
-   258→    });
-   259→  } catch (error) {
-   260→    console.error('Error checking seed status:', error);
-   261→    return NextResponse.json({ error: 'Failed to check seed status' }, { status: 500 });
-   262→  }
-   263→}
-   264→
+
+[showing lines 1-200 of 264; use offset=201 with limit to continue reading]

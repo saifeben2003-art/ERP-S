@@ -1,17 +1,3 @@
-    37→      db.location.create({ data: { code: 'YARD-A1', name: 'Yard A1 - Heavy Lift Zone', type: 'YARD', zone: 'A', maxWeight: 25000, maxDimension: '30m x 10m x 10m', area: 2400, isActive: true, currentLoad: 0 } }),
-    38→      db.location.create({ data: { code: 'YARD-A2', name: 'Yard A2 - Oversize Zone', type: 'YARD', zone: 'A', maxWeight: 15000, maxDimension: '40m x 8m x 6m', area: 3200, isActive: true, currentLoad: 0 } }),
-    39→      db.location.create({ data: { code: 'YARD-A3', name: 'Yard A3 - General Storage', type: 'YARD', zone: 'A', maxWeight: 10000, maxDimension: '20m x 5m x 5m', area: 2000, isActive: true, currentLoad: 0 } }),
-    40→      db.location.create({ data: { code: 'WH-W1', name: 'Warehouse W1 - Climate Controlled', type: 'WAREHOUSE', zone: 'W', maxWeight: 5000, maxDimension: '15m x 4m x 4m', area: 1800, isActive: true, currentLoad: 0 } }),
-    41→      db.location.create({ data: { code: 'WH-W2', name: 'Warehouse W2 - General', type: 'WAREHOUSE', zone: 'W', maxWeight: 8000, maxDimension: '20m x 5m x 5m', area: 2400, isActive: true, currentLoad: 0 } }),
-    42→      db.location.create({ data: { code: 'STG-S1', name: 'Staging Area S1 - Pre-Load', type: 'STAGING', zone: 'S', maxWeight: 30000, maxDimension: '50m x 12m x 12m', area: 5000, isActive: true, currentLoad: 0 } }),
-    43→      db.location.create({ data: { code: 'BERTH-B1', name: 'Berth B1 - Heavy Lift Vessel', type: 'BERTH', zone: 'B', maxWeight: 50000, maxDimension: '60m x 15m x 15m', area: 8000, isActive: true, currentLoad: 0 } }),
-    44→      db.location.create({ data: { code: 'OA-C1', name: 'Open Area C1 - Pipe Rack', type: 'OPEN_AREA', zone: 'C', maxWeight: 20000, maxDimension: '25m x 6m x 4m', area: 3000, isActive: true, currentLoad: 0 } }),
-    45→    ]);
-    46→
-    47→    const locMap: Record<string, string> = {};
-    48→    locations.forEach((l) => { locMap[l.code] = l.id; });
-    49→
-    50→    // ==================== PROJECTS ====================
     51→    const projects = await Promise.all([
     52→      db.project.create({
     53→        data: {

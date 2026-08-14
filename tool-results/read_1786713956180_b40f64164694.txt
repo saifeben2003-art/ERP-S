@@ -7,7 +7,7 @@
      7→  Loader2, X, Camera, Image as ImageIcon, FileText, Download, Upload, Box,
      8→  Printer, QrCode, ClipboardList, Ruler, AlertTriangle, PackageSearch,
      9→  ArrowDown, Play, Check, MoreHorizontal, Tags, Tag, FileCheck, FileSpreadsheet,
-    10→  Certificate, FileBadge, Sparkles,
+    10→  FileBadge, Sparkles, Award,
     11→} from 'lucide-react';
     12→import { Card, CardContent } from '@/components/ui/card';
     13→import { Button } from '@/components/ui/button';
@@ -672,7 +672,7 @@
    672→                        { name: t('detail.documents.bl') || 'Bill of Lading', icon: FileBadge, color: 'dark:text-blue-400 text-blue-500' },
    673→                        { name: t('detail.documents.po') || 'Purchase Order', icon: FileSpreadsheet, color: 'dark:text-emerald-400 text-emerald-500' },
    674→                        { name: t('detail.documents.inspection') || 'Inspection Report', icon: FileCheck, color: 'dark:text-purple-400 text-purple-500' },
-   675→                        { name: t('detail.documents.certificate') || 'Certificate', icon: Certificate, color: 'dark:text-amber-400 text-amber-500' },
+   675→                        { name: t('detail.documents.certificate') || 'Certificate', icon: Award, color: 'dark:text-amber-400 text-amber-500' },
    676→                      ].map((doc) => {
    677→                        const DocIcon = doc.icon;
    678→                        return (
