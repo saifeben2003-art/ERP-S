@@ -4,12 +4,16 @@ export type LiftCategory = 'STANDARD' | 'HEAVY_LIFT' | 'OVERSIZE' | 'PROJECT_CAR
 export type CommodityType = 'GENERAL' | 'MACHINERY' | 'STEEL' | 'EQUIPMENT' | 'MODULE';
 export type CargoStatus = 'IN_TRANSIT' | 'RECEIVED' | 'IN_YARD' | 'IN_WAREHOUSE' | 'DISPATCHED' | 'DELIVERED';
 export type LocationType = 'YARD' | 'WAREHOUSE' | 'OPEN_AREA' | 'STAGING' | 'BERTH';
+export type LocationZoneType = 'GENERAL' | 'BONDED' | 'HAZMAT' | 'REEFER' | 'CUSTOMS_HOLD' | 'QUARANTINE' | 'OVERSIZE' | 'TEMPORARY';
 export type EquipmentType = 'CRANE' | 'FORKLIFT' | 'SPREADER_BAR' | 'SLING' | 'SHACKLE' | 'BEAM' | 'JACK' | 'ROLLER';
 export type EquipmentStatus = 'AVAILABLE' | 'IN_USE' | 'MAINTENANCE' | 'OUT_OF_SERVICE';
 export type MovementType = 'RECEIVE' | 'MOVE' | 'DISPATCH' | 'INSPECT';
 export type ProjectStatus = 'PLANNED' | 'RECEIVING' | 'IN_STORAGE' | 'STAGING' | 'LOADED' | 'SHIPPED' | 'COMPLETED';
 export type SyncDirection = 'OUTBOUND' | 'INBOUND';
 export type SyncStatus = 'PENDING' | 'SENT' | 'SUCCESS' | 'FAILED' | 'RETRYING';
+export type CustomsStatus = 'NOT_SUBMITTED' | 'PENDING' | 'CLEARED' | 'REJECTED' | 'ON_HOLD';
+export type ContainerType = 'NONE' | '20FT' | '40FT' | '40HC' | '45HC' | 'OPEN_TOP' | 'FLAT_RACK' | 'TANK' | 'REEFER';
+export type TransportMode = 'SEA' | 'AIR' | 'LAND' | 'RAIL';
 
 export interface CargoItem {
   id: string;
@@ -38,6 +42,21 @@ export interface CargoItem {
   transportHeight: number | null;
   receivedAt: string | null;
   dispatchedAt: string | null;
+  // Port/Airport fields
+  barcode: string | null;
+  containerNumber: string | null;
+  containerType: ContainerType;
+  sealNumber: string | null;
+  customsStatus: CustomsStatus;
+  customsRef: string | null;
+  vesselName: string | null;
+  voyageNumber: string | null;
+  flightNumber: string | null;
+  transportMode: TransportMode;
+  arrivalDate: string | null;
+  departureDate: string | null;
+  storageDays: number;
+  isDeleted: boolean;
   createdAt: string;
   updatedAt: string;
   location?: Location | null;
@@ -56,6 +75,11 @@ export interface Location {
   area: number | null;
   isActive: boolean;
   currentLoad: number;
+  barcode: string | null;
+  locationType: LocationZoneType;
+  temperatureControlled: boolean;
+  minTemp: number | null;
+  maxTemp: number | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -116,6 +140,8 @@ export interface Movement {
   actualWeight: number | null;
   remarks: string | null;
   performedBy: string;
+  scannedBarcode: string | null;
+  isScanned: boolean;
   createdAt: string;
   fromLocation?: Location | null;
   toLocation?: Location | null;
@@ -142,4 +168,19 @@ export interface DashboardStats {
   projectProgress: { name: string; total: number; received: number; status: string }[];
 }
 
-export type WmsPage = 'dashboard' | 'cargo' | 'projects' | 'locations' | 'equipment' | 'movements' | 'integration';
+export interface ReportData {
+  cargoFlow: { date: string; inbound: number; outbound: number; inYard: number; inWarehouse: number }[];
+  dwellTime: { avgDays: number; maxDays: number; critical: number };
+  locationUtilization: { location: string; locationName: string; capacity: number; used: number; percentage: number }[];
+  weightStats: { total: number; avg: number; max: number; byCategory: { category: string; weight: number }[] };
+  statusDistribution: { status: string; count: number; percentage: number }[];
+  topClients: { client: string; items: number; weight: number }[];
+  movementStats: { total: number; byType: { type: string; count: number }[] };
+}
+
+export interface ScannerResult {
+  type: 'cargo' | 'location';
+  data: CargoItem | Location;
+}
+
+export type WmsPage = 'dashboard' | 'cargo' | 'projects' | 'locations' | 'equipment' | 'movements' | 'reports' | 'scanner' | 'integration';

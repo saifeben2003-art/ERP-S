@@ -11,6 +11,8 @@ import { LocationsPage } from '@/components/wms/locations-page';
 import { EquipmentPage } from '@/components/wms/equipment-page';
 import { MovementsPage } from '@/components/wms/movements-page';
 import { IntegrationPage } from '@/components/wms/integration-page';
+import { ReportsPage } from '@/components/wms/reports-page';
+import { ScannerPage } from '@/components/wms/scanner-page';
 import type { WmsPage } from '@/types/wms';
 import { cn } from '@/lib/utils';
 import { useTranslation, translate } from '@/lib/translations';
@@ -23,7 +25,7 @@ import { exportCargoToCsv, exportProjectsToCsv, exportLocationsToCsv, exportEqui
 function ExportBtn({ page }: { page: WmsPage }) {
   const { t } = useTranslation();
   const [loading, setLoading] = useState(false);
-  if (page === 'dashboard' || page === 'integration') return null;
+  if (page === 'dashboard' || page === 'integration' || page === 'scanner' || page === 'reports') return null;
   const doExport = async () => {
     setLoading(true);
     try {
@@ -70,8 +72,8 @@ export default function WmsApp() {
 
   const onTheme = useCallback((v: ThemeMode) => { setAppTheme(v); setTheme(v === 'system' ? 'system' : v); }, [setAppTheme, setTheme]);
 
-  const hm: Record<WmsPage, string> = { dashboard: t('header.dashboard'), cargo: t('header.cargoManagement'), projects: t('header.projectCargo'), locations: t('header.locations'), equipment: t('header.equipmentLifting'), movements: t('header.movementLog'), integration: t('header.sapIntegration') };
-  const pg = () => { const k = `${activePage}-${rk}`; switch (activePage) { case 'dashboard': return <DashboardPage key={k} onNavigate={setActivePage} />; case 'cargo': return <CargoPage key={k} />; case 'projects': return <ProjectsPage key={k} />; case 'locations': return <LocationsPage key={k} />; case 'equipment': return <EquipmentPage key={k} />; case 'movements': return <MovementsPage key={k} />; case 'integration': return <IntegrationPage key={k} />; default: return <DashboardPage key={k} onNavigate={setActivePage} />; } };
+  const hm: Record<WmsPage, string> = { dashboard: t('header.dashboard'), cargo: t('header.cargoManagement'), projects: t('header.projectCargo'), locations: t('header.locations'), equipment: t('header.equipmentLifting'), movements: t('header.movementLog'), scanner: t('header.scanner'), reports: t('header.reports'), integration: t('header.sapIntegration') };
+  const pg = () => { const k = `${activePage}-${rk}`; switch (activePage) { case 'dashboard': return <DashboardPage key={k} onNavigate={setActivePage} />; case 'cargo': return <CargoPage key={k} />; case 'projects': return <ProjectsPage key={k} />; case 'locations': return <LocationsPage key={k} />; case 'equipment': return <EquipmentPage key={k} />; case 'movements': return <MovementsPage key={k} />; case 'scanner': return <ScannerPage key={k} />; case 'reports': return <ReportsPage key={k} />; case 'integration': return <IntegrationPage key={k} />; default: return <DashboardPage key={k} onNavigate={setActivePage} />; } };
 
   if (!mounted) {
     return (

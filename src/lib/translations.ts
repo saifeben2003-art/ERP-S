@@ -15,6 +15,8 @@ const translations: Record<string, string> = {
   'nav.locations': 'المواقع',
   'nav.equipment': 'المعدات',
   'nav.movements': 'الحركات',
+  'nav.scanner': 'ماسح البضائع',
+  'nav.reports': 'التقارير',
   'nav.sapIntegration': 'تكامل SAP',
 
   // ===== Page Headers =====
@@ -24,6 +26,8 @@ const translations: Record<string, string> = {
   'header.locations': 'المواقع',
   'header.equipmentLifting': 'المعدات وأدوات الرفع',
   'header.movementLog': 'سجل الحركات',
+  'header.scanner': 'ماسح البضائع',
+  'header.reports': 'التقارير والتحليلات',
   'header.sapIntegration': 'تكامل SAP / ERP',
 
   // ===== Common UI =====

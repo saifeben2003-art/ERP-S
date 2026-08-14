@@ -49,6 +49,22 @@ model CargoItem {
   transportWidth  Float?
   transportHeight Float?
 
+  // Port/Airport fields
+  barcode         String?   @unique
+  containerNumber String?
+  containerType   String    @default("NONE") // NONE, 20FT, 40FT, 40HC, 45HC, OPEN_TOP, FLAT_RACK, TANK, REEFER
+  sealNumber      String?
+  customsStatus   String    @default("NOT_SUBMITTED") // NOT_SUBMITTED, PENDING, CLEARED, REJECTED, ON_HOLD
+  customsRef      String?
+  vesselName      String?
+  voyageNumber    String?
+  flightNumber    String?
+  transportMode   String    @default("SEA") // SEA, AIR, LAND, RAIL
+  arrivalDate     DateTime?
+  departureDate   DateTime?
+  storageDays     Int       @default(0)
+  isDeleted       Boolean   @default(false)
+
   // Timestamps
   receivedAt   DateTime?
   dispatchedAt DateTime?
@@ -80,6 +96,13 @@ model Location {
   // Status
   isActive    Boolean @default(true)
   currentLoad Int     @default(0) // number of items currently stored
+
+  // Port/Airport fields
+  barcode               String? @unique
+  locationType          String  @default("GENERAL") // GENERAL, BONDED, HAZMAT, REEFER, CUSTOMS_HOLD, QUARANTINE, OVERSIZE, TEMPORARY
+  temperatureControlled Boolean @default(false)
+  minTemp               Float?
+  maxTemp               Float?
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -180,6 +203,10 @@ model Movement {
 
   // Notes
   remarks String?
+
+  // Scanner
+  scannedBarcode String?
+  isScanned      Boolean @default(false)
 
   // Audit
   performedBy String   @default("SYSTEM")

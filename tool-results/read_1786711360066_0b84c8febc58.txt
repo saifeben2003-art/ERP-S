@@ -1,0 +1,775 @@
+     1→import { useCallback } from 'react';
+     2→import { useAppStore } from './store';
+     3→import { en } from './en';
+     4→
+     5→// ==================== COMPREHENSIVE ARABIC TRANSLATIONS ====================
+     6→
+     7→const translations: Record<string, string> = {
+     8→  // ===== App Title =====
+     9→  'appTitle': 'نظام إدارة المستودعات',
+    10→
+    11→  // ===== Navigation (Sidebar) =====
+    12→  'nav.dashboard': 'لوحة التحكم',
+    13→  'nav.cargoItems': 'البضائع',
+    14→  'nav.projects': 'المشاريع',
+    15→  'nav.locations': 'المواقع',
+    16→  'nav.equipment': 'المعدات',
+    17→  'nav.movements': 'الحركات',
+    18→  'nav.sapIntegration': 'تكامل SAP',
+    19→
+    20→  // ===== Page Headers =====
+    21→  'header.dashboard': 'لوحة التحكم',
+    22→  'header.cargoManagement': 'إدارة البضائع',
+    23→  'header.projectCargo': 'بضائع المشاريع',
+    24→  'header.locations': 'المواقع',
+    25→  'header.equipmentLifting': 'المعدات وأدوات الرفع',
+    26→  'header.movementLog': 'سجل الحركات',
+    27→  'header.sapIntegration': 'تكامل SAP / ERP',
+    28→
+    29→  // ===== Common UI =====
+    30→  'common.add': 'إضافة',
+    31→  'common.edit': 'تعديل',
+    32→  'common.delete': 'حذف',
+    33→  'common.save': 'حفظ',
+    34→  'common.cancel': 'إلغاء',
+    35→  'common.search': 'بحث',
+    36→  'common.filter': 'تصفية',
+    37→  'common.clear': 'مسح',
+    38→  'common.loading': 'جاري التحميل',
+    39→  'common.noDataFound': 'لا توجد بيانات',
+    40→  'common.systemOnline': 'النظام متصل',
+    41→  'common.saving': 'جاري الحفظ...',
+    42→  'common.creating': 'جاري الإنشاء...',
+    43→  'common.recording': 'جاري التسجيل...',
+    44→  'common.update': 'تحديث',
+    45→  'common.create': 'إنشاء',
+    46→  'common.select': 'اختيار...',
+    47→  'common.none': 'بدون',
+    48→  'common.all': 'الكل',
+    49→  'common.allTypes': 'جميع الأنواع',
+    50→  'common.allStatuses': 'جميع الحالات',
+    51→  'common.allCategories': 'جميع الفئات',
+    52→  'common.allCommodities': 'جميع السلع',
+    53→  'common.confirmDelete': 'تأكيد الحذف',
+    54→  'common.actions': 'إجراءات',
+    55→  'common.code': 'الرمز',
+    56→  'common.name': 'الاسم',
+    57→  'common.type': 'النوع',
+    58→  'common.status': 'الحالة',
+    59→  'common.location': 'الموقع',
+    60→  'common.previous': 'السابق',
+    61→  'common.next': 'التالي',
+    62→  'common.page': 'صفحة',
+    63→  'common.of': 'من',
+    64→  'common.tonnes': 'طن',
+    65→  'common.tons': 'طن',
+    66→  'common.items': 'عناصر',
+    67→  'common.active': 'نشط',
+    68→  'common.inactive': 'غير نشط',
+    69→  'common.collapse': 'طي',
+    70→  'common.refresh': 'تحديث',
+    71→  'common.enabled': 'مفعّل',
+    72→  'common.disabled': 'معطّل',
+    73→  'common.description': 'الوصف',
+    74→  'common.weight': 'الوزن',
+    75→  'common.dimensions': 'الأبعاد',
+    76→  'common.load': 'التحميل',
+    77→  'common.progress': 'التقدم',
+    78→  'common.date': 'التاريخ',
+    79→  'common.dateSlashTime': 'التاريخ/الوقت',
+    80→  'common.remarks': 'ملاحظات',
+    81→  'common.operator': 'المشغّل',
+    82→
+    83→  // ===== Footer =====
+    84→  'footer.left': 'نظام إدارة المستودعات v1.0 — عمليات الرفع الثقيل وبضائع المشاريع',
+    85→  'footer.right': 'كومبي ليفت ©',
+    86→  'sidebar.footer': 'عمليات الرفع الثقيل - كومبي ليفت',
+    87→  'sidebar.subtitle': 'إدارة المستودعات',
+    88→
+    89→  // ===== Initialization =====
+    90→  'init.wmsSystem': 'جاري تهيئة نظام إدارة المستودعات...',
+    91→
+    92→  // ===== Cargo Statuses =====
+    93→  'status.IN_YARD': 'في الساحة',
+    94→  'status.IN_WAREHOUSE': 'في المستودع',
+    95→  'status.IN_TRANSIT': 'قيد النقل',
+    96→  'status.RECEIVED': 'مستلم',
+    97→  'status.DISPATCHED': 'مرسل',
+    98→  'status.DELIVERED': 'تم التوصيل',
+    99→
+   100→  // ===== Project Statuses =====
+   101→  'status.PLANNED': 'مخطط',
+   102→  'status.RECEIVING': 'قيد الاستلام',
+   103→  'status.IN_STORAGE': 'في التخزين',
+   104→  'status.STAGING': 'في منطقة التجهيز',
+   105→  'status.LOADED': 'محمل',
+   106→  'status.SHIPPED': 'مشحون',
+   107→  'status.COMPLETED': 'مكتمل',
+   108→
+   109→  // ===== Equipment Statuses =====
+   110→  'status.AVAILABLE': 'متاح',
+   111→  'status.IN_USE': 'قيد الاستخدام',
+   112→  'status.MAINTENANCE': 'صيانة',
+   113→  'status.OUT_OF_SERVICE': 'خارج الخدمة',
+   114→
+   115→  // ===== Lift Categories =====
+   116→  'category.HEAVY_LIFT': 'رفع ثقيل',
+   117→  'category.OVERSIZE': 'أكبر من الحجم القياسي',
+   118→  'category.STANDARD': 'قياسي',
+   119→  'category.PROJECT_CARGO': 'بضائع مشروعية',
+   120→
+   121→  // ===== Commodity Types =====
+   122→  'commodity.GENERAL': 'عام',
+   123→  'commodity.MACHINERY': 'آلات',
+   124→  'commodity.STEEL': 'حديد',
+   125→  'commodity.EQUIPMENT': 'معدات',
+   126→  'commodity.MODULE': 'وحدة',
+   127→
+   128→  // ===== Equipment Types =====
+   129→  'equipmentType.CRANE': 'رافعة',
+   130→  'equipmentType.FORKLIFT': 'رافعة شوكية',
+   131→  'equipmentType.SPREADER_BAR': 'عمود توزيع',
+   132→  'equipmentType.SLING': 'حبل رفع',
+   133→  'equipmentType.SHACKLE': 'شاكلة',
+   134→  'equipmentType.BEAM': 'عارضة رفع',
+   135→  'equipmentType.JACK': 'رافعة هيدروليكية',
+   136→  'equipmentType.ROLLER': 'بكرات',
+   137→
+   138→  // ===== Movement Types =====
+   139→  'movementType.RECEIVE': 'استلام',
+   140→  'movementType.MOVE': 'نقل',
+   141→  'movementType.DISPATCH': 'إرسال',
+   142→  'movementType.INSPECT': 'فحص',
+   143→
+   144→  // ===== Location Types =====
+   145→  'locationType.YARD': 'ساحة',
+   146→  'locationType.WAREHOUSE': 'مستودع',
+   147→  'locationType.OPEN_AREA': 'منطقة مفتوحة',
+   148→  'locationType.STAGING': 'منطقة تجهيز',
+   149→  'locationType.BERTH': 'رصيف',
+   150→
+   151→  // ===== Sync Statuses =====
+   152→  'syncStatus.PENDING': 'معلق',
+   153→  'syncStatus.SENT': 'مرسل',
+   154→  'syncStatus.SUCCESS': 'نجاح',
+   155→  'syncStatus.FAILED': 'فشل',
+   156→  'syncStatus.RETRYING': 'إعادة المحاولة',
+   157→
+   158→  // ===== Sync Directions =====
+   159→  'syncDirection.OUTBOUND': 'صادر',
+   160→  'syncDirection.INBOUND': 'وارد',
+   161→
+   162→  // ===== Dashboard =====
+   163→  'dashboard.title': 'لوحة التحكم',
+   164→  'dashboard.subtitle': 'نظرة عامة على عمليات الرفع الثقيل',
+   165→  'dashboard.totalCargo': 'إجمالي البضائع',
+   166→  'dashboard.inYardStorage': 'في الساحة/التخزين',
+   167→  'dashboard.activeProjects': 'مشاريع نشطة',
+   168→  'dashboard.equipmentAvail': 'المعدات المتاحة',
+   169→  'dashboard.totalWeight': 'إجمالي الوزن',
+   170→  'dashboard.pendingDispatch': 'في انتظار الإرسال',
+   171→  'dashboard.cargoStatusBreakdown': 'توزيع حالة البضائع',
+   172→  'dashboard.liftCategoryDistribution': 'توزيع فئات الرفع',
+   173→  'dashboard.recentMovements': 'آخر الحركات',
+   174→  'dashboard.projectProgress': 'تقدم المشاريع',
+   175→  'dashboard.ref': 'المرجع',
+   176→  'dashboard.cargo': 'البضاعة',
+   177→  'dashboard.type': 'النوع',
+   178→  'dashboard.from': 'من',
+   179→  'dashboard.to': 'إلى',
+   180→
+   181→  // ===== Dashboard Welcome Guide =====
+   182→  'welcome.title': 'مرحباً بك في نظام إدارة المستودعات',
+   183→  'welcome.subtitle': 'نظام شامل لإدارة العمليات الثقيلة وبضائع المشاريع',
+   184→  'welcome.guideStep1.title': 'البضائع',
+   185→  'welcome.guideStep1.description': 'إدارة وتتبع جميع البضائع في المستودع (إضافة، تعديل، حذف، بحث)',
+   186→  'welcome.guideStep2.title': 'المشاريع',
+   187→  'welcome.guideStep2.description': 'تتبع مشاريع الشحن ومراحل تقدمها',
+   188→  'welcome.guideStep3.title': 'المواقع',
+   189→  'welcome.guideStep3.description': 'إدارة مواقع التخزين (ساحات، مستودعات، أرصفة)',
+   190→  'welcome.guideStep4.title': 'المعدات',
+   191→  'welcome.guideStep4.description': 'تتبع الرافعات ومعدات الرفع والشهادات',
+   192→  'welcome.guideStep5.title': 'الحركات',
+   193→  'welcome.guideStep5.description': 'سجل كامل لجميع حركات البضائع (استلام، نقل، إرسال، فحص)',
+   194→
+   195→  // ===== Cargo Page =====
+   196→  'cargo.title': 'البضائع',
+   197→  'cargo.subtitle': 'إدارة جميع البضائع في المستودع',
+   198→  'cargo.addCargo': 'إضافة بضاعة',
+   199→  'cargo.searchPlaceholder': 'بحث بالرمز، الوصف...',
+   200→  'cargo.table.code': 'الرمز',
+   201→  'cargo.table.description': 'الوصف',
+   202→  'cargo.table.weight': 'الوزن (كجم)',
+   203→  'cargo.table.dimensions': 'الأبعاد (ط×ع×ا)',
+   204→  'cargo.table.category': 'الفئة',
+   205→  'cargo.table.status': 'الحالة',
+   206→  'cargo.table.location': 'الموقع',
+   207→  'cargo.table.project': 'المشروع',
+   208→  'cargo.table.actions': 'إجراءات',
+   209→  'cargo.noCargoFound': 'لا توجد بضائع',
+   210→  'cargo.editCargo': 'تعديل بضاعة',
+   211→  'cargo.addNewCargo': 'إضافة بضاعة جديدة',
+   212→  'cargo.form.description': 'الوصف *',
+   213→  'cargo.form.weight': 'الوزن (كجم) *',
+   214→  'cargo.form.dimensions': 'الأبعاد (م)',
+   215→  'cargo.form.liftCategory': 'فئة الرفع *',
+   216→  'cargo.form.commodityType': 'نوع السلعة *',
+   217→  'cargo.form.project': 'المشروع',
+   218→  'cargo.form.clientName': 'اسم العميل',
+   219→  'cargo.form.poReference': 'مرجع أمر الشراء',
+   220→  'cargo.form.blReference': 'مرجع بوليصة الشحن',
+   221→  'cargo.form.centerOfGravity': 'مركز الثقل',
+   222→  'cargo.form.cogPlaceholder': 'مثال: 5.2م من القاعدة',
+   223→  'cargo.form.liftingPoints': 'نقاط الرفع',
+   224→  'cargo.form.liftingPointsPlaceholder': 'عدد النقاط',
+   225→  'cargo.form.specialHandling': 'معالجة خاصة',
+   226→  'cargo.form.specialHandlingPlaceholder': 'أي متطلبات معالجة خاصة...',
+   227→  'cargo.details.title': 'تفاصيل البضاعة —',
+   228→  'cargo.details.description': 'الوصف:',
+   229→  'cargo.details.weight': 'الوزن:',
+   230→  'cargo.details.dimensions': 'الأبعاد:',
+   231→  'cargo.details.category': 'الفئة:',
+   232→  'cargo.details.status': 'الحالة:',
+   233→  'cargo.details.location': 'الموقع:',
+   234→  'cargo.details.project': 'المشروع:',
+   235→  'cargo.details.commodity': 'السلعة:',
+   236→  'cargo.details.client': 'العميل:',
+   237→  'cargo.details.poRef': 'مرجع أ.ش:',
+   238→  'cargo.details.blRef': 'مرجع ب.ش:',
+   239→  'cargo.details.cog': 'مركز الثقل:',
+   240→  'cargo.details.liftingPoints': 'نقاط الرفع:',
+   241→  'cargo.details.specialHandling': 'معالجة خاصة:',
+   242→  'cargo.details.unassigned': 'غير معيّن',
+   243→  'cargo.delete.message': 'هل أنت متأكد من حذف',
+   244→  'cargo.delete.cannotUndo': '؟ لا يمكن التراجع عن هذا الإجراء.',
+   245→  'cargo.toast.fetchFailed': 'فشل في جلب البضائع',
+   246→  'cargo.toast.created': 'تم إنشاء البضاعة',
+   247→  'cargo.toast.updated': 'تم تحديث البضاعة',
+   248→  'cargo.toast.deleted': 'تم حذف البضاعة',
+   249→  'cargo.toast.deleteFailed': 'فشل في حذف البضاعة',
+   250→  'cargo.toast.saveFailed': 'فشل في الحفظ',
+   251→
+   252→  // ===== Projects Page =====
+   253→  'projects.title': 'المشاريع',
+   254→  'projects.subtitle': 'تتبع بضائع المشاريع والشحنات',
+   255→  'projects.addProject': 'إضافة مشروع',
+   256→  'projects.backToProjects': 'العودة إلى المشاريع',
+   257→  'projects.cargoItems': 'بضائع المشروع',
+   258→  'projects.noCargoItems': 'لا توجد بضائع',
+   259→  'projects.noProjectsFound': 'لا توجد مشاريع',
+   260→  'projects.table.code': 'الرمز',
+   261→  'projects.table.description': 'الوصف',
+   262→  'projects.table.weight': 'الوزن (كجم)',
+   263→  'projects.table.category': 'الفئة',
+   264→  'projects.table.status': 'الحالة',
+   265→  'projects.table.location': 'الموقع',
+   266→  'projects.card.items': 'عناصر',
+   267→  'projects.card.weight': 'طن',
+   268→  'projects.card.vol': 'حجم',
+   269→  'projects.card.itemsLabel': 'العناصر:',
+   270→  'projects.card.weightLabel': 'الوزن:',
+   271→  'projects.card.volLabel': 'الحجم:',
+   272→  'projects.tbd': 'غير محدد',
+   273→  'projects.addNewProject': 'إضافة مشروع جديد',
+   274→  'projects.form.projectName': 'اسم المشروع *',
+   275→  'projects.form.description': 'الوصف',
+   276→  'projects.form.clientName': 'اسم العميل *',
+   277→  'projects.form.clientContact': 'تواصل العميل',
+   278→  'projects.form.destination': 'الوجهة',
+   279→  'projects.form.shippingLine': 'خط الملاحة',
+   280→  'projects.form.vesselName': 'اسم السفينة',
+   281→  'projects.form.etd': 'تاريخ المغادرة',
+   282→  'projects.form.eta': 'تاريخ الوصول',
+   283→  'projects.toast.fetchFailed': 'فشل في جلب المشاريع',
+   284→  'projects.toast.created': 'تم إنشاء المشروع',
+   285→  'projects.toast.createFailed': 'فشل في إنشاء المشروع',
+   286→  'projects.toast.cargoFetchFailed': 'فشل في جلب بضائع المشروع',
+   287→
+   288→  // ===== Enhanced Detail Views =====
+   289→  'detail.overview': 'نظرة عامة',
+   290→  'detail.cargo': 'البضائع',
+   291→  'detail.movements': 'الحركات',
+   292→  'detail.timeline': 'الجدول الزمني',
+   293→  'detail.quickActions': 'إجراءات سريعة',
+   294→  'detail.changeStatus': 'تغيير الحالة',
+   295→  'detail.assignLocation': 'تعيين موقع',
+   296→  'detail.recordMovement': 'تسجيل حركة',
+   297→  'detail.movementHistory': 'سجل الحركات',
+   298→  'detail.noMovements': 'لا توجد حركات مسجلة',
+   299→  'detail.statusChanged': 'تم تغيير الحالة بنجاح',
+   300→  'detail.locationAssigned': 'تم تعيين الموقع',
+   301→  'detail.statusChangeFailed': 'فشل في تغيير الحالة',
+   302→  'detail.workflow.title': 'مسار الحالة',
+   303→  'detail.workflow.current': 'الحالة الحالية',
+   304→  'detail.workflow.next': 'الخطوة التالية',
+   305→  'detail.info.specifications': 'المواصفات',
+   306→  'detail.info.references': 'المراجع',
+   307→  'detail.info.shipping': 'الشحن',
+   308→  'detail.info.volume': 'الحجم',
+   309→  'detail.info.createdAt': 'تاريخ الإنشاء',
+   310→  'detail.info.receivedAt': 'تاريخ الاستلام',
+   311→  'detail.info.dispatchedAt': 'تاريخ الإرسال',
+   312→  'detail.cargo.clickToView': 'اضغط لعرض التفاصيل',
+   313→  'detail.cargo.weightUnit': 'كجم',
+   314→  'detail.cargo.viewDetail': 'عرض التفاصيل',
+   315→  'detail.cargo.changeCargoStatus': 'تغيير حالة البضاعة',
+   316→  'detail.cargo.moveCargo': 'نقل البضاعة',
+   317→  'detail.cargo.removeFromProject': 'إزالة من المشروع',
+   318→  'detail.project.statusManagement': 'إدارة حالة المشروع',
+   319→  'detail.project.changeStatus': 'تغيير حالة المشروع',
+   320→  'detail.project.statusChanged': 'تم تغيير حالة المشروع',
+   321→  'detail.project.overview.title': 'ملخص المشروع',
+   322→  'detail.project.overview.description': 'الوصف',
+   323→  'detail.project.overview.client': 'العميل',
+   324→  'detail.project.overview.contact': 'تواصل العميل',
+   325→  'detail.project.overview.destination': 'الوجهة',
+   326→  'detail.project.overview.shippingLine': 'خط الملاحة',
+   327→  'detail.project.overview.vessel': 'السفينة',
+   328→  'detail.project.stats.totalItems': 'إجمالي العناصر',
+   329→  'detail.project.stats.totalWeight': 'إجمالي الوزن',
+   330→  'detail.project.stats.totalVolume': 'إجمالي الحجم',
+   331→  'detail.project.stats.byStatus': 'حسب الحالة',
+   332→  'detail.project.stats.completion': 'نسبة الإنجاز',
+   333→  'detail.project.editProject': 'تعديل المشروع',
+   334→  'detail.project.exportReport': 'تصدير التقرير',
+   335→  'detail.project.timeline': 'الجدول الزمني للنشاط',
+   336→  'detail.project.daysElapsed': 'أيام مرت',
+   337→  'detail.project.daysRemaining': 'أيام متبقية',
+   338→  'detail.project.cargoStatusBreakdown': 'توزيع حالة البضائع',
+   339→  'detail.project.noActivity': 'لا توجد أنشطة مسجلة بعد',
+   340→  'detail.project.shippingTimeline': 'الجدول الزمني للشحن',
+   341→  'detail.location.itemsStored': 'البضائع المخزنة',
+   342→  'detail.location.noItems': 'لا توجد بضائع في هذا الموقع',
+   343→  'detail.location.capacity': 'السعة المستخدمة',
+   344→  'detail.location.free': 'متاح',
+   345→  'detail.location.occupancy': 'نسبة الإشغال',
+   346→  'detail.location.cargoInventory': 'جرد البضائع',
+   347→  'detail.location.mapView': 'عرض الخريطة',
+   348→  'detail.location.mapViewComingSoon': 'عرض الخريطة قريباً',
+   349→  'detail.location.assignCargo': 'تعيين بضاعة',
+   350→  'detail.location.transferAll': 'نقل الكل',
+   351→  'detail.location.printLabel': 'طباعة ملصق الموقع',
+   352→  'detail.location.maxWeight': 'الوزن الأقصى',
+   353→  'detail.location.area': 'المساحة',
+   354→  'detail.location.zone': 'المنطقة',
+   355→  'detail.location.usedOf': 'من',
+   356→  'detail.location.currentLoad': 'الحمولة الحالية',
+   357→  'detail.location.emptyState': 'لا توجد مواقع. أضف أول موقع تخزين.',
+   358→  'detail.location.quickActions': 'إجراءات سريعة',
+   359→  'detail.location.editLocation': 'تعديل الموقع',
+   360→  'detail.location.deleteLocation': 'حذف الموقع',
+   361→  'detail.location.cargoCount': 'البضائع',
+   362→  'detail.location.occupancyRate': 'نسبة الإشغال',
+   363→  'detail.location.noCargo': 'لا توجد بضائع في هذا الموقع',
+   364→
+   365→  // ===== Enhanced Detail Sections =====
+   366→  'detail.photos.title': 'الصور والمرفقات',
+   367→  'detail.photos.upload': 'رفع',
+   368→  'detail.documents.title': 'المستندات',
+   369→  'detail.documents.bl': 'بوليصة الشحن',
+   370→  'detail.documents.po': 'أمر الشراء',
+   371→  'detail.documents.inspection': 'تقرير الفحص',
+   372→  'detail.documents.certificate': 'الشهادة',
+   373→  'detail.quickActions.recordMovement': 'تسجيل حركة',
+   374→  'detail.quickActions.printLabel': 'طباعة ملصق',
+   375→  'detail.quickActions.generateQR': 'إنشاء رمز QR',
+   376→
+   377→  // ===== Locations Page =====
+   378→  'locations.title': 'المواقع',
+   379→  'locations.subtitle': 'إدارة مواقع المستودعات والساحات',
+   380→  'locations.addLocation': 'إضافة موقع',
+   381→  'locations.allTypes': 'جميع الأنواع',
+   382→  'locations.noLocationsFound': 'لا توجد مواقع',
+   383→  'locations.card.zone': 'المنطقة',
+   384→  'locations.card.capacity': 'السعة',
+   385→  'locations.card.dimensions': 'الأبعاد',
+   386→  'locations.card.area': 'المساحة',
+   387→  'locations.card.items': 'عناصر',
+   388→  'locations.card.load': 'التحميل',
+   389→  'locations.editLocation': 'تعديل موقع',
+   390→  'locations.addNewLocation': 'إضافة موقع جديد',
+   391→  'locations.form.code': 'الرمز *',
+   392→  'locations.form.name': 'الاسم *',
+   393→  'locations.form.type': 'النوع *',
+   394→  'locations.form.zone': 'المنطقة',
+   395→  'locations.form.maxWeight': 'الوزن الأقصى (طن)',
+   396→  'locations.form.maxDimension': 'البعد الأقصى',
+   397→  'locations.form.maxDimensionPlaceholder': 'مثال: 50×30×25',
+   398→  'locations.form.area': 'المساحة (م²)',
+   399→  'locations.form.active': 'نشط',
+   400→  'locations.delete.message': 'حذف الموقع',
+   401→  'locations.delete.warning': '؟ لا يمكن حذف المواقع التي تحتوي على بضائع.',
+   402→  'locations.toast.fetchFailed': 'فشل في جلب المواقع',
+   403→  'locations.toast.created': 'تم إنشاء الموقع',
+   404→  'locations.toast.updated': 'تم تحديث الموقع',
+   405→  'locations.toast.deleted': 'تم حذف الموقع',
+   406→  'locations.toast.deleteFailed': 'فشل في حذف الموقع',
+   407→  'locations.gridView': 'شبكة',
+   408→  'locations.tableView': 'جدول',
+   409→  'locations.table.code': 'الرمز',
+   410→  'locations.table.name': 'الاسم',
+   411→  'locations.table.type': 'النوع',
+   412→  'locations.table.zone': 'المنطقة',
+   413→  'locations.table.capacity': 'السعة',
+   414→  'locations.table.area': 'المساحة',
+   415→  'locations.table.cargoCount': 'البضائع',
+   416→  'locations.table.status': 'الحالة',
+   417→  'locations.table.actions': 'إجراءات',
+   418→  'locations.toast.exported': 'تم تصدير المواقع بنجاح',
+   419→  'locations.searchPlaceholder': 'بحث في المواقع...',
+   420→
+   421→  // ===== Equipment Page =====
+   422→  'equipment.title': 'المعدات',
+   423→  'equipment.subtitle': 'إدارة الرافعات والرافعات الشوكية وأدوات الرفع',
+   424→  'equipment.addEquipment': 'إضافة معدات',
+   425→  'equipment.noEquipmentFound': 'لا توجد معدات',
+   426→  'equipment.table.code': 'الرمز',
+   427→  'equipment.table.name': 'الاسم',
+   428→  'equipment.table.type': 'النوع',
+   429→  'equipment.table.capacity': 'السعة',
+   430→  'equipment.table.manufacturer': 'الشركة المصنعة',
+   431→  'equipment.table.status': 'الحالة',
+   432→  'equipment.table.location': 'الموقع',
+   433→  'equipment.table.certExpiry': 'انتهاء الشهادة',
+   434→  'equipment.table.actions': 'إجراءات',
+   435→  'equipment.certExpired': 'الشهادة منتهية',
+   436→  'equipment.certExpiringSoon': 'تنتهي خلال 30 يوم',
+   437→  'equipment.editEquipment': 'تعديل المعدات',
+   438→  'equipment.addNewEquipment': 'إضافة معدات جديدة',
+   439→  'equipment.form.name': 'الاسم *',
+   440→  'equipment.form.type': 'النوع *',
+   441→  'equipment.form.capacity': 'السعة (طن)',
+   442→  'equipment.form.status': 'الحالة *',
+   443→  'equipment.form.manufacturer': 'الشركة المصنعة',
+   444→  'equipment.form.model': 'الموديل',
+   445→  'equipment.form.serialNumber': 'الرقم التسلسلي',
+   446→  'equipment.form.currentLocation': 'الموقع الحالي',
+   447→  'equipment.form.lastInspection': 'آخر فحص',
+   448→  'equipment.form.nextInspection': 'الفحص القادم',
+   449→  'equipment.form.certificationId': 'رقم الشهادة',
+   450→  'equipment.form.certExpiry': 'انتهاء الشهادة',
+   451→  'equipment.delete.message': 'حذف المعدات',
+   452→  'equipment.delete.cannotUndo': '؟ لا يمكن التراجع عن هذا الإجراء.',
+   453→  'equipment.toast.fetchFailed': 'فشل في جلب المعدات',
+   454→  'equipment.toast.created': 'تم إنشاء المعدات',
+   455→  'equipment.toast.updated': 'تم تحديث المعدات',
+   456→  'equipment.toast.deleted': 'تم حذف المعدات',
+   457→  'equipment.toast.deleteFailed': 'فشل في حذف المعدات',
+   458→
+   459→  // ===== Movements Page =====
+   460→  'movements.title': 'الحركات',
+   461→  'movements.subtitle': 'سجل الحركات وآثار التدقيق',
+   462→  'movements.recordMovement': 'تسجيل حركة',
+   463→  'movements.searchPlaceholder': 'رمز البضاعة...',
+   464→  'movements.table.ref': 'المرجع',
+   465→  'movements.table.dateTime': 'التاريخ/الوقت',
+   466→  'movements.table.cargo': 'البضاعة',
+   467→  'movements.table.type': 'النوع',
+   468→  'movements.table.from': 'من',
+   469→  'movements.table.to': 'إلى',
+   470→  'movements.table.equipment': 'المعدات',
+   471→  'movements.table.operator': 'المشغّل',
+   472→  'movements.table.weight': 'الوزن',
+   473→  'movements.table.remarks': 'ملاحظات',
+   474→  'movements.noMovementsFound': 'لا توجد حركات',
+   475→  'movements.recordNewMovement': 'تسجيل حركة جديدة',
+   476→  'movements.form.cargoItem': 'البضاعة *',
+   477→  'movements.form.cargoPlaceholder': 'بحث واختيار بضاعة...',
+   478→  'movements.form.movementType': 'نوع الحركة *',
+   479→  'movements.form.liftMethod': 'طريقة الرفع',
+   480→  'movements.form.liftMethodPlaceholder': 'مثال: رافعة، رافعة شوكية',
+   481→  'movements.form.fromLocation': 'من موقع',
+   482→  'movements.form.toLocation': 'إلى موقع',
+   483→  'movements.form.equipmentUsed': 'المعدات المستخدمة',
+   484→  'movements.form.operatorName': 'المشغّل',
+   485→  'movements.form.actualWeight': 'الوزن الفعلي (كجم)',
+   486→  'movements.form.remarks': 'ملاحظات',
+   487→  'movements.form.remarksPlaceholder': 'ملاحظات اختيارية...',
+   488→  'movements.toast.fetchFailed': 'فشل في جلب الحركات',
+   489→  'movements.toast.recorded': 'تم تسجيل الحركة',
+   490→  'movements.toast.recordFailed': 'فشل في تسجيل الحركة',
+   491→
+   492→  // ===== Integration Page =====
+   493→  'integration.title': 'تكامل SAP',
+   494→  'integration.subtitle': 'تكوين الاتصال القائم على الأحداث مع SAP',
+   495→  'integration.saveConfiguration': 'حفظ الإعدادات',
+   496→  'integration.eventDrivenTitle': 'بنية قائمة على الأحداث',
+   497→  'integration.eventDrivenDesc': 'يستخدم نظام إدارة المستودعات نمطاً قائماً على الأحداث للمزامنة مع SAP. كل عملية بضاعة (استلام، نقل، إرسال) تُفعّل حدثاً صادراً يتم تعيينه إلى نقطة النهاية المقابلة في SAP. هذا يضمن اتساق البيانات في الوقت الفعلي بين نظام إدارة المستودعات و SAP ERP بدون تأخير المعالجة الدفعية.',
+   498→  'integration.syncHealth': 'صحة المزامنة',
+   499→  'integration.successful': 'ناجح',
+   500→  'integration.failed': 'فاشل',
+   501→  'integration.connectionConfig': 'تكوين اتصال SAP',
+   502→  'integration.connectionConfigDesc': 'تكوين الاتصال بنظام SAP ERP الخاص بك',
+   503→  'integration.form.endpoint': 'نقطة نهاية SAP',
+   504→  'integration.form.authMethod': 'طريقة المصادقة',
+   505→  'integration.form.apiKey': 'مفتاح API',
+   506→  'integration.form.protocol': 'البروتوكول',
+   507→  'integration.form.sapSystemId': 'معرّف نظام SAP',
+   508→  'integration.form.client': 'العميل',
+   509→  'integration.form.enableSync': 'تفعيل مزامنة SAP',
+   510→  'integration.eventMapping': 'تعيين الأحداث',
+   511→  'integration.eventMappingDesc': 'تعيين أحداث النظام إلى نقاط نهاية SAP',
+   512→  'integration.table.eventType': 'نوع الحدث',
+   513→  'integration.table.sapEndpoint': 'نقطة نهاية SAP',
+   514→  'integration.table.method': 'الطريقة',
+   515→  'integration.table.enabled': 'مفعّل',
+   516→  'integration.syncLog': 'سجل المزامنة',
+   517→  'integration.syncLogDesc': 'نشاط المزامنة الأخير',
+   518→  'integration.table.event': 'الحدث',
+   519→  'integration.table.direction': 'الاتجاه',
+   520→  'integration.table.timestamp': 'الطابع الزمني',
+   521→  'integration.table.retries': 'إعادة المحاولات',
+   522→  'integration.toast.configSaved': 'تم حفظ إعدادات SAP (عرض تجريبي)',
+   523→  'integration.toast.mappingToggled': 'تم تعيين الحدث',
+   524→  'integration.toast.logRefreshed': 'تم تحديث سجل المزامنة (عرض تجريبي)',
+   525→  'integration.direction.outbound': 'النظام ← SAP',
+   526→  'integration.direction.inbound': 'SAP ← النظام',
+   527→
+   528→  // ===== Equipment Detail =====
+   529→  'detail.equipment.profile': 'بطاقة المعدات',
+   530→  'detail.equipment.certification': 'حالة الشهادة',
+   531→  'detail.equipment.maintenance': 'جدول الصيانة',
+   532→  'detail.equipment.capacity': 'استخدام السعة',
+   533→  'detail.equipment.recordInspection': 'تسجيل فحص',
+   534→  'detail.equipment.scheduleMaintenance': 'جدولة صيانة',
+   535→  'detail.equipment.printCertificate': 'طباعة الشهادة',
+   536→  'detail.equipment.specifications': 'المواصفات',
+   537→  'detail.equipment.capacityTons': 'السعة',
+   538→  'detail.equipment.manufacturer': 'الشركة المصنعة',
+   539→  'detail.equipment.model': 'الموديل',
+   540→  'detail.equipment.serialNumber': 'الرقم التسلسلي',
+   541→  'detail.equipment.currentLocation': 'الموقع الحالي',
+   542→  'detail.equipment.certId': 'رقم الشهادة',
+   543→  'detail.equipment.certExpiryDate': 'تاريخ انتهاء الشهادة',
+   544→  'detail.equipment.certValid': 'ساري',
+   545→  'detail.equipment.certExpiring': 'ينتهي قريباً',
+   546→  'detail.equipment.certExpired': 'منتهي',
+   547→  'detail.equipment.certNone': 'لا توجد شهادة',
+   548→  'detail.equipment.daysRemaining': 'يوم متبقي',
+   549→  'detail.equipment.daysOverdue': 'يوم متأخر',
+   550→  'detail.equipment.lastInspection': 'آخر فحص',
+   551→  'detail.equipment.nextInspection': 'الفحص القادم',
+   552→  'detail.equipment.inspectionProgress': 'تقدم الفحص',
+   553→  'detail.equipment.currentLoad': 'الحمولة الحالية',
+   554→  'detail.equipment.maxCapacity': 'السعة القصوى',
+   555→  'detail.equipment.utilization': 'الاستخدام',
+   556→  'detail.equipment.noCapacity': 'لا توجد بيانات سعة',
+   557→  'detail.equipment.statusManagement': 'إدارة الحالة',
+   558→  'detail.equipment.changeStatus': 'تغيير الحالة',
+   559→  'detail.equipment.statusChanged': 'تم تغيير حالة المعدات',
+   560→  'detail.equipment.statusChangeFailed': 'فشل في تغيير الحالة',
+   561→  'detail.equipment.noNextInspection': 'لم يتم جدولة فحص قادم',
+   562→  'detail.equipment.editEquipment': 'تعديل المعدات',
+   563→  'detail.equipment.noLocation': 'غير معيّن',
+   564→  'detail.equipment.emptyState': 'لا توجد معدات. أضف أول عنصر معدات.',
+   565→  'equipment.form.specifications': 'المواصفات',
+   566→  'equipment.form.inspectionCertification': 'الفحص والشهادات',
+   567→  'equipment.form.capacitySlider': 'السعة',
+   568→
+   569→  // ===== Movement Detail =====
+   570→  'detail.movement.path': 'مسار الحركة',
+   571→  'detail.movement.cargoInfo': 'معلومات البضاعة',
+   572→  'detail.movement.operator': 'المشغّل',
+   573→  'detail.movement.equipment': 'المعدات المستخدمة',
+   574→  'detail.movement.fullTimeline': 'الجدول الزمني الكامل',
+   575→  'detail.movement.fromLocation': 'من موقع',
+   576→  'detail.movement.toLocation': 'إلى موقع',
+   577→  'detail.movement.noLocation': 'لم يتم تعيين موقع',
+   578→  'detail.movement.remarks': 'ملاحظات',
+   579→  'detail.movement.liftMethod': 'طريقة الرفع',
+   580→  'detail.movement.actualWeight': 'الوزن الفعلي',
+   581→  'detail.movement.performedBy': 'تم التنفيذ بواسطة',
+   582→  'detail.movement.cargoCode': 'رمز البضاعة',
+   583→  'detail.movement.cargoDescription': 'الوصف',
+   584→  'detail.movement.cargoWeight': 'الوزن',
+   585→  'detail.movement.cargoCategory': 'الفئة',
+   586→  'detail.movement.cargoStatus': 'الحالة',
+   587→  'detail.movement.noTimeline': 'لا يوجد سجل حركات لهذه البضاعة',
+   588→  'detail.movement.movementDetails': 'تفاصيل الحركة',
+   589→  'movements.stats.today': 'اليوم',
+   590→  'movements.stats.thisWeek': 'هذا الأسبوع',
+   591→  'movements.stats.received': 'مستلمة',
+   592→  'movements.stats.dispatched': 'مرسلة',
+   593→  'movements.stats.movements': 'الحركات',
+   594→  'movements.live': 'مباشر',
+   595→  'movements.autoRefresh': 'تحديث تلقائي',
+   596→  'movements.dateFrom': 'من تاريخ',
+   597→  'movements.dateTo': 'إلى تاريخ',
+   598→  'movements.toast.exported': 'تم تصدير الحركات بنجاح',
+   599→};
+   600→
+   601→// ==================== HELPER: Translate enum values ====================
+   602→
+   603→const statusMap: Record<string, string> = {
+   604→  IN_YARD: 'status.IN_YARD',
+   605→  IN_WAREHOUSE: 'status.IN_WAREHOUSE',
+   606→  IN_TRANSIT: 'status.IN_TRANSIT',
+   607→  RECEIVED: 'status.RECEIVED',
+   608→  DISPATCHED: 'status.DISPATCHED',
+   609→  DELIVERED: 'status.DELIVERED',
+   610→  PLANNED: 'status.PLANNED',
+   611→  RECEIVING: 'status.RECEIVING',
+   612→  IN_STORAGE: 'status.IN_STORAGE',
+   613→  STAGING: 'status.STAGING',
+   614→  LOADED: 'status.LOADED',
+   615→  SHIPPED: 'status.SHIPPED',
+   616→  COMPLETED: 'status.COMPLETED',
+   617→  AVAILABLE: 'status.AVAILABLE',
+   618→  IN_USE: 'status.IN_USE',
+   619→  MAINTENANCE: 'status.MAINTENANCE',
+   620→  OUT_OF_SERVICE: 'status.OUT_OF_SERVICE',
+   621→};
+   622→
+   623→const categoryMap: Record<string, string> = {
+   624→  HEAVY_LIFT: 'category.HEAVY_LIFT',
+   625→  OVERSIZE: 'category.OVERSIZE',
+   626→  STANDARD: 'category.STANDARD',
+   627→  PROJECT_CARGO: 'category.PROJECT_CARGO',
+   628→};
+   629→
+   630→const commodityMap: Record<string, string> = {
+   631→  GENERAL: 'commodity.GENERAL',
+   632→  MACHINERY: 'commodity.MACHINERY',
+   633→  STEEL: 'commodity.STEEL',
+   634→  EQUIPMENT: 'commodity.EQUIPMENT',
+   635→  MODULE: 'commodity.MODULE',
+   636→};
+   637→
+   638→const equipmentTypeMap: Record<string, string> = {
+   639→  CRANE: 'equipmentType.CRANE',
+   640→  FORKLIFT: 'equipmentType.FORKLIFT',
+   641→  SPREADER_BAR: 'equipmentType.SPREADER_BAR',
+   642→  SLING: 'equipmentType.SLING',
+   643→  SHACKLE: 'equipmentType.SHACKLE',
+   644→  BEAM: 'equipmentType.BEAM',
+   645→  JACK: 'equipmentType.JACK',
+   646→  ROLLER: 'equipmentType.ROLLER',
+   647→};
+   648→
+   649→const movementTypeMap: Record<string, string> = {
+   650→  RECEIVE: 'movementType.RECEIVE',
+   651→  MOVE: 'movementType.MOVE',
+   652→  DISPATCH: 'movementType.DISPATCH',
+   653→  INSPECT: 'movementType.INSPECT',
+   654→};
+   655→
+   656→const locationTypeMap: Record<string, string> = {
+   657→  YARD: 'locationType.YARD',
+   658→  WAREHOUSE: 'locationType.WAREHOUSE',
+   659→  OPEN_AREA: 'locationType.OPEN_AREA',
+   660→  STAGING: 'locationType.STAGING',
+   661→  BERTH: 'locationType.BERTH',
+   662→};
+   663→
+   664→const syncStatusMap: Record<string, string> = {
+   665→  PENDING: 'syncStatus.PENDING',
+   666→  SENT: 'syncStatus.SENT',
+   667→  SUCCESS: 'syncStatus.SUCCESS',
+   668→  FAILED: 'syncStatus.FAILED',
+   669→  RETRYING: 'syncStatus.RETRYING',
+   670→};
+   671→
+   672→const syncDirectionMap: Record<string, string> = {
+   673→  OUTBOUND: 'syncDirection.OUTBOUND',
+   674→  INBOUND: 'syncDirection.INBOUND',
+   675→};
+   676→
+   677→// ==================== TRANSLATION FUNCTION ====================
+   678→
+   679→export function translate(key: string, locale: 'ar' | 'en' = 'ar'): string {
+   680→  const map = locale === 'en' ? en : translations;
+   681→  return map[key] || key;
+   682→}
+   683→
+   684→// Convenience helpers for translating enum values
+   685→export function translateStatus(value: string, locale?: 'ar' | 'en'): string {
+   686→  const key = statusMap[value];
+   687→  const map = locale === 'en' ? en : translations;
+   688→  return key ? map[key] || value : value;
+   689→}
+   690→
+   691→export function translateCategory(value: string, locale?: 'ar' | 'en'): string {
+   692→  const key = categoryMap[value];
+   693→  const map = locale === 'en' ? en : translations;
+   694→  return key ? map[key] || value : value;
+   695→}
+   696→
+   697→export function translateCommodity(value: string, locale?: 'ar' | 'en'): string {
+   698→  const key = commodityMap[value];
+   699→  const map = locale === 'en' ? en : translations;
+   700→  return key ? map[key] || value : value;
+   701→}
+   702→
+   703→export function translateEquipmentType(value: string, locale?: 'ar' | 'en'): string {
+   704→  const key = equipmentTypeMap[value];
+   705→  const map = locale === 'en' ? en : translations;
+   706→  return key ? map[key] || value : value;
+   707→}
+   708→
+   709→export function translateMovementType(value: string, locale?: 'ar' | 'en'): string {
+   710→  const key = movementTypeMap[value];
+   711→  const map = locale === 'en' ? en : translations;
+   712→  return key ? map[key] || value : value;
+   713→}
+   714→
+   715→export function translateLocationType(value: string, locale?: 'ar' | 'en'): string {
+   716→  const key = locationTypeMap[value];
+   717→  const map = locale === 'en' ? en : translations;
+   718→  return key ? map[key] || value : value;
+   719→}
+   720→
+   721→export function translateSyncStatus(value: string, locale?: 'ar' | 'en'): string {
+   722→  const key = syncStatusMap[value];
+   723→  const map = locale === 'en' ? en : translations;
+   724→  return key ? map[key] || value : value;
+   725→}
+   726→
+   727→export function translateSyncDirection(value: string, locale?: 'ar' | 'en'): string {
+   728→  const key = syncDirectionMap[value];
+   729→  const map = locale === 'en' ? en : translations;
+   730→  return key ? map[key] || value : value;
+   731→}
+   732→
+   733→// Welcome guide data
+   734→export const welcomeGuideSteps = [
+   735→  {
+   736→    title: translations['welcome.guideStep1.title'],
+   737→    description: translations['welcome.guideStep1.description'],
+   738→    icon: 'Package' as const,
+   739→  },
+   740→  {
+   741→    title: translations['welcome.guideStep2.title'],
+   742→    description: translations['welcome.guideStep2.description'],
+   743→    icon: 'FolderKanban' as const,
+   744→  },
+   745→  {
+   746→    title: translations['welcome.guideStep3.title'],
+   747→    description: translations['welcome.guideStep3.description'],
+   748→    icon: 'MapPin' as const,
+   749→  },
+   750→  {
+   751→    title: translations['welcome.guideStep4.title'],
+   752→    description: translations['welcome.guideStep4.description'],
+   753→    icon: 'Wrench' as const,
+   754→  },
+   755→  {
+   756→    title: translations['welcome.guideStep5.title'],
+   757→    description: translations['welcome.guideStep5.description'],
+   758→    icon: 'ArrowLeftRight' as const,
+   759→  },
+   760→];
+   761→
+   762→// ==================== HOOK ====================
+   763→
+   764→export function useTranslation() {
+   765→  const locale = useAppStore((s) => s.locale);
+   766→  const translate = useCallback((key: string): string => {
+   767→    const map = locale === 'en' ? en : translations;
+   768→    return map[key] || key;
+   769→  }, [locale]);
+   770→
+   771→  return { t: translate, locale };
+   772→}
+   773→
+   774→export default translations;
+   775→

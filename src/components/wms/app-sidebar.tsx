@@ -1,6 +1,6 @@
 'use client';
 
-import { Box, LayoutDashboard, Package, FolderKanban, MapPin, Wrench, ArrowLeftRight, Plug, Menu, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Box, LayoutDashboard, Package, FolderKanban, MapPin, Wrench, ArrowLeftRight, Plug, Menu, ChevronLeft, ChevronRight, BarChart3, ScanLine } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
@@ -27,6 +27,8 @@ const navItems: NavItem[] = [
   { page: 'locations', labelKey: 'nav.locations', icon: MapPin },
   { page: 'equipment', labelKey: 'nav.equipment', icon: Wrench },
   { page: 'movements', labelKey: 'nav.movements', icon: ArrowLeftRight },
+  { page: 'scanner', labelKey: 'nav.scanner', icon: ScanLine },
+  { page: 'reports', labelKey: 'nav.reports', icon: BarChart3 },
   { page: 'integration', labelKey: 'nav.sapIntegration', icon: Plug },
 ];
 

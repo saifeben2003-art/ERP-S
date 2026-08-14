@@ -7,7 +7,7 @@ import {
   Loader2, X, Camera, Image as ImageIcon, FileText, Download, Upload, Box,
   Printer, QrCode, ClipboardList, Ruler, AlertTriangle, PackageSearch,
   ArrowDown, Play, Check, MoreHorizontal, Tags, Tag, FileCheck, FileSpreadsheet,
-  FileBadge, Sparkles, Award,
+  FileBadge, Sparkles, Award, Ship, Plane, ArrowRightLeft,
 } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -165,6 +165,29 @@ export function CargoPage() {
   const [statusChanging, setStatusChanging] = useState(false);
   const [assigningLocation, setAssigningLocation] = useState(false);
   const [selectedLocationId, setSelectedLocationId] = useState('');
+  const [showTransfer, setShowTransfer] = useState(false);
+  const [transferTo, setTransferTo] = useState('');
+  const [transferRemarks, setTransferRemarks] = useState('');
+  const [transferring, setTransferring] = useState(false);
+
+  const portLabels: Record<string, string> = {
+    container: 'الحاوية',
+    seal: 'الختم',
+    customs: 'الجمارك',
+    vessel: 'السفينة',
+    voyage: 'الرحلة',
+    flight: 'الرحلة الجوية',
+    transportMode: 'طريقة النقل',
+    arrival: 'تاريخ الوصول',
+    storageDays: 'أيام التخزين',
+    barcode: 'الباركود',
+    type: 'النوع',
+    'customs.NOT_SUBMITTED': 'لم يقدم',
+    'customs.PENDING': 'قيد المراجعة',
+    'customs.CLEARED': 'مخلص',
+    'customs.REJECTED': 'مرفوض',
+    'customs.ON_HOLD': 'معلق',
+  };
 
   const { t } = useTranslation();
 
@@ -317,6 +340,30 @@ export function CargoPage() {
       openDetail(detailCargo);
       fetchCargo();
     } catch { toast.error(t('detail.statusChangeFailed')); } finally { setAssigningLocation(false); }
+  };
+
+  const handleTransfer = async () => {
+    if (!detailCargo || !transferTo) return;
+    setTransferring(true);
+    try {
+      const res = await fetch(`/api/cargo/${detailCargo.id}/transfer`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ toLocationId: transferTo, remarks: transferRemarks || undefined }),
+      });
+      if (!res.ok) {
+        const err = await res.json();
+        throw new Error(err.error || 'Transfer failed');
+      }
+      toast.success('تم نقل البضاعة بنجاح');
+      setShowTransfer(false);
+      setTransferTo('');
+      setTransferRemarks('');
+      openDetail(detailCargo);
+      fetchCargo();
+    } catch (e: unknown) {
+      toast.error(e instanceof Error ? e.message : 'فشل النقل');
+    } finally { setTransferring(false); }
   };
 
   // ==================== SELECTION LOGIC ====================
@@ -710,14 +757,13 @@ export function CargoPage() {
                     </h3>
                     <div className="grid grid-cols-3 gap-2">
                       <button
+                        onClick={() => setShowTransfer(true)}
                         className="flex flex-col items-center gap-2 p-3 rounded-xl dark:bg-slate-800/60 bg-slate-50 dark:hover:bg-slate-800 hover:bg-slate-100 transition-all duration-200 group cursor-pointer border dark:border-transparent border-slate-200 dark:hover:border-amber-500/20 hover:border-amber-400/30"
                       >
                         <div className="h-9 w-9 rounded-lg dark:bg-emerald-500/10 bg-emerald-50 flex items-center justify-center group-hover:dark:bg-emerald-500/20 group-hover:bg-emerald-100 transition-colors">
-                          <ClipboardList className="h-4 w-4 dark:text-emerald-400 text-emerald-600" />
+                          <ArrowRightLeft className="h-4 w-4 dark:text-emerald-400 text-emerald-600" />
                         </div>
-                        <span className="text-[10px] font-medium dark:text-slate-300 text-slate-600 text-center leading-tight">
-                          {t('detail.quickActions.recordMovement') || 'Record Movement'}
-                        </span>
+                        <span className="text-[10px] font-medium dark:text-slate-300 text-slate-600 text-center leading-tight">نقل الموقع</span>
                       </button>
                       <button
                         className="flex flex-col items-center gap-2 p-3 rounded-xl dark:bg-slate-800/60 bg-slate-50 dark:hover:bg-slate-800 hover:bg-slate-100 transition-all duration-200 group cursor-pointer border dark:border-transparent border-slate-200 dark:hover:border-amber-500/20 hover:border-amber-400/30"
@@ -1033,6 +1079,91 @@ export function CargoPage() {
                     </div>
                   </div>
 
+                  {/* ===== PORT/AIRPORT INFO ===== */}
+                  {(detailCargo.containerNumber || detailCargo.customsStatus || detailCargo.vesselName || detailCargo.transportMode || detailCargo.barcode) && (
+                  <div className="rounded-xl border dark:border-slate-800 border-slate-200 dark:bg-slate-900/50 bg-white p-4 shadow-sm">
+                    <h3 className="text-xs font-semibold dark:text-slate-300 text-slate-600 flex items-center gap-1.5 mb-3">
+                      <Ship className="h-3.5 w-3.5 dark:text-slate-400 text-slate-500" />
+                      {portLabels.transportMode} / معلومات الميناء
+                    </h3>
+                    <div className="grid grid-cols-2 gap-3 text-sm">
+                      {detailCargo.containerNumber && (
+                        <div>
+                          <span className="dark:text-slate-500 text-slate-400 text-xs">{portLabels.container}{detailCargo.containerType && detailCargo.containerType !== 'NONE' ? ` — ${detailCargo.containerType}` : ''}</span>
+                          <p className="dark:text-slate-200 text-slate-800 font-mono mt-0.5">{detailCargo.containerNumber}</p>
+                        </div>
+                      )}
+                      {detailCargo.sealNumber && (
+                        <div>
+                          <span className="dark:text-slate-500 text-slate-400 text-xs">{portLabels.seal}</span>
+                          <p className="dark:text-slate-200 text-slate-800 font-mono mt-0.5">{detailCargo.sealNumber}</p>
+                        </div>
+                      )}
+                      {detailCargo.customsStatus && (
+                        <div>
+                          <span className="dark:text-slate-500 text-slate-400 text-xs">{portLabels.customs}</span>
+                          <div className="mt-0.5">
+                            <Badge className={
+                              detailCargo.customsStatus === 'CLEARED' ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20' :
+                              detailCargo.customsStatus === 'PENDING' ? 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20' :
+                              detailCargo.customsStatus === 'REJECTED' ? 'bg-red-500/10 text-red-600 dark:text-red-400 border-red-500/20' :
+                              detailCargo.customsStatus === 'ON_HOLD' ? 'bg-orange-500/10 text-orange-600 dark:text-orange-400 border-orange-500/20' :
+                              'bg-slate-500/10 text-slate-600 dark:text-slate-400 border-slate-500/20'
+                            }>
+                              {portLabels[`customs.${detailCargo.customsStatus}`] || detailCargo.customsStatus}
+                            </Badge>
+                          </div>
+                        </div>
+                      )}
+                      {detailCargo.transportMode && (
+                        <div>
+                          <span className="dark:text-slate-500 text-slate-400 text-xs">{portLabels.transportMode}</span>
+                          <p className="dark:text-slate-200 text-slate-800 mt-0.5 flex items-center gap-1.5">
+                            {detailCargo.transportMode === 'SEA' && <Ship className="h-3.5 w-3.5 dark:text-blue-400 text-blue-600" />}
+                            {detailCargo.transportMode === 'AIR' && <Plane className="h-3.5 w-3.5 dark:text-purple-400 text-purple-600" />}
+                            {detailCargo.transportMode === 'LAND' && <Truck className="h-3.5 w-3.5 dark:text-amber-400 text-amber-600" />}
+                            {detailCargo.transportMode}
+                          </p>
+                        </div>
+                      )}
+                      {(detailCargo.vesselName || detailCargo.flightNumber) && (
+                        <div>
+                          <span className="dark:text-slate-500 text-slate-400 text-xs">
+                            {detailCargo.transportMode === 'AIR' ? portLabels.flight : portLabels.vessel}
+                          </span>
+                          <p className="dark:text-slate-200 text-slate-800 mt-0.5">
+                            {detailCargo.vesselName}{detailCargo.voyageNumber ? ` — ${detailCargo.voyageNumber}` : ''}
+                            {detailCargo.flightNumber ? ` ${detailCargo.flightNumber}` : ''}
+                          </p>
+                        </div>
+                      )}
+                      {detailCargo.arrivalDate && (
+                        <div>
+                          <span className="dark:text-slate-500 text-slate-400 text-xs">{portLabels.arrival}</span>
+                          <p className="dark:text-slate-200 text-slate-800 mt-0.5">{detailCargo.arrivalDate}</p>
+                        </div>
+                      )}
+                      {detailCargo.storageDays != null && (
+                        <div>
+                          <span className="dark:text-slate-500 text-slate-400 text-xs">{portLabels.storageDays}</span>
+                          <p className={`mt-0.5 font-semibold ${detailCargo.storageDays > 15 ? 'text-red-600 dark:text-red-400' : 'dark:text-slate-200 text-slate-800'}`}>
+                            {detailCargo.storageDays} يوم
+                            {detailCargo.storageDays > 15 && (
+                              <span className="ml-1 text-[10px] font-normal dark:text-amber-400 text-amber-600">⚠</span>
+                            )}
+                          </p>
+                        </div>
+                      )}
+                      {detailCargo.barcode && (
+                        <div className="col-span-2">
+                          <span className="dark:text-slate-500 text-slate-400 text-xs">{portLabels.barcode}</span>
+                          <p className="dark:text-slate-200 text-slate-800 font-mono mt-0.5 text-xs">{detailCargo.barcode}</p>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                  )}
+
                   {/* ===== SPECIAL HANDLING ===== */}
                   {detailCargo.specialHandling && (
                     <div className="rounded-xl border dark:border-amber-500/20 border-amber-200 dark:bg-amber-500/5 bg-amber-50 p-4 shadow-sm">
@@ -1112,6 +1243,54 @@ export function CargoPage() {
           ) : null}
         </SheetContent>
       </Sheet>
+
+      {/* ===== TRANSFER DIALOG ===== */}
+      <Dialog open={showTransfer} onOpenChange={(open) => {
+        if (!open) {
+          setShowTransfer(false);
+          setTransferTo('');
+          setTransferRemarks('');
+        }
+      }}>
+        <DialogContent className="dark:border-slate-700 border-slate-200 dark:bg-slate-900 bg-white max-w-md shadow-xl">
+          <DialogHeader>
+            <DialogTitle className="dark:text-slate-100 text-slate-900">نقل البضاعة</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-2">
+            {detailCargo?.location && (
+              <div className="rounded-lg dark:bg-slate-800/50 bg-slate-50 p-3">
+                <span className="text-xs dark:text-slate-500 text-slate-400">الموقع الحالي</span>
+                <p className="text-sm font-medium dark:text-slate-200 text-slate-800 mt-0.5">{detailCargo.location.code} — {detailCargo.location.name}</p>
+              </div>
+            )}
+            <div>
+              <Label className="dark:text-slate-400 text-slate-600">الموقع الوجهة</Label>
+              <Select value={transferTo} onValueChange={setTransferTo}>
+                <SelectTrigger className="dark:border-slate-700 border-slate-300 dark:bg-slate-800 bg-white dark:text-slate-200 text-slate-900 mt-1">
+                  <SelectValue placeholder="اختر موقع..." />
+                </SelectTrigger>
+                <SelectContent className="dark:border-slate-700 border-slate-200 dark:bg-slate-800 bg-white">
+                  {locations.filter(l => l.id !== detailCargo?.locationId).map((l) => (
+                    <SelectItem key={l.id} value={l.id} className="dark:text-slate-200 text-slate-700">{l.code} — {l.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <Label className="dark:text-slate-400 text-slate-600">ملاحظات</Label>
+              <Textarea value={transferRemarks} onChange={(e) => setTransferRemarks(e.target.value)}
+                className="dark:border-slate-700 border-slate-300 dark:bg-slate-800 bg-white dark:text-slate-200 text-slate-900 mt-1"
+                placeholder="ملاحظات اختيارية..." />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowTransfer(false)} className="dark:border-slate-700 border-slate-300 dark:text-slate-300 text-slate-700">إلغاء</Button>
+            <Button onClick={handleTransfer} disabled={!transferTo || transferring} className="bg-amber-500 hover:bg-amber-600 text-slate-900">
+              {transferring ? 'جاري النقل...' : 'تأكيد النقل'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* ===== ADD/EDIT DIALOG ===== */}
       <Dialog open={showAdd || !!editing} onOpenChange={(open) => { if (!open) { setShowAdd(false); setEditing(null); setForm(emptyForm); } }}>

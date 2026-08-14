@@ -1540,6 +1540,7 @@ export namespace Prisma {
     transportLength: number | null
     transportWidth: number | null
     transportHeight: number | null
+    storageDays: number | null
   }
 
   export type CargoItemSumAggregateOutputType = {
@@ -1553,6 +1554,7 @@ export namespace Prisma {
     transportLength: number | null
     transportWidth: number | null
     transportHeight: number | null
+    storageDays: number | null
   }
 
   export type CargoItemMinAggregateOutputType = {
@@ -1580,6 +1582,20 @@ export namespace Prisma {
     transportLength: number | null
     transportWidth: number | null
     transportHeight: number | null
+    barcode: string | null
+    containerNumber: string | null
+    containerType: string | null
+    sealNumber: string | null
+    customsStatus: string | null
+    customsRef: string | null
+    vesselName: string | null
+    voyageNumber: string | null
+    flightNumber: string | null
+    transportMode: string | null
+    arrivalDate: Date | null
+    departureDate: Date | null
+    storageDays: number | null
+    isDeleted: boolean | null
     receivedAt: Date | null
     dispatchedAt: Date | null
     createdAt: Date | null
@@ -1611,6 +1627,20 @@ export namespace Prisma {
     transportLength: number | null
     transportWidth: number | null
     transportHeight: number | null
+    barcode: string | null
+    containerNumber: string | null
+    containerType: string | null
+    sealNumber: string | null
+    customsStatus: string | null
+    customsRef: string | null
+    vesselName: string | null
+    voyageNumber: string | null
+    flightNumber: string | null
+    transportMode: string | null
+    arrivalDate: Date | null
+    departureDate: Date | null
+    storageDays: number | null
+    isDeleted: boolean | null
     receivedAt: Date | null
     dispatchedAt: Date | null
     createdAt: Date | null
@@ -1642,6 +1672,20 @@ export namespace Prisma {
     transportLength: number
     transportWidth: number
     transportHeight: number
+    barcode: number
+    containerNumber: number
+    containerType: number
+    sealNumber: number
+    customsStatus: number
+    customsRef: number
+    vesselName: number
+    voyageNumber: number
+    flightNumber: number
+    transportMode: number
+    arrivalDate: number
+    departureDate: number
+    storageDays: number
+    isDeleted: number
     receivedAt: number
     dispatchedAt: number
     createdAt: number
@@ -1661,6 +1705,7 @@ export namespace Prisma {
     transportLength?: true
     transportWidth?: true
     transportHeight?: true
+    storageDays?: true
   }
 
   export type CargoItemSumAggregateInputType = {
@@ -1674,6 +1719,7 @@ export namespace Prisma {
     transportLength?: true
     transportWidth?: true
     transportHeight?: true
+    storageDays?: true
   }
 
   export type CargoItemMinAggregateInputType = {
@@ -1701,6 +1747,20 @@ export namespace Prisma {
     transportLength?: true
     transportWidth?: true
     transportHeight?: true
+    barcode?: true
+    containerNumber?: true
+    containerType?: true
+    sealNumber?: true
+    customsStatus?: true
+    customsRef?: true
+    vesselName?: true
+    voyageNumber?: true
+    flightNumber?: true
+    transportMode?: true
+    arrivalDate?: true
+    departureDate?: true
+    storageDays?: true
+    isDeleted?: true
     receivedAt?: true
     dispatchedAt?: true
     createdAt?: true
@@ -1732,6 +1792,20 @@ export namespace Prisma {
     transportLength?: true
     transportWidth?: true
     transportHeight?: true
+    barcode?: true
+    containerNumber?: true
+    containerType?: true
+    sealNumber?: true
+    customsStatus?: true
+    customsRef?: true
+    vesselName?: true
+    voyageNumber?: true
+    flightNumber?: true
+    transportMode?: true
+    arrivalDate?: true
+    departureDate?: true
+    storageDays?: true
+    isDeleted?: true
     receivedAt?: true
     dispatchedAt?: true
     createdAt?: true
@@ -1763,6 +1837,20 @@ export namespace Prisma {
     transportLength?: true
     transportWidth?: true
     transportHeight?: true
+    barcode?: true
+    containerNumber?: true
+    containerType?: true
+    sealNumber?: true
+    customsStatus?: true
+    customsRef?: true
+    vesselName?: true
+    voyageNumber?: true
+    flightNumber?: true
+    transportMode?: true
+    arrivalDate?: true
+    departureDate?: true
+    storageDays?: true
+    isDeleted?: true
     receivedAt?: true
     dispatchedAt?: true
     createdAt?: true
@@ -1881,6 +1969,20 @@ export namespace Prisma {
     transportLength: number | null
     transportWidth: number | null
     transportHeight: number | null
+    barcode: string | null
+    containerNumber: string | null
+    containerType: string
+    sealNumber: string | null
+    customsStatus: string
+    customsRef: string | null
+    vesselName: string | null
+    voyageNumber: string | null
+    flightNumber: string | null
+    transportMode: string
+    arrivalDate: Date | null
+    departureDate: Date | null
+    storageDays: number
+    isDeleted: boolean
     receivedAt: Date | null
     dispatchedAt: Date | null
     createdAt: Date
@@ -1931,6 +2033,20 @@ export namespace Prisma {
     transportLength?: boolean
     transportWidth?: boolean
     transportHeight?: boolean
+    barcode?: boolean
+    containerNumber?: boolean
+    containerType?: boolean
+    sealNumber?: boolean
+    customsStatus?: boolean
+    customsRef?: boolean
+    vesselName?: boolean
+    voyageNumber?: boolean
+    flightNumber?: boolean
+    transportMode?: boolean
+    arrivalDate?: boolean
+    departureDate?: boolean
+    storageDays?: boolean
+    isDeleted?: boolean
     receivedAt?: boolean
     dispatchedAt?: boolean
     createdAt?: boolean
@@ -1966,6 +2082,20 @@ export namespace Prisma {
     transportLength?: boolean
     transportWidth?: boolean
     transportHeight?: boolean
+    barcode?: boolean
+    containerNumber?: boolean
+    containerType?: boolean
+    sealNumber?: boolean
+    customsStatus?: boolean
+    customsRef?: boolean
+    vesselName?: boolean
+    voyageNumber?: boolean
+    flightNumber?: boolean
+    transportMode?: boolean
+    arrivalDate?: boolean
+    departureDate?: boolean
+    storageDays?: boolean
+    isDeleted?: boolean
     receivedAt?: boolean
     dispatchedAt?: boolean
     createdAt?: boolean
@@ -1999,6 +2129,20 @@ export namespace Prisma {
     transportLength?: boolean
     transportWidth?: boolean
     transportHeight?: boolean
+    barcode?: boolean
+    containerNumber?: boolean
+    containerType?: boolean
+    sealNumber?: boolean
+    customsStatus?: boolean
+    customsRef?: boolean
+    vesselName?: boolean
+    voyageNumber?: boolean
+    flightNumber?: boolean
+    transportMode?: boolean
+    arrivalDate?: boolean
+    departureDate?: boolean
+    storageDays?: boolean
+    isDeleted?: boolean
     receivedAt?: boolean
     dispatchedAt?: boolean
     createdAt?: boolean
@@ -2032,13 +2176,27 @@ export namespace Prisma {
     transportLength?: boolean
     transportWidth?: boolean
     transportHeight?: boolean
+    barcode?: boolean
+    containerNumber?: boolean
+    containerType?: boolean
+    sealNumber?: boolean
+    customsStatus?: boolean
+    customsRef?: boolean
+    vesselName?: boolean
+    voyageNumber?: boolean
+    flightNumber?: boolean
+    transportMode?: boolean
+    arrivalDate?: boolean
+    departureDate?: boolean
+    storageDays?: boolean
+    isDeleted?: boolean
     receivedAt?: boolean
     dispatchedAt?: boolean
     createdAt?: boolean
     updatedAt?: boolean
   }
 
-  export type CargoItemOmit<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetOmit<"id" | "cargoCode" | "description" | "weight" | "length" | "width" | "height" | "volume" | "liftCategory" | "centerOfGravity" | "liftingPoints" | "specialHandling" | "hazardClass" | "commodityType" | "status" | "locationId" | "projectId" | "clientName" | "poReference" | "blReference" | "transportWeight" | "transportLength" | "transportWidth" | "transportHeight" | "receivedAt" | "dispatchedAt" | "createdAt" | "updatedAt", ExtArgs["result"]["cargoItem"]>
+  export type CargoItemOmit<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetOmit<"id" | "cargoCode" | "description" | "weight" | "length" | "width" | "height" | "volume" | "liftCategory" | "centerOfGravity" | "liftingPoints" | "specialHandling" | "hazardClass" | "commodityType" | "status" | "locationId" | "projectId" | "clientName" | "poReference" | "blReference" | "transportWeight" | "transportLength" | "transportWidth" | "transportHeight" | "barcode" | "containerNumber" | "containerType" | "sealNumber" | "customsStatus" | "customsRef" | "vesselName" | "voyageNumber" | "flightNumber" | "transportMode" | "arrivalDate" | "departureDate" | "storageDays" | "isDeleted" | "receivedAt" | "dispatchedAt" | "createdAt" | "updatedAt", ExtArgs["result"]["cargoItem"]>
   export type CargoItemInclude<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
     location?: boolean | CargoItem$locationArgs<ExtArgs>
     project?: boolean | CargoItem$projectArgs<ExtArgs>
@@ -2086,6 +2244,20 @@ export namespace Prisma {
       transportLength: number | null
       transportWidth: number | null
       transportHeight: number | null
+      barcode: string | null
+      containerNumber: string | null
+      containerType: string
+      sealNumber: string | null
+      customsStatus: string
+      customsRef: string | null
+      vesselName: string | null
+      voyageNumber: string | null
+      flightNumber: string | null
+      transportMode: string
+      arrivalDate: Date | null
+      departureDate: Date | null
+      storageDays: number
+      isDeleted: boolean
       receivedAt: Date | null
       dispatchedAt: Date | null
       createdAt: Date
@@ -2540,6 +2712,20 @@ export namespace Prisma {
     readonly transportLength: FieldRef<"CargoItem", 'Float'>
     readonly transportWidth: FieldRef<"CargoItem", 'Float'>
     readonly transportHeight: FieldRef<"CargoItem", 'Float'>
+    readonly barcode: FieldRef<"CargoItem", 'String'>
+    readonly containerNumber: FieldRef<"CargoItem", 'String'>
+    readonly containerType: FieldRef<"CargoItem", 'String'>
+    readonly sealNumber: FieldRef<"CargoItem", 'String'>
+    readonly customsStatus: FieldRef<"CargoItem", 'String'>
+    readonly customsRef: FieldRef<"CargoItem", 'String'>
+    readonly vesselName: FieldRef<"CargoItem", 'String'>
+    readonly voyageNumber: FieldRef<"CargoItem", 'String'>
+    readonly flightNumber: FieldRef<"CargoItem", 'String'>
+    readonly transportMode: FieldRef<"CargoItem", 'String'>
+    readonly arrivalDate: FieldRef<"CargoItem", 'DateTime'>
+    readonly departureDate: FieldRef<"CargoItem", 'DateTime'>
+    readonly storageDays: FieldRef<"CargoItem", 'Int'>
+    readonly isDeleted: FieldRef<"CargoItem", 'Boolean'>
     readonly receivedAt: FieldRef<"CargoItem", 'DateTime'>
     readonly dispatchedAt: FieldRef<"CargoItem", 'DateTime'>
     readonly createdAt: FieldRef<"CargoItem", 'DateTime'>
@@ -3034,12 +3220,16 @@ export namespace Prisma {
     maxWeight: number | null
     area: number | null
     currentLoad: number | null
+    minTemp: number | null
+    maxTemp: number | null
   }
 
   export type LocationSumAggregateOutputType = {
     maxWeight: number | null
     area: number | null
     currentLoad: number | null
+    minTemp: number | null
+    maxTemp: number | null
   }
 
   export type LocationMinAggregateOutputType = {
@@ -3053,6 +3243,11 @@ export namespace Prisma {
     area: number | null
     isActive: boolean | null
     currentLoad: number | null
+    barcode: string | null
+    locationType: string | null
+    temperatureControlled: boolean | null
+    minTemp: number | null
+    maxTemp: number | null
     createdAt: Date | null
     updatedAt: Date | null
   }
@@ -3068,6 +3263,11 @@ export namespace Prisma {
     area: number | null
     isActive: boolean | null
     currentLoad: number | null
+    barcode: string | null
+    locationType: string | null
+    temperatureControlled: boolean | null
+    minTemp: number | null
+    maxTemp: number | null
     createdAt: Date | null
     updatedAt: Date | null
   }
@@ -3083,6 +3283,11 @@ export namespace Prisma {
     area: number
     isActive: number
     currentLoad: number
+    barcode: number
+    locationType: number
+    temperatureControlled: number
+    minTemp: number
+    maxTemp: number
     createdAt: number
     updatedAt: number
     _all: number
@@ -3093,12 +3298,16 @@ export namespace Prisma {
     maxWeight?: true
     area?: true
     currentLoad?: true
+    minTemp?: true
+    maxTemp?: true
   }
 
   export type LocationSumAggregateInputType = {
     maxWeight?: true
     area?: true
     currentLoad?: true
+    minTemp?: true
+    maxTemp?: true
   }
 
   export type LocationMinAggregateInputType = {
@@ -3112,6 +3321,11 @@ export namespace Prisma {
     area?: true
     isActive?: true
     currentLoad?: true
+    barcode?: true
+    locationType?: true
+    temperatureControlled?: true
+    minTemp?: true
+    maxTemp?: true
     createdAt?: true
     updatedAt?: true
   }
@@ -3127,6 +3341,11 @@ export namespace Prisma {
     area?: true
     isActive?: true
     currentLoad?: true
+    barcode?: true
+    locationType?: true
+    temperatureControlled?: true
+    minTemp?: true
+    maxTemp?: true
     createdAt?: true
     updatedAt?: true
   }
@@ -3142,6 +3361,11 @@ export namespace Prisma {
     area?: true
     isActive?: true
     currentLoad?: true
+    barcode?: true
+    locationType?: true
+    temperatureControlled?: true
+    minTemp?: true
+    maxTemp?: true
     createdAt?: true
     updatedAt?: true
     _all?: true
@@ -3244,6 +3468,11 @@ export namespace Prisma {
     area: number | null
     isActive: boolean
     currentLoad: number
+    barcode: string | null
+    locationType: string
+    temperatureControlled: boolean
+    minTemp: number | null
+    maxTemp: number | null
     createdAt: Date
     updatedAt: Date
     _count: LocationCountAggregateOutputType | null
@@ -3278,6 +3507,11 @@ export namespace Prisma {
     area?: boolean
     isActive?: boolean
     currentLoad?: boolean
+    barcode?: boolean
+    locationType?: boolean
+    temperatureControlled?: boolean
+    minTemp?: boolean
+    maxTemp?: boolean
     createdAt?: boolean
     updatedAt?: boolean
     cargoItems?: boolean | Location$cargoItemsArgs<ExtArgs>
@@ -3297,6 +3531,11 @@ export namespace Prisma {
     area?: boolean
     isActive?: boolean
     currentLoad?: boolean
+    barcode?: boolean
+    locationType?: boolean
+    temperatureControlled?: boolean
+    minTemp?: boolean
+    maxTemp?: boolean
     createdAt?: boolean
     updatedAt?: boolean
   }, ExtArgs["result"]["location"]>
@@ -3312,6 +3551,11 @@ export namespace Prisma {
     area?: boolean
     isActive?: boolean
     currentLoad?: boolean
+    barcode?: boolean
+    locationType?: boolean
+    temperatureControlled?: boolean
+    minTemp?: boolean
+    maxTemp?: boolean
     createdAt?: boolean
     updatedAt?: boolean
   }, ExtArgs["result"]["location"]>
@@ -3327,11 +3571,16 @@ export namespace Prisma {
     area?: boolean
     isActive?: boolean
     currentLoad?: boolean
+    barcode?: boolean
+    locationType?: boolean
+    temperatureControlled?: boolean
+    minTemp?: boolean
+    maxTemp?: boolean
     createdAt?: boolean
     updatedAt?: boolean
   }
 
-  export type LocationOmit<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetOmit<"id" | "code" | "name" | "type" | "zone" | "maxWeight" | "maxDimension" | "area" | "isActive" | "currentLoad" | "createdAt" | "updatedAt", ExtArgs["result"]["location"]>
+  export type LocationOmit<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetOmit<"id" | "code" | "name" | "type" | "zone" | "maxWeight" | "maxDimension" | "area" | "isActive" | "currentLoad" | "barcode" | "locationType" | "temperatureControlled" | "minTemp" | "maxTemp" | "createdAt" | "updatedAt", ExtArgs["result"]["location"]>
   export type LocationInclude<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
     cargoItems?: boolean | Location$cargoItemsArgs<ExtArgs>
     movementsFrom?: boolean | Location$movementsFromArgs<ExtArgs>
@@ -3359,6 +3608,11 @@ export namespace Prisma {
       area: number | null
       isActive: boolean
       currentLoad: number
+      barcode: string | null
+      locationType: string
+      temperatureControlled: boolean
+      minTemp: number | null
+      maxTemp: number | null
       createdAt: Date
       updatedAt: Date
     }, ExtArgs["result"]["location"]>
@@ -3797,6 +4051,11 @@ export namespace Prisma {
     readonly area: FieldRef<"Location", 'Float'>
     readonly isActive: FieldRef<"Location", 'Boolean'>
     readonly currentLoad: FieldRef<"Location", 'Int'>
+    readonly barcode: FieldRef<"Location", 'String'>
+    readonly locationType: FieldRef<"Location", 'String'>
+    readonly temperatureControlled: FieldRef<"Location", 'Boolean'>
+    readonly minTemp: FieldRef<"Location", 'Float'>
+    readonly maxTemp: FieldRef<"Location", 'Float'>
     readonly createdAt: FieldRef<"Location", 'DateTime'>
     readonly updatedAt: FieldRef<"Location", 'DateTime'>
   }
@@ -6770,6 +7029,8 @@ export namespace Prisma {
     operatorName: string | null
     actualWeight: number | null
     remarks: string | null
+    scannedBarcode: string | null
+    isScanned: boolean | null
     performedBy: string | null
     createdAt: Date | null
   }
@@ -6787,6 +7048,8 @@ export namespace Prisma {
     operatorName: string | null
     actualWeight: number | null
     remarks: string | null
+    scannedBarcode: string | null
+    isScanned: boolean | null
     performedBy: string | null
     createdAt: Date | null
   }
@@ -6804,6 +7067,8 @@ export namespace Prisma {
     operatorName: number
     actualWeight: number
     remarks: number
+    scannedBarcode: number
+    isScanned: number
     performedBy: number
     createdAt: number
     _all: number
@@ -6831,6 +7096,8 @@ export namespace Prisma {
     operatorName?: true
     actualWeight?: true
     remarks?: true
+    scannedBarcode?: true
+    isScanned?: true
     performedBy?: true
     createdAt?: true
   }
@@ -6848,6 +7115,8 @@ export namespace Prisma {
     operatorName?: true
     actualWeight?: true
     remarks?: true
+    scannedBarcode?: true
+    isScanned?: true
     performedBy?: true
     createdAt?: true
   }
@@ -6865,6 +7134,8 @@ export namespace Prisma {
     operatorName?: true
     actualWeight?: true
     remarks?: true
+    scannedBarcode?: true
+    isScanned?: true
     performedBy?: true
     createdAt?: true
     _all?: true
@@ -6969,6 +7240,8 @@ export namespace Prisma {
     operatorName: string | null
     actualWeight: number | null
     remarks: string | null
+    scannedBarcode: string | null
+    isScanned: boolean
     performedBy: string
     createdAt: Date
     _count: MovementCountAggregateOutputType | null
@@ -7005,6 +7278,8 @@ export namespace Prisma {
     operatorName?: boolean
     actualWeight?: boolean
     remarks?: boolean
+    scannedBarcode?: boolean
+    isScanned?: boolean
     performedBy?: boolean
     createdAt?: boolean
     cargoItem?: boolean | CargoItemDefaultArgs<ExtArgs>
@@ -7025,6 +7300,8 @@ export namespace Prisma {
     operatorName?: boolean
     actualWeight?: boolean
     remarks?: boolean
+    scannedBarcode?: boolean
+    isScanned?: boolean
     performedBy?: boolean
     createdAt?: boolean
     cargoItem?: boolean | CargoItemDefaultArgs<ExtArgs>
@@ -7045,6 +7322,8 @@ export namespace Prisma {
     operatorName?: boolean
     actualWeight?: boolean
     remarks?: boolean
+    scannedBarcode?: boolean
+    isScanned?: boolean
     performedBy?: boolean
     createdAt?: boolean
     cargoItem?: boolean | CargoItemDefaultArgs<ExtArgs>
@@ -7065,11 +7344,13 @@ export namespace Prisma {
     operatorName?: boolean
     actualWeight?: boolean
     remarks?: boolean
+    scannedBarcode?: boolean
+    isScanned?: boolean
     performedBy?: boolean
     createdAt?: boolean
   }
 
-  export type MovementOmit<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetOmit<"id" | "movementRef" | "cargoItemId" | "cargoCode" | "type" | "fromLocationId" | "toLocationId" | "equipmentUsed" | "liftMethod" | "operatorName" | "actualWeight" | "remarks" | "performedBy" | "createdAt", ExtArgs["result"]["movement"]>
+  export type MovementOmit<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetOmit<"id" | "movementRef" | "cargoItemId" | "cargoCode" | "type" | "fromLocationId" | "toLocationId" | "equipmentUsed" | "liftMethod" | "operatorName" | "actualWeight" | "remarks" | "scannedBarcode" | "isScanned" | "performedBy" | "createdAt", ExtArgs["result"]["movement"]>
   export type MovementInclude<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
     cargoItem?: boolean | CargoItemDefaultArgs<ExtArgs>
     fromLocation?: boolean | Movement$fromLocationArgs<ExtArgs>
@@ -7106,6 +7387,8 @@ export namespace Prisma {
       operatorName: string | null
       actualWeight: number | null
       remarks: string | null
+      scannedBarcode: string | null
+      isScanned: boolean
       performedBy: string
       createdAt: Date
     }, ExtArgs["result"]["movement"]>
@@ -7546,6 +7829,8 @@ export namespace Prisma {
     readonly operatorName: FieldRef<"Movement", 'String'>
     readonly actualWeight: FieldRef<"Movement", 'Float'>
     readonly remarks: FieldRef<"Movement", 'String'>
+    readonly scannedBarcode: FieldRef<"Movement", 'String'>
+    readonly isScanned: FieldRef<"Movement", 'Boolean'>
     readonly performedBy: FieldRef<"Movement", 'String'>
     readonly createdAt: FieldRef<"Movement", 'DateTime'>
   }
@@ -10309,6 +10594,20 @@ export namespace Prisma {
     transportLength: 'transportLength',
     transportWidth: 'transportWidth',
     transportHeight: 'transportHeight',
+    barcode: 'barcode',
+    containerNumber: 'containerNumber',
+    containerType: 'containerType',
+    sealNumber: 'sealNumber',
+    customsStatus: 'customsStatus',
+    customsRef: 'customsRef',
+    vesselName: 'vesselName',
+    voyageNumber: 'voyageNumber',
+    flightNumber: 'flightNumber',
+    transportMode: 'transportMode',
+    arrivalDate: 'arrivalDate',
+    departureDate: 'departureDate',
+    storageDays: 'storageDays',
+    isDeleted: 'isDeleted',
     receivedAt: 'receivedAt',
     dispatchedAt: 'dispatchedAt',
     createdAt: 'createdAt',
@@ -10329,6 +10628,11 @@ export namespace Prisma {
     area: 'area',
     isActive: 'isActive',
     currentLoad: 'currentLoad',
+    barcode: 'barcode',
+    locationType: 'locationType',
+    temperatureControlled: 'temperatureControlled',
+    minTemp: 'minTemp',
+    maxTemp: 'maxTemp',
     createdAt: 'createdAt',
     updatedAt: 'updatedAt'
   };
@@ -10396,6 +10700,8 @@ export namespace Prisma {
     operatorName: 'operatorName',
     actualWeight: 'actualWeight',
     remarks: 'remarks',
+    scannedBarcode: 'scannedBarcode',
+    isScanned: 'isScanned',
     performedBy: 'performedBy',
     createdAt: 'createdAt'
   };
@@ -10531,6 +10837,20 @@ export namespace Prisma {
     transportLength?: FloatNullableFilter<"CargoItem"> | number | null
     transportWidth?: FloatNullableFilter<"CargoItem"> | number | null
     transportHeight?: FloatNullableFilter<"CargoItem"> | number | null
+    barcode?: StringNullableFilter<"CargoItem"> | string | null
+    containerNumber?: StringNullableFilter<"CargoItem"> | string | null
+    containerType?: StringFilter<"CargoItem"> | string
+    sealNumber?: StringNullableFilter<"CargoItem"> | string | null
+    customsStatus?: StringFilter<"CargoItem"> | string
+    customsRef?: StringNullableFilter<"CargoItem"> | string | null
+    vesselName?: StringNullableFilter<"CargoItem"> | string | null
+    voyageNumber?: StringNullableFilter<"CargoItem"> | string | null
+    flightNumber?: StringNullableFilter<"CargoItem"> | string | null
+    transportMode?: StringFilter<"CargoItem"> | string
+    arrivalDate?: DateTimeNullableFilter<"CargoItem"> | Date | string | null
+    departureDate?: DateTimeNullableFilter<"CargoItem"> | Date | string | null
+    storageDays?: IntFilter<"CargoItem"> | number
+    isDeleted?: BoolFilter<"CargoItem"> | boolean
     receivedAt?: DateTimeNullableFilter<"CargoItem"> | Date | string | null
     dispatchedAt?: DateTimeNullableFilter<"CargoItem"> | Date | string | null
     createdAt?: DateTimeFilter<"CargoItem"> | Date | string
@@ -10565,6 +10885,20 @@ export namespace Prisma {
     transportLength?: SortOrderInput | SortOrder
     transportWidth?: SortOrderInput | SortOrder
     transportHeight?: SortOrderInput | SortOrder
+    barcode?: SortOrderInput | SortOrder
+    containerNumber?: SortOrderInput | SortOrder
+    containerType?: SortOrder
+    sealNumber?: SortOrderInput | SortOrder
+    customsStatus?: SortOrder
+    customsRef?: SortOrderInput | SortOrder
+    vesselName?: SortOrderInput | SortOrder
+    voyageNumber?: SortOrderInput | SortOrder
+    flightNumber?: SortOrderInput | SortOrder
+    transportMode?: SortOrder
+    arrivalDate?: SortOrderInput | SortOrder
+    departureDate?: SortOrderInput | SortOrder
+    storageDays?: SortOrder
+    isDeleted?: SortOrder
     receivedAt?: SortOrderInput | SortOrder
     dispatchedAt?: SortOrderInput | SortOrder
     createdAt?: SortOrder
@@ -10577,6 +10911,7 @@ export namespace Prisma {
   export type CargoItemWhereUniqueInput = Prisma.AtLeast<{
     id?: string
     cargoCode?: string
+    barcode?: string
     AND?: CargoItemWhereInput | CargoItemWhereInput[]
     OR?: CargoItemWhereInput[]
     NOT?: CargoItemWhereInput | CargoItemWhereInput[]
@@ -10602,6 +10937,19 @@ export namespace Prisma {
     transportLength?: FloatNullableFilter<"CargoItem"> | number | null
     transportWidth?: FloatNullableFilter<"CargoItem"> | number | null
     transportHeight?: FloatNullableFilter<"CargoItem"> | number | null
+    containerNumber?: StringNullableFilter<"CargoItem"> | string | null
+    containerType?: StringFilter<"CargoItem"> | string
+    sealNumber?: StringNullableFilter<"CargoItem"> | string | null
+    customsStatus?: StringFilter<"CargoItem"> | string
+    customsRef?: StringNullableFilter<"CargoItem"> | string | null
+    vesselName?: StringNullableFilter<"CargoItem"> | string | null
+    voyageNumber?: StringNullableFilter<"CargoItem"> | string | null
+    flightNumber?: StringNullableFilter<"CargoItem"> | string | null
+    transportMode?: StringFilter<"CargoItem"> | string
+    arrivalDate?: DateTimeNullableFilter<"CargoItem"> | Date | string | null
+    departureDate?: DateTimeNullableFilter<"CargoItem"> | Date | string | null
+    storageDays?: IntFilter<"CargoItem"> | number
+    isDeleted?: BoolFilter<"CargoItem"> | boolean
     receivedAt?: DateTimeNullableFilter<"CargoItem"> | Date | string | null
     dispatchedAt?: DateTimeNullableFilter<"CargoItem"> | Date | string | null
     createdAt?: DateTimeFilter<"CargoItem"> | Date | string
@@ -10609,7 +10957,7 @@ export namespace Prisma {
     location?: XOR<LocationNullableScalarRelationFilter, LocationWhereInput> | null
     project?: XOR<ProjectNullableScalarRelationFilter, ProjectWhereInput> | null
     movements?: MovementListRelationFilter
-  }, "id" | "cargoCode">
+  }, "id" | "cargoCode" | "barcode">
 
   export type CargoItemOrderByWithAggregationInput = {
     id?: SortOrder
@@ -10636,6 +10984,20 @@ export namespace Prisma {
     transportLength?: SortOrderInput | SortOrder
     transportWidth?: SortOrderInput | SortOrder
     transportHeight?: SortOrderInput | SortOrder
+    barcode?: SortOrderInput | SortOrder
+    containerNumber?: SortOrderInput | SortOrder
+    containerType?: SortOrder
+    sealNumber?: SortOrderInput | SortOrder
+    customsStatus?: SortOrder
+    customsRef?: SortOrderInput | SortOrder
+    vesselName?: SortOrderInput | SortOrder
+    voyageNumber?: SortOrderInput | SortOrder
+    flightNumber?: SortOrderInput | SortOrder
+    transportMode?: SortOrder
+    arrivalDate?: SortOrderInput | SortOrder
+    departureDate?: SortOrderInput | SortOrder
+    storageDays?: SortOrder
+    isDeleted?: SortOrder
     receivedAt?: SortOrderInput | SortOrder
     dispatchedAt?: SortOrderInput | SortOrder
     createdAt?: SortOrder
@@ -10675,6 +11037,20 @@ export namespace Prisma {
     transportLength?: FloatNullableWithAggregatesFilter<"CargoItem"> | number | null
     transportWidth?: FloatNullableWithAggregatesFilter<"CargoItem"> | number | null
     transportHeight?: FloatNullableWithAggregatesFilter<"CargoItem"> | number | null
+    barcode?: StringNullableWithAggregatesFilter<"CargoItem"> | string | null
+    containerNumber?: StringNullableWithAggregatesFilter<"CargoItem"> | string | null
+    containerType?: StringWithAggregatesFilter<"CargoItem"> | string
+    sealNumber?: StringNullableWithAggregatesFilter<"CargoItem"> | string | null
+    customsStatus?: StringWithAggregatesFilter<"CargoItem"> | string
+    customsRef?: StringNullableWithAggregatesFilter<"CargoItem"> | string | null
+    vesselName?: StringNullableWithAggregatesFilter<"CargoItem"> | string | null
+    voyageNumber?: StringNullableWithAggregatesFilter<"CargoItem"> | string | null
+    flightNumber?: StringNullableWithAggregatesFilter<"CargoItem"> | string | null
+    transportMode?: StringWithAggregatesFilter<"CargoItem"> | string
+    arrivalDate?: DateTimeNullableWithAggregatesFilter<"CargoItem"> | Date | string | null
+    departureDate?: DateTimeNullableWithAggregatesFilter<"CargoItem"> | Date | string | null
+    storageDays?: IntWithAggregatesFilter<"CargoItem"> | number
+    isDeleted?: BoolWithAggregatesFilter<"CargoItem"> | boolean
     receivedAt?: DateTimeNullableWithAggregatesFilter<"CargoItem"> | Date | string | null
     dispatchedAt?: DateTimeNullableWithAggregatesFilter<"CargoItem"> | Date | string | null
     createdAt?: DateTimeWithAggregatesFilter<"CargoItem"> | Date | string
@@ -10695,6 +11071,11 @@ export namespace Prisma {
     area?: FloatNullableFilter<"Location"> | number | null
     isActive?: BoolFilter<"Location"> | boolean
     currentLoad?: IntFilter<"Location"> | number
+    barcode?: StringNullableFilter<"Location"> | string | null
+    locationType?: StringFilter<"Location"> | string
+    temperatureControlled?: BoolFilter<"Location"> | boolean
+    minTemp?: FloatNullableFilter<"Location"> | number | null
+    maxTemp?: FloatNullableFilter<"Location"> | number | null
     createdAt?: DateTimeFilter<"Location"> | Date | string
     updatedAt?: DateTimeFilter<"Location"> | Date | string
     cargoItems?: CargoItemListRelationFilter
@@ -10713,6 +11094,11 @@ export namespace Prisma {
     area?: SortOrderInput | SortOrder
     isActive?: SortOrder
     currentLoad?: SortOrder
+    barcode?: SortOrderInput | SortOrder
+    locationType?: SortOrder
+    temperatureControlled?: SortOrder
+    minTemp?: SortOrderInput | SortOrder
+    maxTemp?: SortOrderInput | SortOrder
     createdAt?: SortOrder
     updatedAt?: SortOrder
     cargoItems?: CargoItemOrderByRelationAggregateInput
@@ -10723,6 +11109,7 @@ export namespace Prisma {
   export type LocationWhereUniqueInput = Prisma.AtLeast<{
     id?: string
     code?: string
+    barcode?: string
     AND?: LocationWhereInput | LocationWhereInput[]
     OR?: LocationWhereInput[]
     NOT?: LocationWhereInput | LocationWhereInput[]
@@ -10734,12 +11121,16 @@ export namespace Prisma {
     area?: FloatNullableFilter<"Location"> | number | null
     isActive?: BoolFilter<"Location"> | boolean
     currentLoad?: IntFilter<"Location"> | number
+    locationType?: StringFilter<"Location"> | string
+    temperatureControlled?: BoolFilter<"Location"> | boolean
+    minTemp?: FloatNullableFilter<"Location"> | number | null
+    maxTemp?: FloatNullableFilter<"Location"> | number | null
     createdAt?: DateTimeFilter<"Location"> | Date | string
     updatedAt?: DateTimeFilter<"Location"> | Date | string
     cargoItems?: CargoItemListRelationFilter
     movementsFrom?: MovementListRelationFilter
     movementsTo?: MovementListRelationFilter
-  }, "id" | "code">
+  }, "id" | "code" | "barcode">
 
   export type LocationOrderByWithAggregationInput = {
     id?: SortOrder
@@ -10752,6 +11143,11 @@ export namespace Prisma {
     area?: SortOrderInput | SortOrder
     isActive?: SortOrder
     currentLoad?: SortOrder
+    barcode?: SortOrderInput | SortOrder
+    locationType?: SortOrder
+    temperatureControlled?: SortOrder
+    minTemp?: SortOrderInput | SortOrder
+    maxTemp?: SortOrderInput | SortOrder
     createdAt?: SortOrder
     updatedAt?: SortOrder
     _count?: LocationCountOrderByAggregateInput
@@ -10775,6 +11171,11 @@ export namespace Prisma {
     area?: FloatNullableWithAggregatesFilter<"Location"> | number | null
     isActive?: BoolWithAggregatesFilter<"Location"> | boolean
     currentLoad?: IntWithAggregatesFilter<"Location"> | number
+    barcode?: StringNullableWithAggregatesFilter<"Location"> | string | null
+    locationType?: StringWithAggregatesFilter<"Location"> | string
+    temperatureControlled?: BoolWithAggregatesFilter<"Location"> | boolean
+    minTemp?: FloatNullableWithAggregatesFilter<"Location"> | number | null
+    maxTemp?: FloatNullableWithAggregatesFilter<"Location"> | number | null
     createdAt?: DateTimeWithAggregatesFilter<"Location"> | Date | string
     updatedAt?: DateTimeWithAggregatesFilter<"Location"> | Date | string
   }
@@ -11031,6 +11432,8 @@ export namespace Prisma {
     operatorName?: StringNullableFilter<"Movement"> | string | null
     actualWeight?: FloatNullableFilter<"Movement"> | number | null
     remarks?: StringNullableFilter<"Movement"> | string | null
+    scannedBarcode?: StringNullableFilter<"Movement"> | string | null
+    isScanned?: BoolFilter<"Movement"> | boolean
     performedBy?: StringFilter<"Movement"> | string
     createdAt?: DateTimeFilter<"Movement"> | Date | string
     cargoItem?: XOR<CargoItemScalarRelationFilter, CargoItemWhereInput>
@@ -11051,6 +11454,8 @@ export namespace Prisma {
     operatorName?: SortOrderInput | SortOrder
     actualWeight?: SortOrderInput | SortOrder
     remarks?: SortOrderInput | SortOrder
+    scannedBarcode?: SortOrderInput | SortOrder
+    isScanned?: SortOrder
     performedBy?: SortOrder
     createdAt?: SortOrder
     cargoItem?: CargoItemOrderByWithRelationInput
@@ -11074,6 +11479,8 @@ export namespace Prisma {
     operatorName?: StringNullableFilter<"Movement"> | string | null
     actualWeight?: FloatNullableFilter<"Movement"> | number | null
     remarks?: StringNullableFilter<"Movement"> | string | null
+    scannedBarcode?: StringNullableFilter<"Movement"> | string | null
+    isScanned?: BoolFilter<"Movement"> | boolean
     performedBy?: StringFilter<"Movement"> | string
     createdAt?: DateTimeFilter<"Movement"> | Date | string
     cargoItem?: XOR<CargoItemScalarRelationFilter, CargoItemWhereInput>
@@ -11094,6 +11501,8 @@ export namespace Prisma {
     operatorName?: SortOrderInput | SortOrder
     actualWeight?: SortOrderInput | SortOrder
     remarks?: SortOrderInput | SortOrder
+    scannedBarcode?: SortOrderInput | SortOrder
+    isScanned?: SortOrder
     performedBy?: SortOrder
     createdAt?: SortOrder
     _count?: MovementCountOrderByAggregateInput
@@ -11119,6 +11528,8 @@ export namespace Prisma {
     operatorName?: StringNullableWithAggregatesFilter<"Movement"> | string | null
     actualWeight?: FloatNullableWithAggregatesFilter<"Movement"> | number | null
     remarks?: StringNullableWithAggregatesFilter<"Movement"> | string | null
+    scannedBarcode?: StringNullableWithAggregatesFilter<"Movement"> | string | null
+    isScanned?: BoolWithAggregatesFilter<"Movement"> | boolean
     performedBy?: StringWithAggregatesFilter<"Movement"> | string
     createdAt?: DateTimeWithAggregatesFilter<"Movement"> | Date | string
   }
@@ -11347,6 +11758,20 @@ export namespace Prisma {
     transportLength?: number | null
     transportWidth?: number | null
     transportHeight?: number | null
+    barcode?: string | null
+    containerNumber?: string | null
+    containerType?: string
+    sealNumber?: string | null
+    customsStatus?: string
+    customsRef?: string | null
+    vesselName?: string | null
+    voyageNumber?: string | null
+    flightNumber?: string | null
+    transportMode?: string
+    arrivalDate?: Date | string | null
+    departureDate?: Date | string | null
+    storageDays?: number
+    isDeleted?: boolean
     receivedAt?: Date | string | null
     dispatchedAt?: Date | string | null
     createdAt?: Date | string
@@ -11381,6 +11806,20 @@ export namespace Prisma {
     transportLength?: number | null
     transportWidth?: number | null
     transportHeight?: number | null
+    barcode?: string | null
+    containerNumber?: string | null
+    containerType?: string
+    sealNumber?: string | null
+    customsStatus?: string
+    customsRef?: string | null
+    vesselName?: string | null
+    voyageNumber?: string | null
+    flightNumber?: string | null
+    transportMode?: string
+    arrivalDate?: Date | string | null
+    departureDate?: Date | string | null
+    storageDays?: number
+    isDeleted?: boolean
     receivedAt?: Date | string | null
     dispatchedAt?: Date | string | null
     createdAt?: Date | string
@@ -11411,6 +11850,20 @@ export namespace Prisma {
     transportLength?: NullableFloatFieldUpdateOperationsInput | number | null
     transportWidth?: NullableFloatFieldUpdateOperationsInput | number | null
     transportHeight?: NullableFloatFieldUpdateOperationsInput | number | null
+    barcode?: NullableStringFieldUpdateOperationsInput | string | null
+    containerNumber?: NullableStringFieldUpdateOperationsInput | string | null
+    containerType?: StringFieldUpdateOperationsInput | string
+    sealNumber?: NullableStringFieldUpdateOperationsInput | string | null
+    customsStatus?: StringFieldUpdateOperationsInput | string
+    customsRef?: NullableStringFieldUpdateOperationsInput | string | null
+    vesselName?: NullableStringFieldUpdateOperationsInput | string | null
+    voyageNumber?: NullableStringFieldUpdateOperationsInput | string | null
+    flightNumber?: NullableStringFieldUpdateOperationsInput | string | null
+    transportMode?: StringFieldUpdateOperationsInput | string
+    arrivalDate?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    departureDate?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    storageDays?: IntFieldUpdateOperationsInput | number
+    isDeleted?: BoolFieldUpdateOperationsInput | boolean
     receivedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     dispatchedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
@@ -11445,6 +11898,20 @@ export namespace Prisma {
     transportLength?: NullableFloatFieldUpdateOperationsInput | number | null
     transportWidth?: NullableFloatFieldUpdateOperationsInput | number | null
     transportHeight?: NullableFloatFieldUpdateOperationsInput | number | null
+    barcode?: NullableStringFieldUpdateOperationsInput | string | null
+    containerNumber?: NullableStringFieldUpdateOperationsInput | string | null
+    containerType?: StringFieldUpdateOperationsInput | string
+    sealNumber?: NullableStringFieldUpdateOperationsInput | string | null
+    customsStatus?: StringFieldUpdateOperationsInput | string
+    customsRef?: NullableStringFieldUpdateOperationsInput | string | null
+    vesselName?: NullableStringFieldUpdateOperationsInput | string | null
+    voyageNumber?: NullableStringFieldUpdateOperationsInput | string | null
+    flightNumber?: NullableStringFieldUpdateOperationsInput | string | null
+    transportMode?: StringFieldUpdateOperationsInput | string
+    arrivalDate?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    departureDate?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    storageDays?: IntFieldUpdateOperationsInput | number
+    isDeleted?: BoolFieldUpdateOperationsInput | boolean
     receivedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     dispatchedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
@@ -11477,6 +11944,20 @@ export namespace Prisma {
     transportLength?: number | null
     transportWidth?: number | null
     transportHeight?: number | null
+    barcode?: string | null
+    containerNumber?: string | null
+    containerType?: string
+    sealNumber?: string | null
+    customsStatus?: string
+    customsRef?: string | null
+    vesselName?: string | null
+    voyageNumber?: string | null
+    flightNumber?: string | null
+    transportMode?: string
+    arrivalDate?: Date | string | null
+    departureDate?: Date | string | null
+    storageDays?: number
+    isDeleted?: boolean
     receivedAt?: Date | string | null
     dispatchedAt?: Date | string | null
     createdAt?: Date | string
@@ -11506,6 +11987,20 @@ export namespace Prisma {
     transportLength?: NullableFloatFieldUpdateOperationsInput | number | null
     transportWidth?: NullableFloatFieldUpdateOperationsInput | number | null
     transportHeight?: NullableFloatFieldUpdateOperationsInput | number | null
+    barcode?: NullableStringFieldUpdateOperationsInput | string | null
+    containerNumber?: NullableStringFieldUpdateOperationsInput | string | null
+    containerType?: StringFieldUpdateOperationsInput | string
+    sealNumber?: NullableStringFieldUpdateOperationsInput | string | null
+    customsStatus?: StringFieldUpdateOperationsInput | string
+    customsRef?: NullableStringFieldUpdateOperationsInput | string | null
+    vesselName?: NullableStringFieldUpdateOperationsInput | string | null
+    voyageNumber?: NullableStringFieldUpdateOperationsInput | string | null
+    flightNumber?: NullableStringFieldUpdateOperationsInput | string | null
+    transportMode?: StringFieldUpdateOperationsInput | string
+    arrivalDate?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    departureDate?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    storageDays?: IntFieldUpdateOperationsInput | number
+    isDeleted?: BoolFieldUpdateOperationsInput | boolean
     receivedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     dispatchedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
@@ -11537,6 +12032,20 @@ export namespace Prisma {
     transportLength?: NullableFloatFieldUpdateOperationsInput | number | null
     transportWidth?: NullableFloatFieldUpdateOperationsInput | number | null
     transportHeight?: NullableFloatFieldUpdateOperationsInput | number | null
+    barcode?: NullableStringFieldUpdateOperationsInput | string | null
+    containerNumber?: NullableStringFieldUpdateOperationsInput | string | null
+    containerType?: StringFieldUpdateOperationsInput | string
+    sealNumber?: NullableStringFieldUpdateOperationsInput | string | null
+    customsStatus?: StringFieldUpdateOperationsInput | string
+    customsRef?: NullableStringFieldUpdateOperationsInput | string | null
+    vesselName?: NullableStringFieldUpdateOperationsInput | string | null
+    voyageNumber?: NullableStringFieldUpdateOperationsInput | string | null
+    flightNumber?: NullableStringFieldUpdateOperationsInput | string | null
+    transportMode?: StringFieldUpdateOperationsInput | string
+    arrivalDate?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    departureDate?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    storageDays?: IntFieldUpdateOperationsInput | number
+    isDeleted?: BoolFieldUpdateOperationsInput | boolean
     receivedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     dispatchedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
@@ -11554,6 +12063,11 @@ export namespace Prisma {
     area?: number | null
     isActive?: boolean
     currentLoad?: number
+    barcode?: string | null
+    locationType?: string
+    temperatureControlled?: boolean
+    minTemp?: number | null
+    maxTemp?: number | null
     createdAt?: Date | string
     updatedAt?: Date | string
     cargoItems?: CargoItemCreateNestedManyWithoutLocationInput
@@ -11572,6 +12086,11 @@ export namespace Prisma {
     area?: number | null
     isActive?: boolean
     currentLoad?: number
+    barcode?: string | null
+    locationType?: string
+    temperatureControlled?: boolean
+    minTemp?: number | null
+    maxTemp?: number | null
     createdAt?: Date | string
     updatedAt?: Date | string
     cargoItems?: CargoItemUncheckedCreateNestedManyWithoutLocationInput
@@ -11590,6 +12109,11 @@ export namespace Prisma {
     area?: NullableFloatFieldUpdateOperationsInput | number | null
     isActive?: BoolFieldUpdateOperationsInput | boolean
     currentLoad?: IntFieldUpdateOperationsInput | number
+    barcode?: NullableStringFieldUpdateOperationsInput | string | null
+    locationType?: StringFieldUpdateOperationsInput | string
+    temperatureControlled?: BoolFieldUpdateOperationsInput | boolean
+    minTemp?: NullableFloatFieldUpdateOperationsInput | number | null
+    maxTemp?: NullableFloatFieldUpdateOperationsInput | number | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
     cargoItems?: CargoItemUpdateManyWithoutLocationNestedInput
@@ -11608,6 +12132,11 @@ export namespace Prisma {
     area?: NullableFloatFieldUpdateOperationsInput | number | null
     isActive?: BoolFieldUpdateOperationsInput | boolean
     currentLoad?: IntFieldUpdateOperationsInput | number
+    barcode?: NullableStringFieldUpdateOperationsInput | string | null
+    locationType?: StringFieldUpdateOperationsInput | string
+    temperatureControlled?: BoolFieldUpdateOperationsInput | boolean
+    minTemp?: NullableFloatFieldUpdateOperationsInput | number | null
+    maxTemp?: NullableFloatFieldUpdateOperationsInput | number | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
     cargoItems?: CargoItemUncheckedUpdateManyWithoutLocationNestedInput
@@ -11626,6 +12155,11 @@ export namespace Prisma {
     area?: number | null
     isActive?: boolean
     currentLoad?: number
+    barcode?: string | null
+    locationType?: string
+    temperatureControlled?: boolean
+    minTemp?: number | null
+    maxTemp?: number | null
     createdAt?: Date | string
     updatedAt?: Date | string
   }
@@ -11641,6 +12175,11 @@ export namespace Prisma {
     area?: NullableFloatFieldUpdateOperationsInput | number | null
     isActive?: BoolFieldUpdateOperationsInput | boolean
     currentLoad?: IntFieldUpdateOperationsInput | number
+    barcode?: NullableStringFieldUpdateOperationsInput | string | null
+    locationType?: StringFieldUpdateOperationsInput | string
+    temperatureControlled?: BoolFieldUpdateOperationsInput | boolean
+    minTemp?: NullableFloatFieldUpdateOperationsInput | number | null
+    maxTemp?: NullableFloatFieldUpdateOperationsInput | number | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
   }
@@ -11656,6 +12195,11 @@ export namespace Prisma {
     area?: NullableFloatFieldUpdateOperationsInput | number | null
     isActive?: BoolFieldUpdateOperationsInput | boolean
     currentLoad?: IntFieldUpdateOperationsInput | number
+    barcode?: NullableStringFieldUpdateOperationsInput | string | null
+    locationType?: StringFieldUpdateOperationsInput | string
+    temperatureControlled?: BoolFieldUpdateOperationsInput | boolean
+    minTemp?: NullableFloatFieldUpdateOperationsInput | number | null
+    maxTemp?: NullableFloatFieldUpdateOperationsInput | number | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
   }
@@ -11961,6 +12505,8 @@ export namespace Prisma {
     operatorName?: string | null
     actualWeight?: number | null
     remarks?: string | null
+    scannedBarcode?: string | null
+    isScanned?: boolean
     performedBy?: string
     createdAt?: Date | string
     cargoItem: CargoItemCreateNestedOneWithoutMovementsInput
@@ -11981,6 +12527,8 @@ export namespace Prisma {
     operatorName?: string | null
     actualWeight?: number | null
     remarks?: string | null
+    scannedBarcode?: string | null
+    isScanned?: boolean
     performedBy?: string
     createdAt?: Date | string
   }
@@ -11995,6 +12543,8 @@ export namespace Prisma {
     operatorName?: NullableStringFieldUpdateOperationsInput | string | null
     actualWeight?: NullableFloatFieldUpdateOperationsInput | number | null
     remarks?: NullableStringFieldUpdateOperationsInput | string | null
+    scannedBarcode?: NullableStringFieldUpdateOperationsInput | string | null
+    isScanned?: BoolFieldUpdateOperationsInput | boolean
     performedBy?: StringFieldUpdateOperationsInput | string
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     cargoItem?: CargoItemUpdateOneRequiredWithoutMovementsNestedInput
@@ -12015,6 +12565,8 @@ export namespace Prisma {
     operatorName?: NullableStringFieldUpdateOperationsInput | string | null
     actualWeight?: NullableFloatFieldUpdateOperationsInput | number | null
     remarks?: NullableStringFieldUpdateOperationsInput | string | null
+    scannedBarcode?: NullableStringFieldUpdateOperationsInput | string | null
+    isScanned?: BoolFieldUpdateOperationsInput | boolean
     performedBy?: StringFieldUpdateOperationsInput | string
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
   }
@@ -12032,6 +12584,8 @@ export namespace Prisma {
     operatorName?: string | null
     actualWeight?: number | null
     remarks?: string | null
+    scannedBarcode?: string | null
+    isScanned?: boolean
     performedBy?: string
     createdAt?: Date | string
   }
@@ -12046,6 +12600,8 @@ export namespace Prisma {
     operatorName?: NullableStringFieldUpdateOperationsInput | string | null
     actualWeight?: NullableFloatFieldUpdateOperationsInput | number | null
     remarks?: NullableStringFieldUpdateOperationsInput | string | null
+    scannedBarcode?: NullableStringFieldUpdateOperationsInput | string | null
+    isScanned?: BoolFieldUpdateOperationsInput | boolean
     performedBy?: StringFieldUpdateOperationsInput | string
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
   }
@@ -12063,6 +12619,8 @@ export namespace Prisma {
     operatorName?: NullableStringFieldUpdateOperationsInput | string | null
     actualWeight?: NullableFloatFieldUpdateOperationsInput | number | null
     remarks?: NullableStringFieldUpdateOperationsInput | string | null
+    scannedBarcode?: NullableStringFieldUpdateOperationsInput | string | null
+    isScanned?: BoolFieldUpdateOperationsInput | boolean
     performedBy?: StringFieldUpdateOperationsInput | string
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
   }
@@ -12384,6 +12942,22 @@ export namespace Prisma {
     not?: NestedDateTimeNullableFilter<$PrismaModel> | Date | string | null
   }
 
+  export type IntFilter<$PrismaModel = never> = {
+    equals?: number | IntFieldRefInput<$PrismaModel>
+    in?: number[]
+    notIn?: number[]
+    lt?: number | IntFieldRefInput<$PrismaModel>
+    lte?: number | IntFieldRefInput<$PrismaModel>
+    gt?: number | IntFieldRefInput<$PrismaModel>
+    gte?: number | IntFieldRefInput<$PrismaModel>
+    not?: NestedIntFilter<$PrismaModel> | number
+  }
+
+  export type BoolFilter<$PrismaModel = never> = {
+    equals?: boolean | BooleanFieldRefInput<$PrismaModel>
+    not?: NestedBoolFilter<$PrismaModel> | boolean
+  }
+
   export type DateTimeFilter<$PrismaModel = never> = {
     equals?: Date | string | DateTimeFieldRefInput<$PrismaModel>
     in?: Date[] | string[]
@@ -12445,6 +13019,20 @@ export namespace Prisma {
     transportLength?: SortOrder
     transportWidth?: SortOrder
     transportHeight?: SortOrder
+    barcode?: SortOrder
+    containerNumber?: SortOrder
+    containerType?: SortOrder
+    sealNumber?: SortOrder
+    customsStatus?: SortOrder
+    customsRef?: SortOrder
+    vesselName?: SortOrder
+    voyageNumber?: SortOrder
+    flightNumber?: SortOrder
+    transportMode?: SortOrder
+    arrivalDate?: SortOrder
+    departureDate?: SortOrder
+    storageDays?: SortOrder
+    isDeleted?: SortOrder
     receivedAt?: SortOrder
     dispatchedAt?: SortOrder
     createdAt?: SortOrder
@@ -12462,6 +13050,7 @@ export namespace Prisma {
     transportLength?: SortOrder
     transportWidth?: SortOrder
     transportHeight?: SortOrder
+    storageDays?: SortOrder
   }
 
   export type CargoItemMaxOrderByAggregateInput = {
@@ -12489,6 +13078,20 @@ export namespace Prisma {
     transportLength?: SortOrder
     transportWidth?: SortOrder
     transportHeight?: SortOrder
+    barcode?: SortOrder
+    containerNumber?: SortOrder
+    containerType?: SortOrder
+    sealNumber?: SortOrder
+    customsStatus?: SortOrder
+    customsRef?: SortOrder
+    vesselName?: SortOrder
+    voyageNumber?: SortOrder
+    flightNumber?: SortOrder
+    transportMode?: SortOrder
+    arrivalDate?: SortOrder
+    departureDate?: SortOrder
+    storageDays?: SortOrder
+    isDeleted?: SortOrder
     receivedAt?: SortOrder
     dispatchedAt?: SortOrder
     createdAt?: SortOrder
@@ -12520,6 +13123,20 @@ export namespace Prisma {
     transportLength?: SortOrder
     transportWidth?: SortOrder
     transportHeight?: SortOrder
+    barcode?: SortOrder
+    containerNumber?: SortOrder
+    containerType?: SortOrder
+    sealNumber?: SortOrder
+    customsStatus?: SortOrder
+    customsRef?: SortOrder
+    vesselName?: SortOrder
+    voyageNumber?: SortOrder
+    flightNumber?: SortOrder
+    transportMode?: SortOrder
+    arrivalDate?: SortOrder
+    departureDate?: SortOrder
+    storageDays?: SortOrder
+    isDeleted?: SortOrder
     receivedAt?: SortOrder
     dispatchedAt?: SortOrder
     createdAt?: SortOrder
@@ -12537,6 +13154,7 @@ export namespace Prisma {
     transportLength?: SortOrder
     transportWidth?: SortOrder
     transportHeight?: SortOrder
+    storageDays?: SortOrder
   }
 
   export type StringWithAggregatesFilter<$PrismaModel = never> = {
@@ -12635,6 +13253,30 @@ export namespace Prisma {
     _max?: NestedDateTimeNullableFilter<$PrismaModel>
   }
 
+  export type IntWithAggregatesFilter<$PrismaModel = never> = {
+    equals?: number | IntFieldRefInput<$PrismaModel>
+    in?: number[]
+    notIn?: number[]
+    lt?: number | IntFieldRefInput<$PrismaModel>
+    lte?: number | IntFieldRefInput<$PrismaModel>
+    gt?: number | IntFieldRefInput<$PrismaModel>
+    gte?: number | IntFieldRefInput<$PrismaModel>
+    not?: NestedIntWithAggregatesFilter<$PrismaModel> | number
+    _count?: NestedIntFilter<$PrismaModel>
+    _avg?: NestedFloatFilter<$PrismaModel>
+    _sum?: NestedIntFilter<$PrismaModel>
+    _min?: NestedIntFilter<$PrismaModel>
+    _max?: NestedIntFilter<$PrismaModel>
+  }
+
+  export type BoolWithAggregatesFilter<$PrismaModel = never> = {
+    equals?: boolean | BooleanFieldRefInput<$PrismaModel>
+    not?: NestedBoolWithAggregatesFilter<$PrismaModel> | boolean
+    _count?: NestedIntFilter<$PrismaModel>
+    _min?: NestedBoolFilter<$PrismaModel>
+    _max?: NestedBoolFilter<$PrismaModel>
+  }
+
   export type DateTimeWithAggregatesFilter<$PrismaModel = never> = {
     equals?: Date | string | DateTimeFieldRefInput<$PrismaModel>
     in?: Date[] | string[]
@@ -12647,22 +13289,6 @@ export namespace Prisma {
     _count?: NestedIntFilter<$PrismaModel>
     _min?: NestedDateTimeFilter<$PrismaModel>
     _max?: NestedDateTimeFilter<$PrismaModel>
-  }
-
-  export type BoolFilter<$PrismaModel = never> = {
-    equals?: boolean | BooleanFieldRefInput<$PrismaModel>
-    not?: NestedBoolFilter<$PrismaModel> | boolean
-  }
-
-  export type IntFilter<$PrismaModel = never> = {
-    equals?: number | IntFieldRefInput<$PrismaModel>
-    in?: number[]
-    notIn?: number[]
-    lt?: number | IntFieldRefInput<$PrismaModel>
-    lte?: number | IntFieldRefInput<$PrismaModel>
-    gt?: number | IntFieldRefInput<$PrismaModel>
-    gte?: number | IntFieldRefInput<$PrismaModel>
-    not?: NestedIntFilter<$PrismaModel> | number
   }
 
   export type CargoItemListRelationFilter = {
@@ -12686,6 +13312,11 @@ export namespace Prisma {
     area?: SortOrder
     isActive?: SortOrder
     currentLoad?: SortOrder
+    barcode?: SortOrder
+    locationType?: SortOrder
+    temperatureControlled?: SortOrder
+    minTemp?: SortOrder
+    maxTemp?: SortOrder
     createdAt?: SortOrder
     updatedAt?: SortOrder
   }
@@ -12694,6 +13325,8 @@ export namespace Prisma {
     maxWeight?: SortOrder
     area?: SortOrder
     currentLoad?: SortOrder
+    minTemp?: SortOrder
+    maxTemp?: SortOrder
   }
 
   export type LocationMaxOrderByAggregateInput = {
@@ -12707,6 +13340,11 @@ export namespace Prisma {
     area?: SortOrder
     isActive?: SortOrder
     currentLoad?: SortOrder
+    barcode?: SortOrder
+    locationType?: SortOrder
+    temperatureControlled?: SortOrder
+    minTemp?: SortOrder
+    maxTemp?: SortOrder
     createdAt?: SortOrder
     updatedAt?: SortOrder
   }
@@ -12722,6 +13360,11 @@ export namespace Prisma {
     area?: SortOrder
     isActive?: SortOrder
     currentLoad?: SortOrder
+    barcode?: SortOrder
+    locationType?: SortOrder
+    temperatureControlled?: SortOrder
+    minTemp?: SortOrder
+    maxTemp?: SortOrder
     createdAt?: SortOrder
     updatedAt?: SortOrder
   }
@@ -12730,30 +13373,8 @@ export namespace Prisma {
     maxWeight?: SortOrder
     area?: SortOrder
     currentLoad?: SortOrder
-  }
-
-  export type BoolWithAggregatesFilter<$PrismaModel = never> = {
-    equals?: boolean | BooleanFieldRefInput<$PrismaModel>
-    not?: NestedBoolWithAggregatesFilter<$PrismaModel> | boolean
-    _count?: NestedIntFilter<$PrismaModel>
-    _min?: NestedBoolFilter<$PrismaModel>
-    _max?: NestedBoolFilter<$PrismaModel>
-  }
-
-  export type IntWithAggregatesFilter<$PrismaModel = never> = {
-    equals?: number | IntFieldRefInput<$PrismaModel>
-    in?: number[]
-    notIn?: number[]
-    lt?: number | IntFieldRefInput<$PrismaModel>
-    lte?: number | IntFieldRefInput<$PrismaModel>
-    gt?: number | IntFieldRefInput<$PrismaModel>
-    gte?: number | IntFieldRefInput<$PrismaModel>
-    not?: NestedIntWithAggregatesFilter<$PrismaModel> | number
-    _count?: NestedIntFilter<$PrismaModel>
-    _avg?: NestedFloatFilter<$PrismaModel>
-    _sum?: NestedIntFilter<$PrismaModel>
-    _min?: NestedIntFilter<$PrismaModel>
-    _max?: NestedIntFilter<$PrismaModel>
+    minTemp?: SortOrder
+    maxTemp?: SortOrder
   }
 
   export type ProjectCountOrderByAggregateInput = {
@@ -12917,6 +13538,8 @@ export namespace Prisma {
     operatorName?: SortOrder
     actualWeight?: SortOrder
     remarks?: SortOrder
+    scannedBarcode?: SortOrder
+    isScanned?: SortOrder
     performedBy?: SortOrder
     createdAt?: SortOrder
   }
@@ -12938,6 +13561,8 @@ export namespace Prisma {
     operatorName?: SortOrder
     actualWeight?: SortOrder
     remarks?: SortOrder
+    scannedBarcode?: SortOrder
+    isScanned?: SortOrder
     performedBy?: SortOrder
     createdAt?: SortOrder
   }
@@ -12955,6 +13580,8 @@ export namespace Prisma {
     operatorName?: SortOrder
     actualWeight?: SortOrder
     remarks?: SortOrder
+    scannedBarcode?: SortOrder
+    isScanned?: SortOrder
     performedBy?: SortOrder
     createdAt?: SortOrder
   }
@@ -13142,6 +13769,18 @@ export namespace Prisma {
     set?: Date | string | null
   }
 
+  export type IntFieldUpdateOperationsInput = {
+    set?: number
+    increment?: number
+    decrement?: number
+    multiply?: number
+    divide?: number
+  }
+
+  export type BoolFieldUpdateOperationsInput = {
+    set?: boolean
+  }
+
   export type DateTimeFieldUpdateOperationsInput = {
     set?: Date | string
   }
@@ -13234,18 +13873,6 @@ export namespace Prisma {
     connectOrCreate?: MovementCreateOrConnectWithoutToLocationInput | MovementCreateOrConnectWithoutToLocationInput[]
     createMany?: MovementCreateManyToLocationInputEnvelope
     connect?: MovementWhereUniqueInput | MovementWhereUniqueInput[]
-  }
-
-  export type BoolFieldUpdateOperationsInput = {
-    set?: boolean
-  }
-
-  export type IntFieldUpdateOperationsInput = {
-    set?: number
-    increment?: number
-    decrement?: number
-    multiply?: number
-    divide?: number
   }
 
   export type CargoItemUpdateManyWithoutLocationNestedInput = {
@@ -13492,6 +14119,22 @@ export namespace Prisma {
     not?: NestedDateTimeNullableFilter<$PrismaModel> | Date | string | null
   }
 
+  export type NestedIntFilter<$PrismaModel = never> = {
+    equals?: number | IntFieldRefInput<$PrismaModel>
+    in?: number[]
+    notIn?: number[]
+    lt?: number | IntFieldRefInput<$PrismaModel>
+    lte?: number | IntFieldRefInput<$PrismaModel>
+    gt?: number | IntFieldRefInput<$PrismaModel>
+    gte?: number | IntFieldRefInput<$PrismaModel>
+    not?: NestedIntFilter<$PrismaModel> | number
+  }
+
+  export type NestedBoolFilter<$PrismaModel = never> = {
+    equals?: boolean | BooleanFieldRefInput<$PrismaModel>
+    not?: NestedBoolFilter<$PrismaModel> | boolean
+  }
+
   export type NestedDateTimeFilter<$PrismaModel = never> = {
     equals?: Date | string | DateTimeFieldRefInput<$PrismaModel>
     in?: Date[] | string[]
@@ -13518,17 +14161,6 @@ export namespace Prisma {
     _count?: NestedIntFilter<$PrismaModel>
     _min?: NestedStringFilter<$PrismaModel>
     _max?: NestedStringFilter<$PrismaModel>
-  }
-
-  export type NestedIntFilter<$PrismaModel = never> = {
-    equals?: number | IntFieldRefInput<$PrismaModel>
-    in?: number[]
-    notIn?: number[]
-    lt?: number | IntFieldRefInput<$PrismaModel>
-    lte?: number | IntFieldRefInput<$PrismaModel>
-    gt?: number | IntFieldRefInput<$PrismaModel>
-    gte?: number | IntFieldRefInput<$PrismaModel>
-    not?: NestedIntFilter<$PrismaModel> | number
   }
 
   export type NestedFloatWithAggregatesFilter<$PrismaModel = never> = {
@@ -13610,33 +14242,6 @@ export namespace Prisma {
     _max?: NestedDateTimeNullableFilter<$PrismaModel>
   }
 
-  export type NestedDateTimeWithAggregatesFilter<$PrismaModel = never> = {
-    equals?: Date | string | DateTimeFieldRefInput<$PrismaModel>
-    in?: Date[] | string[]
-    notIn?: Date[] | string[]
-    lt?: Date | string | DateTimeFieldRefInput<$PrismaModel>
-    lte?: Date | string | DateTimeFieldRefInput<$PrismaModel>
-    gt?: Date | string | DateTimeFieldRefInput<$PrismaModel>
-    gte?: Date | string | DateTimeFieldRefInput<$PrismaModel>
-    not?: NestedDateTimeWithAggregatesFilter<$PrismaModel> | Date | string
-    _count?: NestedIntFilter<$PrismaModel>
-    _min?: NestedDateTimeFilter<$PrismaModel>
-    _max?: NestedDateTimeFilter<$PrismaModel>
-  }
-
-  export type NestedBoolFilter<$PrismaModel = never> = {
-    equals?: boolean | BooleanFieldRefInput<$PrismaModel>
-    not?: NestedBoolFilter<$PrismaModel> | boolean
-  }
-
-  export type NestedBoolWithAggregatesFilter<$PrismaModel = never> = {
-    equals?: boolean | BooleanFieldRefInput<$PrismaModel>
-    not?: NestedBoolWithAggregatesFilter<$PrismaModel> | boolean
-    _count?: NestedIntFilter<$PrismaModel>
-    _min?: NestedBoolFilter<$PrismaModel>
-    _max?: NestedBoolFilter<$PrismaModel>
-  }
-
   export type NestedIntWithAggregatesFilter<$PrismaModel = never> = {
     equals?: number | IntFieldRefInput<$PrismaModel>
     in?: number[]
@@ -13653,6 +14258,28 @@ export namespace Prisma {
     _max?: NestedIntFilter<$PrismaModel>
   }
 
+  export type NestedBoolWithAggregatesFilter<$PrismaModel = never> = {
+    equals?: boolean | BooleanFieldRefInput<$PrismaModel>
+    not?: NestedBoolWithAggregatesFilter<$PrismaModel> | boolean
+    _count?: NestedIntFilter<$PrismaModel>
+    _min?: NestedBoolFilter<$PrismaModel>
+    _max?: NestedBoolFilter<$PrismaModel>
+  }
+
+  export type NestedDateTimeWithAggregatesFilter<$PrismaModel = never> = {
+    equals?: Date | string | DateTimeFieldRefInput<$PrismaModel>
+    in?: Date[] | string[]
+    notIn?: Date[] | string[]
+    lt?: Date | string | DateTimeFieldRefInput<$PrismaModel>
+    lte?: Date | string | DateTimeFieldRefInput<$PrismaModel>
+    gt?: Date | string | DateTimeFieldRefInput<$PrismaModel>
+    gte?: Date | string | DateTimeFieldRefInput<$PrismaModel>
+    not?: NestedDateTimeWithAggregatesFilter<$PrismaModel> | Date | string
+    _count?: NestedIntFilter<$PrismaModel>
+    _min?: NestedDateTimeFilter<$PrismaModel>
+    _max?: NestedDateTimeFilter<$PrismaModel>
+  }
+
   export type LocationCreateWithoutCargoItemsInput = {
     id?: string
     code: string
@@ -13664,6 +14291,11 @@ export namespace Prisma {
     area?: number | null
     isActive?: boolean
     currentLoad?: number
+    barcode?: string | null
+    locationType?: string
+    temperatureControlled?: boolean
+    minTemp?: number | null
+    maxTemp?: number | null
     createdAt?: Date | string
     updatedAt?: Date | string
     movementsFrom?: MovementCreateNestedManyWithoutFromLocationInput
@@ -13681,6 +14313,11 @@ export namespace Prisma {
     area?: number | null
     isActive?: boolean
     currentLoad?: number
+    barcode?: string | null
+    locationType?: string
+    temperatureControlled?: boolean
+    minTemp?: number | null
+    maxTemp?: number | null
     createdAt?: Date | string
     updatedAt?: Date | string
     movementsFrom?: MovementUncheckedCreateNestedManyWithoutFromLocationInput
@@ -13751,6 +14388,8 @@ export namespace Prisma {
     operatorName?: string | null
     actualWeight?: number | null
     remarks?: string | null
+    scannedBarcode?: string | null
+    isScanned?: boolean
     performedBy?: string
     createdAt?: Date | string
     fromLocation?: LocationCreateNestedOneWithoutMovementsFromInput
@@ -13769,6 +14408,8 @@ export namespace Prisma {
     operatorName?: string | null
     actualWeight?: number | null
     remarks?: string | null
+    scannedBarcode?: string | null
+    isScanned?: boolean
     performedBy?: string
     createdAt?: Date | string
   }
@@ -13804,6 +14445,11 @@ export namespace Prisma {
     area?: NullableFloatFieldUpdateOperationsInput | number | null
     isActive?: BoolFieldUpdateOperationsInput | boolean
     currentLoad?: IntFieldUpdateOperationsInput | number
+    barcode?: NullableStringFieldUpdateOperationsInput | string | null
+    locationType?: StringFieldUpdateOperationsInput | string
+    temperatureControlled?: BoolFieldUpdateOperationsInput | boolean
+    minTemp?: NullableFloatFieldUpdateOperationsInput | number | null
+    maxTemp?: NullableFloatFieldUpdateOperationsInput | number | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
     movementsFrom?: MovementUpdateManyWithoutFromLocationNestedInput
@@ -13821,6 +14467,11 @@ export namespace Prisma {
     area?: NullableFloatFieldUpdateOperationsInput | number | null
     isActive?: BoolFieldUpdateOperationsInput | boolean
     currentLoad?: IntFieldUpdateOperationsInput | number
+    barcode?: NullableStringFieldUpdateOperationsInput | string | null
+    locationType?: StringFieldUpdateOperationsInput | string
+    temperatureControlled?: BoolFieldUpdateOperationsInput | boolean
+    minTemp?: NullableFloatFieldUpdateOperationsInput | number | null
+    maxTemp?: NullableFloatFieldUpdateOperationsInput | number | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
     movementsFrom?: MovementUncheckedUpdateManyWithoutFromLocationNestedInput
@@ -13914,6 +14565,8 @@ export namespace Prisma {
     operatorName?: StringNullableFilter<"Movement"> | string | null
     actualWeight?: FloatNullableFilter<"Movement"> | number | null
     remarks?: StringNullableFilter<"Movement"> | string | null
+    scannedBarcode?: StringNullableFilter<"Movement"> | string | null
+    isScanned?: BoolFilter<"Movement"> | boolean
     performedBy?: StringFilter<"Movement"> | string
     createdAt?: DateTimeFilter<"Movement"> | Date | string
   }
@@ -13941,6 +14594,20 @@ export namespace Prisma {
     transportLength?: number | null
     transportWidth?: number | null
     transportHeight?: number | null
+    barcode?: string | null
+    containerNumber?: string | null
+    containerType?: string
+    sealNumber?: string | null
+    customsStatus?: string
+    customsRef?: string | null
+    vesselName?: string | null
+    voyageNumber?: string | null
+    flightNumber?: string | null
+    transportMode?: string
+    arrivalDate?: Date | string | null
+    departureDate?: Date | string | null
+    storageDays?: number
+    isDeleted?: boolean
     receivedAt?: Date | string | null
     dispatchedAt?: Date | string | null
     createdAt?: Date | string
@@ -13973,6 +14640,20 @@ export namespace Prisma {
     transportLength?: number | null
     transportWidth?: number | null
     transportHeight?: number | null
+    barcode?: string | null
+    containerNumber?: string | null
+    containerType?: string
+    sealNumber?: string | null
+    customsStatus?: string
+    customsRef?: string | null
+    vesselName?: string | null
+    voyageNumber?: string | null
+    flightNumber?: string | null
+    transportMode?: string
+    arrivalDate?: Date | string | null
+    departureDate?: Date | string | null
+    storageDays?: number
+    isDeleted?: boolean
     receivedAt?: Date | string | null
     dispatchedAt?: Date | string | null
     createdAt?: Date | string
@@ -13999,6 +14680,8 @@ export namespace Prisma {
     operatorName?: string | null
     actualWeight?: number | null
     remarks?: string | null
+    scannedBarcode?: string | null
+    isScanned?: boolean
     performedBy?: string
     createdAt?: Date | string
     cargoItem: CargoItemCreateNestedOneWithoutMovementsInput
@@ -14017,6 +14700,8 @@ export namespace Prisma {
     operatorName?: string | null
     actualWeight?: number | null
     remarks?: string | null
+    scannedBarcode?: string | null
+    isScanned?: boolean
     performedBy?: string
     createdAt?: Date | string
   }
@@ -14040,6 +14725,8 @@ export namespace Prisma {
     operatorName?: string | null
     actualWeight?: number | null
     remarks?: string | null
+    scannedBarcode?: string | null
+    isScanned?: boolean
     performedBy?: string
     createdAt?: Date | string
     cargoItem: CargoItemCreateNestedOneWithoutMovementsInput
@@ -14058,6 +14745,8 @@ export namespace Prisma {
     operatorName?: string | null
     actualWeight?: number | null
     remarks?: string | null
+    scannedBarcode?: string | null
+    isScanned?: boolean
     performedBy?: string
     createdAt?: Date | string
   }
@@ -14115,6 +14804,20 @@ export namespace Prisma {
     transportLength?: FloatNullableFilter<"CargoItem"> | number | null
     transportWidth?: FloatNullableFilter<"CargoItem"> | number | null
     transportHeight?: FloatNullableFilter<"CargoItem"> | number | null
+    barcode?: StringNullableFilter<"CargoItem"> | string | null
+    containerNumber?: StringNullableFilter<"CargoItem"> | string | null
+    containerType?: StringFilter<"CargoItem"> | string
+    sealNumber?: StringNullableFilter<"CargoItem"> | string | null
+    customsStatus?: StringFilter<"CargoItem"> | string
+    customsRef?: StringNullableFilter<"CargoItem"> | string | null
+    vesselName?: StringNullableFilter<"CargoItem"> | string | null
+    voyageNumber?: StringNullableFilter<"CargoItem"> | string | null
+    flightNumber?: StringNullableFilter<"CargoItem"> | string | null
+    transportMode?: StringFilter<"CargoItem"> | string
+    arrivalDate?: DateTimeNullableFilter<"CargoItem"> | Date | string | null
+    departureDate?: DateTimeNullableFilter<"CargoItem"> | Date | string | null
+    storageDays?: IntFilter<"CargoItem"> | number
+    isDeleted?: BoolFilter<"CargoItem"> | boolean
     receivedAt?: DateTimeNullableFilter<"CargoItem"> | Date | string | null
     dispatchedAt?: DateTimeNullableFilter<"CargoItem"> | Date | string | null
     createdAt?: DateTimeFilter<"CargoItem"> | Date | string
@@ -14176,6 +14879,20 @@ export namespace Prisma {
     transportLength?: number | null
     transportWidth?: number | null
     transportHeight?: number | null
+    barcode?: string | null
+    containerNumber?: string | null
+    containerType?: string
+    sealNumber?: string | null
+    customsStatus?: string
+    customsRef?: string | null
+    vesselName?: string | null
+    voyageNumber?: string | null
+    flightNumber?: string | null
+    transportMode?: string
+    arrivalDate?: Date | string | null
+    departureDate?: Date | string | null
+    storageDays?: number
+    isDeleted?: boolean
     receivedAt?: Date | string | null
     dispatchedAt?: Date | string | null
     createdAt?: Date | string
@@ -14208,6 +14925,20 @@ export namespace Prisma {
     transportLength?: number | null
     transportWidth?: number | null
     transportHeight?: number | null
+    barcode?: string | null
+    containerNumber?: string | null
+    containerType?: string
+    sealNumber?: string | null
+    customsStatus?: string
+    customsRef?: string | null
+    vesselName?: string | null
+    voyageNumber?: string | null
+    flightNumber?: string | null
+    transportMode?: string
+    arrivalDate?: Date | string | null
+    departureDate?: Date | string | null
+    storageDays?: number
+    isDeleted?: boolean
     receivedAt?: Date | string | null
     dispatchedAt?: Date | string | null
     createdAt?: Date | string
@@ -14263,6 +14994,20 @@ export namespace Prisma {
     transportLength?: number | null
     transportWidth?: number | null
     transportHeight?: number | null
+    barcode?: string | null
+    containerNumber?: string | null
+    containerType?: string
+    sealNumber?: string | null
+    customsStatus?: string
+    customsRef?: string | null
+    vesselName?: string | null
+    voyageNumber?: string | null
+    flightNumber?: string | null
+    transportMode?: string
+    arrivalDate?: Date | string | null
+    departureDate?: Date | string | null
+    storageDays?: number
+    isDeleted?: boolean
     receivedAt?: Date | string | null
     dispatchedAt?: Date | string | null
     createdAt?: Date | string
@@ -14296,6 +15041,20 @@ export namespace Prisma {
     transportLength?: number | null
     transportWidth?: number | null
     transportHeight?: number | null
+    barcode?: string | null
+    containerNumber?: string | null
+    containerType?: string
+    sealNumber?: string | null
+    customsStatus?: string
+    customsRef?: string | null
+    vesselName?: string | null
+    voyageNumber?: string | null
+    flightNumber?: string | null
+    transportMode?: string
+    arrivalDate?: Date | string | null
+    departureDate?: Date | string | null
+    storageDays?: number
+    isDeleted?: boolean
     receivedAt?: Date | string | null
     dispatchedAt?: Date | string | null
     createdAt?: Date | string
@@ -14318,6 +15077,11 @@ export namespace Prisma {
     area?: number | null
     isActive?: boolean
     currentLoad?: number
+    barcode?: string | null
+    locationType?: string
+    temperatureControlled?: boolean
+    minTemp?: number | null
+    maxTemp?: number | null
     createdAt?: Date | string
     updatedAt?: Date | string
     cargoItems?: CargoItemCreateNestedManyWithoutLocationInput
@@ -14335,6 +15099,11 @@ export namespace Prisma {
     area?: number | null
     isActive?: boolean
     currentLoad?: number
+    barcode?: string | null
+    locationType?: string
+    temperatureControlled?: boolean
+    minTemp?: number | null
+    maxTemp?: number | null
     createdAt?: Date | string
     updatedAt?: Date | string
     cargoItems?: CargoItemUncheckedCreateNestedManyWithoutLocationInput
@@ -14357,6 +15126,11 @@ export namespace Prisma {
     area?: number | null
     isActive?: boolean
     currentLoad?: number
+    barcode?: string | null
+    locationType?: string
+    temperatureControlled?: boolean
+    minTemp?: number | null
+    maxTemp?: number | null
     createdAt?: Date | string
     updatedAt?: Date | string
     cargoItems?: CargoItemCreateNestedManyWithoutLocationInput
@@ -14374,6 +15148,11 @@ export namespace Prisma {
     area?: number | null
     isActive?: boolean
     currentLoad?: number
+    barcode?: string | null
+    locationType?: string
+    temperatureControlled?: boolean
+    minTemp?: number | null
+    maxTemp?: number | null
     createdAt?: Date | string
     updatedAt?: Date | string
     cargoItems?: CargoItemUncheckedCreateNestedManyWithoutLocationInput
@@ -14419,6 +15198,20 @@ export namespace Prisma {
     transportLength?: NullableFloatFieldUpdateOperationsInput | number | null
     transportWidth?: NullableFloatFieldUpdateOperationsInput | number | null
     transportHeight?: NullableFloatFieldUpdateOperationsInput | number | null
+    barcode?: NullableStringFieldUpdateOperationsInput | string | null
+    containerNumber?: NullableStringFieldUpdateOperationsInput | string | null
+    containerType?: StringFieldUpdateOperationsInput | string
+    sealNumber?: NullableStringFieldUpdateOperationsInput | string | null
+    customsStatus?: StringFieldUpdateOperationsInput | string
+    customsRef?: NullableStringFieldUpdateOperationsInput | string | null
+    vesselName?: NullableStringFieldUpdateOperationsInput | string | null
+    voyageNumber?: NullableStringFieldUpdateOperationsInput | string | null
+    flightNumber?: NullableStringFieldUpdateOperationsInput | string | null
+    transportMode?: StringFieldUpdateOperationsInput | string
+    arrivalDate?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    departureDate?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    storageDays?: IntFieldUpdateOperationsInput | number
+    isDeleted?: BoolFieldUpdateOperationsInput | boolean
     receivedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     dispatchedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
@@ -14452,6 +15245,20 @@ export namespace Prisma {
     transportLength?: NullableFloatFieldUpdateOperationsInput | number | null
     transportWidth?: NullableFloatFieldUpdateOperationsInput | number | null
     transportHeight?: NullableFloatFieldUpdateOperationsInput | number | null
+    barcode?: NullableStringFieldUpdateOperationsInput | string | null
+    containerNumber?: NullableStringFieldUpdateOperationsInput | string | null
+    containerType?: StringFieldUpdateOperationsInput | string
+    sealNumber?: NullableStringFieldUpdateOperationsInput | string | null
+    customsStatus?: StringFieldUpdateOperationsInput | string
+    customsRef?: NullableStringFieldUpdateOperationsInput | string | null
+    vesselName?: NullableStringFieldUpdateOperationsInput | string | null
+    voyageNumber?: NullableStringFieldUpdateOperationsInput | string | null
+    flightNumber?: NullableStringFieldUpdateOperationsInput | string | null
+    transportMode?: StringFieldUpdateOperationsInput | string
+    arrivalDate?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    departureDate?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    storageDays?: IntFieldUpdateOperationsInput | number
+    isDeleted?: BoolFieldUpdateOperationsInput | boolean
     receivedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     dispatchedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
@@ -14480,6 +15287,11 @@ export namespace Prisma {
     area?: NullableFloatFieldUpdateOperationsInput | number | null
     isActive?: BoolFieldUpdateOperationsInput | boolean
     currentLoad?: IntFieldUpdateOperationsInput | number
+    barcode?: NullableStringFieldUpdateOperationsInput | string | null
+    locationType?: StringFieldUpdateOperationsInput | string
+    temperatureControlled?: BoolFieldUpdateOperationsInput | boolean
+    minTemp?: NullableFloatFieldUpdateOperationsInput | number | null
+    maxTemp?: NullableFloatFieldUpdateOperationsInput | number | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
     cargoItems?: CargoItemUpdateManyWithoutLocationNestedInput
@@ -14497,6 +15309,11 @@ export namespace Prisma {
     area?: NullableFloatFieldUpdateOperationsInput | number | null
     isActive?: BoolFieldUpdateOperationsInput | boolean
     currentLoad?: IntFieldUpdateOperationsInput | number
+    barcode?: NullableStringFieldUpdateOperationsInput | string | null
+    locationType?: StringFieldUpdateOperationsInput | string
+    temperatureControlled?: BoolFieldUpdateOperationsInput | boolean
+    minTemp?: NullableFloatFieldUpdateOperationsInput | number | null
+    maxTemp?: NullableFloatFieldUpdateOperationsInput | number | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
     cargoItems?: CargoItemUncheckedUpdateManyWithoutLocationNestedInput
@@ -14525,6 +15342,11 @@ export namespace Prisma {
     area?: NullableFloatFieldUpdateOperationsInput | number | null
     isActive?: BoolFieldUpdateOperationsInput | boolean
     currentLoad?: IntFieldUpdateOperationsInput | number
+    barcode?: NullableStringFieldUpdateOperationsInput | string | null
+    locationType?: StringFieldUpdateOperationsInput | string
+    temperatureControlled?: BoolFieldUpdateOperationsInput | boolean
+    minTemp?: NullableFloatFieldUpdateOperationsInput | number | null
+    maxTemp?: NullableFloatFieldUpdateOperationsInput | number | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
     cargoItems?: CargoItemUpdateManyWithoutLocationNestedInput
@@ -14542,6 +15364,11 @@ export namespace Prisma {
     area?: NullableFloatFieldUpdateOperationsInput | number | null
     isActive?: BoolFieldUpdateOperationsInput | boolean
     currentLoad?: IntFieldUpdateOperationsInput | number
+    barcode?: NullableStringFieldUpdateOperationsInput | string | null
+    locationType?: StringFieldUpdateOperationsInput | string
+    temperatureControlled?: BoolFieldUpdateOperationsInput | boolean
+    minTemp?: NullableFloatFieldUpdateOperationsInput | number | null
+    maxTemp?: NullableFloatFieldUpdateOperationsInput | number | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     updatedAt?: DateTimeFieldUpdateOperationsInput | Date | string
     cargoItems?: CargoItemUncheckedUpdateManyWithoutLocationNestedInput
@@ -14560,6 +15387,8 @@ export namespace Prisma {
     operatorName?: string | null
     actualWeight?: number | null
     remarks?: string | null
+    scannedBarcode?: string | null
+    isScanned?: boolean
     performedBy?: string
     createdAt?: Date | string
   }
@@ -14574,6 +15403,8 @@ export namespace Prisma {
     operatorName?: NullableStringFieldUpdateOperationsInput | string | null
     actualWeight?: NullableFloatFieldUpdateOperationsInput | number | null
     remarks?: NullableStringFieldUpdateOperationsInput | string | null
+    scannedBarcode?: NullableStringFieldUpdateOperationsInput | string | null
+    isScanned?: BoolFieldUpdateOperationsInput | boolean
     performedBy?: StringFieldUpdateOperationsInput | string
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     fromLocation?: LocationUpdateOneWithoutMovementsFromNestedInput
@@ -14592,6 +15423,8 @@ export namespace Prisma {
     operatorName?: NullableStringFieldUpdateOperationsInput | string | null
     actualWeight?: NullableFloatFieldUpdateOperationsInput | number | null
     remarks?: NullableStringFieldUpdateOperationsInput | string | null
+    scannedBarcode?: NullableStringFieldUpdateOperationsInput | string | null
+    isScanned?: BoolFieldUpdateOperationsInput | boolean
     performedBy?: StringFieldUpdateOperationsInput | string
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
   }
@@ -14608,6 +15441,8 @@ export namespace Prisma {
     operatorName?: NullableStringFieldUpdateOperationsInput | string | null
     actualWeight?: NullableFloatFieldUpdateOperationsInput | number | null
     remarks?: NullableStringFieldUpdateOperationsInput | string | null
+    scannedBarcode?: NullableStringFieldUpdateOperationsInput | string | null
+    isScanned?: BoolFieldUpdateOperationsInput | boolean
     performedBy?: StringFieldUpdateOperationsInput | string
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
   }
@@ -14636,6 +15471,20 @@ export namespace Prisma {
     transportLength?: number | null
     transportWidth?: number | null
     transportHeight?: number | null
+    barcode?: string | null
+    containerNumber?: string | null
+    containerType?: string
+    sealNumber?: string | null
+    customsStatus?: string
+    customsRef?: string | null
+    vesselName?: string | null
+    voyageNumber?: string | null
+    flightNumber?: string | null
+    transportMode?: string
+    arrivalDate?: Date | string | null
+    departureDate?: Date | string | null
+    storageDays?: number
+    isDeleted?: boolean
     receivedAt?: Date | string | null
     dispatchedAt?: Date | string | null
     createdAt?: Date | string
@@ -14654,6 +15503,8 @@ export namespace Prisma {
     operatorName?: string | null
     actualWeight?: number | null
     remarks?: string | null
+    scannedBarcode?: string | null
+    isScanned?: boolean
     performedBy?: string
     createdAt?: Date | string
   }
@@ -14670,6 +15521,8 @@ export namespace Prisma {
     operatorName?: string | null
     actualWeight?: number | null
     remarks?: string | null
+    scannedBarcode?: string | null
+    isScanned?: boolean
     performedBy?: string
     createdAt?: Date | string
   }
@@ -14697,6 +15550,20 @@ export namespace Prisma {
     transportLength?: NullableFloatFieldUpdateOperationsInput | number | null
     transportWidth?: NullableFloatFieldUpdateOperationsInput | number | null
     transportHeight?: NullableFloatFieldUpdateOperationsInput | number | null
+    barcode?: NullableStringFieldUpdateOperationsInput | string | null
+    containerNumber?: NullableStringFieldUpdateOperationsInput | string | null
+    containerType?: StringFieldUpdateOperationsInput | string
+    sealNumber?: NullableStringFieldUpdateOperationsInput | string | null
+    customsStatus?: StringFieldUpdateOperationsInput | string
+    customsRef?: NullableStringFieldUpdateOperationsInput | string | null
+    vesselName?: NullableStringFieldUpdateOperationsInput | string | null
+    voyageNumber?: NullableStringFieldUpdateOperationsInput | string | null
+    flightNumber?: NullableStringFieldUpdateOperationsInput | string | null
+    transportMode?: StringFieldUpdateOperationsInput | string
+    arrivalDate?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    departureDate?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    storageDays?: IntFieldUpdateOperationsInput | number
+    isDeleted?: BoolFieldUpdateOperationsInput | boolean
     receivedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     dispatchedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
@@ -14729,6 +15596,20 @@ export namespace Prisma {
     transportLength?: NullableFloatFieldUpdateOperationsInput | number | null
     transportWidth?: NullableFloatFieldUpdateOperationsInput | number | null
     transportHeight?: NullableFloatFieldUpdateOperationsInput | number | null
+    barcode?: NullableStringFieldUpdateOperationsInput | string | null
+    containerNumber?: NullableStringFieldUpdateOperationsInput | string | null
+    containerType?: StringFieldUpdateOperationsInput | string
+    sealNumber?: NullableStringFieldUpdateOperationsInput | string | null
+    customsStatus?: StringFieldUpdateOperationsInput | string
+    customsRef?: NullableStringFieldUpdateOperationsInput | string | null
+    vesselName?: NullableStringFieldUpdateOperationsInput | string | null
+    voyageNumber?: NullableStringFieldUpdateOperationsInput | string | null
+    flightNumber?: NullableStringFieldUpdateOperationsInput | string | null
+    transportMode?: StringFieldUpdateOperationsInput | string
+    arrivalDate?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    departureDate?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    storageDays?: IntFieldUpdateOperationsInput | number
+    isDeleted?: BoolFieldUpdateOperationsInput | boolean
     receivedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     dispatchedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
@@ -14760,6 +15641,20 @@ export namespace Prisma {
     transportLength?: NullableFloatFieldUpdateOperationsInput | number | null
     transportWidth?: NullableFloatFieldUpdateOperationsInput | number | null
     transportHeight?: NullableFloatFieldUpdateOperationsInput | number | null
+    barcode?: NullableStringFieldUpdateOperationsInput | string | null
+    containerNumber?: NullableStringFieldUpdateOperationsInput | string | null
+    containerType?: StringFieldUpdateOperationsInput | string
+    sealNumber?: NullableStringFieldUpdateOperationsInput | string | null
+    customsStatus?: StringFieldUpdateOperationsInput | string
+    customsRef?: NullableStringFieldUpdateOperationsInput | string | null
+    vesselName?: NullableStringFieldUpdateOperationsInput | string | null
+    voyageNumber?: NullableStringFieldUpdateOperationsInput | string | null
+    flightNumber?: NullableStringFieldUpdateOperationsInput | string | null
+    transportMode?: StringFieldUpdateOperationsInput | string
+    arrivalDate?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    departureDate?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    storageDays?: IntFieldUpdateOperationsInput | number
+    isDeleted?: BoolFieldUpdateOperationsInput | boolean
     receivedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     dispatchedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
@@ -14776,6 +15671,8 @@ export namespace Prisma {
     operatorName?: NullableStringFieldUpdateOperationsInput | string | null
     actualWeight?: NullableFloatFieldUpdateOperationsInput | number | null
     remarks?: NullableStringFieldUpdateOperationsInput | string | null
+    scannedBarcode?: NullableStringFieldUpdateOperationsInput | string | null
+    isScanned?: BoolFieldUpdateOperationsInput | boolean
     performedBy?: StringFieldUpdateOperationsInput | string
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     cargoItem?: CargoItemUpdateOneRequiredWithoutMovementsNestedInput
@@ -14794,6 +15691,8 @@ export namespace Prisma {
     operatorName?: NullableStringFieldUpdateOperationsInput | string | null
     actualWeight?: NullableFloatFieldUpdateOperationsInput | number | null
     remarks?: NullableStringFieldUpdateOperationsInput | string | null
+    scannedBarcode?: NullableStringFieldUpdateOperationsInput | string | null
+    isScanned?: BoolFieldUpdateOperationsInput | boolean
     performedBy?: StringFieldUpdateOperationsInput | string
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
   }
@@ -14810,6 +15709,8 @@ export namespace Prisma {
     operatorName?: NullableStringFieldUpdateOperationsInput | string | null
     actualWeight?: NullableFloatFieldUpdateOperationsInput | number | null
     remarks?: NullableStringFieldUpdateOperationsInput | string | null
+    scannedBarcode?: NullableStringFieldUpdateOperationsInput | string | null
+    isScanned?: BoolFieldUpdateOperationsInput | boolean
     performedBy?: StringFieldUpdateOperationsInput | string
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
   }
@@ -14824,6 +15725,8 @@ export namespace Prisma {
     operatorName?: NullableStringFieldUpdateOperationsInput | string | null
     actualWeight?: NullableFloatFieldUpdateOperationsInput | number | null
     remarks?: NullableStringFieldUpdateOperationsInput | string | null
+    scannedBarcode?: NullableStringFieldUpdateOperationsInput | string | null
+    isScanned?: BoolFieldUpdateOperationsInput | boolean
     performedBy?: StringFieldUpdateOperationsInput | string
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
     cargoItem?: CargoItemUpdateOneRequiredWithoutMovementsNestedInput
@@ -14842,6 +15745,8 @@ export namespace Prisma {
     operatorName?: NullableStringFieldUpdateOperationsInput | string | null
     actualWeight?: NullableFloatFieldUpdateOperationsInput | number | null
     remarks?: NullableStringFieldUpdateOperationsInput | string | null
+    scannedBarcode?: NullableStringFieldUpdateOperationsInput | string | null
+    isScanned?: BoolFieldUpdateOperationsInput | boolean
     performedBy?: StringFieldUpdateOperationsInput | string
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
   }
@@ -14858,6 +15763,8 @@ export namespace Prisma {
     operatorName?: NullableStringFieldUpdateOperationsInput | string | null
     actualWeight?: NullableFloatFieldUpdateOperationsInput | number | null
     remarks?: NullableStringFieldUpdateOperationsInput | string | null
+    scannedBarcode?: NullableStringFieldUpdateOperationsInput | string | null
+    isScanned?: BoolFieldUpdateOperationsInput | boolean
     performedBy?: StringFieldUpdateOperationsInput | string
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
   }
@@ -14886,6 +15793,20 @@ export namespace Prisma {
     transportLength?: number | null
     transportWidth?: number | null
     transportHeight?: number | null
+    barcode?: string | null
+    containerNumber?: string | null
+    containerType?: string
+    sealNumber?: string | null
+    customsStatus?: string
+    customsRef?: string | null
+    vesselName?: string | null
+    voyageNumber?: string | null
+    flightNumber?: string | null
+    transportMode?: string
+    arrivalDate?: Date | string | null
+    departureDate?: Date | string | null
+    storageDays?: number
+    isDeleted?: boolean
     receivedAt?: Date | string | null
     dispatchedAt?: Date | string | null
     createdAt?: Date | string
@@ -14915,6 +15836,20 @@ export namespace Prisma {
     transportLength?: NullableFloatFieldUpdateOperationsInput | number | null
     transportWidth?: NullableFloatFieldUpdateOperationsInput | number | null
     transportHeight?: NullableFloatFieldUpdateOperationsInput | number | null
+    barcode?: NullableStringFieldUpdateOperationsInput | string | null
+    containerNumber?: NullableStringFieldUpdateOperationsInput | string | null
+    containerType?: StringFieldUpdateOperationsInput | string
+    sealNumber?: NullableStringFieldUpdateOperationsInput | string | null
+    customsStatus?: StringFieldUpdateOperationsInput | string
+    customsRef?: NullableStringFieldUpdateOperationsInput | string | null
+    vesselName?: NullableStringFieldUpdateOperationsInput | string | null
+    voyageNumber?: NullableStringFieldUpdateOperationsInput | string | null
+    flightNumber?: NullableStringFieldUpdateOperationsInput | string | null
+    transportMode?: StringFieldUpdateOperationsInput | string
+    arrivalDate?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    departureDate?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    storageDays?: IntFieldUpdateOperationsInput | number
+    isDeleted?: BoolFieldUpdateOperationsInput | boolean
     receivedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     dispatchedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
@@ -14947,6 +15882,20 @@ export namespace Prisma {
     transportLength?: NullableFloatFieldUpdateOperationsInput | number | null
     transportWidth?: NullableFloatFieldUpdateOperationsInput | number | null
     transportHeight?: NullableFloatFieldUpdateOperationsInput | number | null
+    barcode?: NullableStringFieldUpdateOperationsInput | string | null
+    containerNumber?: NullableStringFieldUpdateOperationsInput | string | null
+    containerType?: StringFieldUpdateOperationsInput | string
+    sealNumber?: NullableStringFieldUpdateOperationsInput | string | null
+    customsStatus?: StringFieldUpdateOperationsInput | string
+    customsRef?: NullableStringFieldUpdateOperationsInput | string | null
+    vesselName?: NullableStringFieldUpdateOperationsInput | string | null
+    voyageNumber?: NullableStringFieldUpdateOperationsInput | string | null
+    flightNumber?: NullableStringFieldUpdateOperationsInput | string | null
+    transportMode?: StringFieldUpdateOperationsInput | string
+    arrivalDate?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    departureDate?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    storageDays?: IntFieldUpdateOperationsInput | number
+    isDeleted?: BoolFieldUpdateOperationsInput | boolean
     receivedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     dispatchedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
@@ -14978,6 +15927,20 @@ export namespace Prisma {
     transportLength?: NullableFloatFieldUpdateOperationsInput | number | null
     transportWidth?: NullableFloatFieldUpdateOperationsInput | number | null
     transportHeight?: NullableFloatFieldUpdateOperationsInput | number | null
+    barcode?: NullableStringFieldUpdateOperationsInput | string | null
+    containerNumber?: NullableStringFieldUpdateOperationsInput | string | null
+    containerType?: StringFieldUpdateOperationsInput | string
+    sealNumber?: NullableStringFieldUpdateOperationsInput | string | null
+    customsStatus?: StringFieldUpdateOperationsInput | string
+    customsRef?: NullableStringFieldUpdateOperationsInput | string | null
+    vesselName?: NullableStringFieldUpdateOperationsInput | string | null
+    voyageNumber?: NullableStringFieldUpdateOperationsInput | string | null
+    flightNumber?: NullableStringFieldUpdateOperationsInput | string | null
+    transportMode?: StringFieldUpdateOperationsInput | string
+    arrivalDate?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    departureDate?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    storageDays?: IntFieldUpdateOperationsInput | number
+    isDeleted?: BoolFieldUpdateOperationsInput | boolean
     receivedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     dispatchedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
