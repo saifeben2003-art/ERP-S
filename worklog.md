@@ -104,3 +104,31 @@ Stage Summary:
 - Cargo page shows 18 demo cargo items ✅
 - No more Vercel login required (site is public) ✅
 - Custom adapter solves the fundamental nested dependency issue permanently
+
+---
+Task ID: 8
+Agent: Main Agent
+Task: World-class WMS upgrade - Charts, Multi-language, Theme, Export
+
+Work Log:
+- Created Zustand store (src/lib/store.ts) with locale, theme, sidebarCollapsed state (persisted)
+- Created English translations file (src/lib/en.ts) with 300+ translation keys
+- Updated translations.ts: hook now uses locale from Zustand store, all translate helpers accept locale param
+- Updated layout.tsx with ThemeProvider from next-themes + StoreInitializer component
+- Created store-initializer.tsx to sync Zustand theme with next-themes and update html dir/lang
+- Updated page.tsx with: language dropdown (AR/EN), theme dropdown (dark/light), CSV export button, refresh button
+- Updated globals.css: added proper light/dark theme CSS variables with oklch colors
+- Updated app-sidebar.tsx: full RTL/LTR support (sidebar position, border side, sheet side, chevron direction)
+- Enhanced dashboard API with 3 new data points: movementsByDay (7-day time-series), weightByCategory, locationUtilization
+- Updated DashboardStats type with new fields
+- Rebuilt dashboard-page.tsx with 3 Recharts charts: AreaChart (movements trend), PieChart/donut (cargo status), BarChart (weight by category)
+- Created export-utils.ts with CSV export functions for all 5 data types
+
+Stage Summary:
+- Dashboard now has 3 interactive Recharts charts (area, donut, bar) ✅
+- Arabic/English language toggle in header ✅
+- Dark/Light theme toggle in header ✅
+- CSV export button on all data pages ✅
+- Sidebar adapts to RTL (Arabic) and LTR (English) ✅
+- Light theme with proper CSS variables ✅
+- Footer version bumped to v2.0 ✅

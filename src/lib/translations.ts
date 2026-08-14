@@ -1,4 +1,6 @@
 import { useCallback } from 'react';
+import { useAppStore } from './store';
+import { en } from './en';
 
 // ==================== COMPREHENSIVE ARABIC TRANSLATIONS ====================
 
@@ -497,19 +499,22 @@ const syncDirectionMap: Record<string, string> = {
 
 // ==================== TRANSLATION FUNCTION ====================
 
-export function t(key: string): string {
-  return translations[key] || key;
+export function translate(key: string, locale: 'ar' | 'en' = 'ar'): string {
+  const map = locale === 'en' ? en : translations;
+  return map[key] || key;
 }
 
 // Convenience helpers for translating enum values
-export function translateStatus(value: string): string {
+export function translateStatus(value: string, locale?: 'ar' | 'en'): string {
   const key = statusMap[value];
-  return key ? translations[key] || value : value;
+  const map = locale === 'en' ? en : translations;
+  return key ? map[key] || value : value;
 }
 
-export function translateCategory(value: string): string {
+export function translateCategory(value: string, locale?: 'ar' | 'en'): string {
   const key = categoryMap[value];
-  return key ? translations[key] || value : value;
+  const map = locale === 'en' ? en : translations;
+  return key ? map[key] || value : value;
 }
 
 export function translateCommodity(value: string): string {
@@ -522,9 +527,10 @@ export function translateEquipmentType(value: string): string {
   return key ? translations[key] || value : value;
 }
 
-export function translateMovementType(value: string): string {
+export function translateMovementType(value: string, locale?: 'ar' | 'en'): string {
   const key = movementTypeMap[value];
-  return key ? translations[key] || value : value;
+  const map = locale === 'en' ? en : translations;
+  return key ? map[key] || value : value;
 }
 
 export function translateLocationType(value: string): string {
@@ -574,11 +580,13 @@ export const welcomeGuideSteps = [
 // ==================== HOOK ====================
 
 export function useTranslation() {
+  const locale = useAppStore((s) => s.locale);
   const translate = useCallback((key: string): string => {
-    return translations[key] || key;
-  }, []);
+    const map = locale === 'en' ? en : translations;
+    return map[key] || key;
+  }, [locale]);
 
-  return { t: translate };
+  return { t: translate, locale };
 }
 
 export default translations;
