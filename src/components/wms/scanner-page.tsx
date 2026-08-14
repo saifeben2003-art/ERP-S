@@ -308,6 +308,8 @@ export function ScannerPage() {
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
 
+    let linePos = 0;
+
     const animate = () => {
       const w = canvas.width;
       const h = canvas.height;
@@ -353,13 +355,13 @@ export function ScannerPage() {
       ctx.stroke();
 
       // Draw scanning line (amber gradient)
-      const lineY = margin + (scanLineY * (h - 2 * margin));
+      const lineY = margin + (linePos * (h - 2 * margin));
       const gradient = ctx.createLinearGradient(margin, lineY, w - margin, lineY);
-      gradient.addColorStop(0, 'rgba(251, 191, 36, 0)'); // transparent
-      gradient.addColorStop(0.2, 'rgba(251, 191, 36, 0.9)'); // amber-400
-      gradient.addColorStop(0.5, 'rgba(251, 146, 60, 1)'); // orange-400
-      gradient.addColorStop(0.8, 'rgba(251, 191, 36, 0.9)'); // amber-400
-      gradient.addColorStop(1, 'rgba(251, 191, 36, 0)'); // transparent
+      gradient.addColorStop(0, 'rgba(251, 191, 36, 0)');
+      gradient.addColorStop(0.2, 'rgba(251, 191, 36, 0.9)');
+      gradient.addColorStop(0.5, 'rgba(251, 146, 60, 1)');
+      gradient.addColorStop(0.8, 'rgba(251, 191, 36, 0.9)');
+      gradient.addColorStop(1, 'rgba(251, 191, 36, 0)');
 
       ctx.strokeStyle = gradient;
       ctx.lineWidth = 2;
@@ -377,16 +379,15 @@ export function ScannerPage() {
       ctx.fillRect(margin, lineY - 15, w - 2 * margin, 30);
 
       // Update scan line position
-      scanLineY += 0.005 * scanLineDirection.current;
-      if (scanLineY >= 1) {
-        scanLineY = 1;
+      linePos += 0.005 * scanLineDirection.current;
+      if (linePos >= 1) {
+        linePos = 1;
         scanLineDirection.current = -1;
-      } else if (scanLineY <= 0) {
-        scanLineY = 0;
+      } else if (linePos <= 0) {
+        linePos = 0;
         scanLineDirection.current = 1;
       }
 
-      setScanLineY(scanLineY);
       animationRef.current = requestAnimationFrame(animate);
     };
 
@@ -397,7 +398,7 @@ export function ScannerPage() {
         cancelAnimationFrame(animationRef.current);
       }
     };
-  }, [cameraActive, scanLineY]);
+  }, [cameraActive]);
 
   // ==================== CAMERA EFFECTS ====================
 
