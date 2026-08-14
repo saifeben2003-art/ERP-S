@@ -136,6 +136,8 @@ export interface DashboardStats {
   oversizeCount: number;
   statusBreakdown: { status: string; count: number }[];
   categoryBreakdown: { category: string; count: number }[];
+  weightByCategory: { category: string; weight: number }[];
+  movementsByDay: { date: string; RECEIVE: number; MOVE: number; DISPATCH: number }[];
   recentMovements: Movement[];
   projectProgress: { name: string; total: number; received: number; status: string }[];
 }

@@ -1,12 +1,12 @@
 'use client';
 
-import { useState } from 'react';
 import { Box, LayoutDashboard, Package, FolderKanban, MapPin, Wrench, ArrowLeftRight, Plug, Menu, ChevronLeft, ChevronRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
 import { cn } from '@/lib/utils';
 import { useTranslation } from '@/lib/translations';
+import { useAppStore } from '@/lib/store';
 import type { WmsPage } from '@/types/wms';
 
 interface SidebarProps {
@@ -43,13 +43,13 @@ function NavButton({ item, active, onClick, collapsed, t }: { item: NavItem; act
               'flex h-10 w-10 items-center justify-center rounded-lg transition-all duration-200',
               active
                 ? 'bg-amber-500/15 text-amber-400 shadow-sm shadow-amber-500/10'
-                : 'text-slate-400 hover:bg-slate-700/50 hover:text-slate-200'
+                : 'dark:text-slate-400 text-slate-500 dark:hover:bg-slate-700/50 hover:bg-slate-100 hover:dark:text-slate-200 hover:text-slate-900'
             )}
           >
             <Icon className="h-5 w-5" />
           </button>
         </TooltipTrigger>
-        <TooltipContent side="left" className="border-slate-700 bg-slate-800 text-slate-200">
+        <TooltipContent side="left" className="dark:border-slate-700 border-slate-200 dark:bg-slate-800 bg-white dark:text-slate-200 text-slate-700">
           {t(item.labelKey)}
         </TooltipContent>
       </Tooltip>
@@ -63,7 +63,7 @@ function NavButton({ item, active, onClick, collapsed, t }: { item: NavItem; act
         'flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-all duration-200',
         active
           ? 'bg-amber-500/15 text-amber-400 shadow-sm shadow-amber-500/10'
-          : 'text-slate-400 hover:bg-slate-700/50 hover:text-slate-200'
+          : 'dark:text-slate-400 text-slate-500 dark:hover:bg-slate-700/50 hover:bg-slate-100 dark:hover:text-slate-200 hover:text-slate-900'
       )}
     >
       <Icon className="h-5 w-5 shrink-0" />
@@ -76,28 +76,29 @@ function NavButton({ item, active, onClick, collapsed, t }: { item: NavItem; act
 }
 
 export function AppSidebar({ activePage, onPageChange }: SidebarProps) {
-  const [collapsed, setCollapsed] = useState(false);
+  const collapsed = useAppStore((s) => s.sidebarCollapsed);
+  const setCollapsed = useAppStore((s) => s.setSidebarCollapsed);
   const { t } = useTranslation();
 
   return (
     <>
       {/* Mobile hamburger */}
-      <div className="fixed top-0 left-0 right-0 z-40 flex h-14 items-center gap-3 border-b border-slate-800 bg-slate-900 px-4 lg:hidden">
+      <div className="fixed top-0 left-0 right-0 z-40 flex h-14 items-center gap-3 border-b dark:border-slate-800 border-slate-200 dark:bg-slate-900 bg-white px-4 lg:hidden">
         <Sheet>
           <SheetTrigger asChild>
-            <Button variant="ghost" size="icon" className="text-slate-400 hover:text-slate-200">
+            <Button variant="ghost" size="icon" className="dark:text-slate-400 text-slate-500 dark:hover:text-slate-200 hover:text-slate-900">
               <Menu className="h-5 w-5" />
             </Button>
           </SheetTrigger>
-          <SheetContent side="right" className="w-72 border-slate-800 bg-slate-900 p-0">
-            <SheetHeader className="border-b border-slate-800 px-4 py-4">
+          <SheetContent side="right" className="w-72 dark:border-slate-800 border-slate-200 dark:bg-slate-900 bg-white p-0">
+            <SheetHeader className="dark:border-b-slate-800 border-b-slate-200 px-4 py-4">
               <SheetTitle className="flex items-center gap-3 text-right">
                 <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-amber-500/15">
                   <Box className="h-5 w-5 text-amber-400" />
                 </div>
                 <div>
-                  <span className="text-base font-bold text-slate-100">{t('appTitle')}</span>
-                  <p className="text-[11px] font-medium text-slate-500">{t('sidebar.subtitle')}</p>
+                  <span className="text-base font-bold dark:text-slate-100 text-slate-900">{t('appTitle')}</span>
+                  <p className="text-[11px] font-medium dark:text-slate-500 text-slate-400">{t('sidebar.subtitle')}</p>
                 </div>
               </SheetTitle>
             </SheetHeader>
@@ -110,7 +111,7 @@ export function AppSidebar({ activePage, onPageChange }: SidebarProps) {
                     'flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-all duration-200',
                     activePage === item.page
                       ? 'bg-amber-500/15 text-amber-400 shadow-sm shadow-amber-500/10'
-                      : 'text-slate-400 hover:bg-slate-700/50 hover:text-slate-200'
+                      : 'dark:text-slate-400 text-slate-500 dark:hover:bg-slate-700/50 hover:bg-slate-100 dark:hover:text-slate-200 hover:text-slate-900'
                   )}
                 >
                   <item.icon className="h-5 w-5 shrink-0" />
@@ -118,33 +119,34 @@ export function AppSidebar({ activePage, onPageChange }: SidebarProps) {
                 </button>
               ))}
             </nav>
-            <div className="mt-auto border-t border-slate-800 p-4">
-              <p className="text-[11px] text-slate-600 leading-tight">{t('sidebar.footer')}</p>
+            <div className="mt-auto dark:border-t-slate-800 border-t-slate-200 p-4">
+              <p className="text-[11px] dark:text-slate-600 text-slate-400 leading-tight">{t('sidebar.footer')}</p>
             </div>
           </SheetContent>
         </Sheet>
         <div className="flex items-center gap-2">
           <Box className="h-5 w-5 text-amber-400" />
-          <span className="text-sm font-bold text-slate-100">{t('appTitle')}</span>
+          <span className="text-sm font-bold dark:text-slate-100 text-slate-900">{t('appTitle')}</span>
         </div>
       </div>
 
       {/* Desktop sidebar - RIGHT side for RTL */}
       <aside
         className={cn(
-          'fixed inset-y-0 right-0 z-30 hidden lg:flex flex-col border-l border-slate-800 bg-slate-900 transition-all duration-300',
+          'fixed inset-y-0 right-0 z-30 hidden lg:flex flex-col transition-all duration-300',
+          'dark:border-l-slate-800 border-l-slate-200 dark:bg-slate-900 bg-white',
           collapsed ? 'w-[68px]' : 'w-64'
         )}
       >
         {/* Logo */}
-        <div className="flex h-14 items-center gap-3 border-b border-slate-800 px-4">
+        <div className="flex h-14 items-center gap-3 dark:border-b-slate-800 border-b-slate-200 px-4">
           <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-amber-500/15">
             <Box className="h-5 w-5 text-amber-400" />
           </div>
           {!collapsed && (
             <div className="overflow-hidden">
-              <span className="text-base font-bold text-slate-100">{t('appTitle')}</span>
-              <p className="text-[11px] font-medium text-slate-500">{t('sidebar.subtitle')}</p>
+              <span className="text-base font-bold dark:text-slate-100 text-slate-900">{t('appTitle')}</span>
+              <p className="text-[11px] font-medium dark:text-slate-500 text-slate-400">{t('sidebar.subtitle')}</p>
             </div>
           )}
         </div>
@@ -164,12 +166,12 @@ export function AppSidebar({ activePage, onPageChange }: SidebarProps) {
         </nav>
 
         {/* Collapse toggle */}
-        <div className="border-t border-slate-800 p-3">
+        <div className="dark:border-t-slate-800 border-t-slate-200 p-3">
           <Button
             variant="ghost"
             size="sm"
             onClick={() => setCollapsed(!collapsed)}
-            className="w-full justify-center text-slate-500 hover:text-slate-300 hover:bg-slate-800"
+            className="w-full justify-center dark:text-slate-500 text-slate-400 dark:hover:text-slate-300 hover:text-slate-600 dark:hover:bg-slate-800 hover:bg-slate-100"
           >
             {collapsed ? <ChevronLeft className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
             {!collapsed && <span className="mr-2 text-xs">{t('common.collapse')}</span>}
@@ -178,8 +180,8 @@ export function AppSidebar({ activePage, onPageChange }: SidebarProps) {
 
         {/* Footer */}
         {!collapsed && (
-          <div className="border-t border-slate-800 p-4">
-            <p className="text-[11px] text-slate-600 leading-tight">{t('sidebar.footer')}</p>
+          <div className="dark:border-t-slate-800 border-t-slate-200 p-4">
+            <p className="text-[11px] dark:text-slate-600 text-slate-400 leading-tight">{t('sidebar.footer')}</p>
           </div>
         )}
       </aside>

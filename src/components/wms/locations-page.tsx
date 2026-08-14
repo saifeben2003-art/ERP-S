@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState, useCallback } from 'react';
-import { Plus, Pencil, Trash2, MapPin, Layers, Maximize, Weight } from 'lucide-react';
+import { Plus, Pencil, Trash2, MapPin, Layers, Maximize, Weight, Package } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -9,15 +9,23 @@ import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Switch } from '@/components/ui/switch';
+import { ScrollArea } from '@/components/ui/scroll-area';
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter,
 } from '@/components/ui/dialog';
 import {
+  Sheet, SheetContent, SheetHeader, SheetTitle,
+} from '@/components/ui/sheet';
+import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from '@/components/ui/select';
+import {
+  Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
+} from '@/components/ui/table';
 import { toast } from 'sonner';
-import { useTranslation, translateLocationType } from '@/lib/translations';
-import type { Location, LocationType } from '@/types/wms';
+import { useTranslation, translateLocationType, translateStatus } from '@/lib/translations';
+import { cn } from '@/lib/utils';
+import type { Location, LocationType, CargoItem } from '@/types/wms';
 
 const typeStyles: Record<LocationType, string> = {
   YARD: 'bg-amber-500/10 text-amber-400 border-amber-500/20',
@@ -27,6 +35,15 @@ const typeStyles: Record<LocationType, string> = {
   BERTH: 'bg-cyan-500/10 text-cyan-400 border-cyan-500/20',
 };
 
+const cargoStatusStyles: Record<string, string> = {
+  IN_YARD: 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20',
+  IN_TRANSIT: 'bg-amber-500/10 text-amber-400 border-amber-500/20',
+  DISPATCHED: 'bg-slate-500/10 text-slate-400 border-slate-500/20',
+  RECEIVED: 'bg-cyan-500/10 text-cyan-400 border-cyan-500/20',
+  IN_WAREHOUSE: 'bg-teal-500/10 text-teal-400 border-teal-500/20',
+  DELIVERED: 'bg-slate-400/10 text-slate-500 border-slate-400/20',
+};
+
 const locationTypes: LocationType[] = ['YARD', 'WAREHOUSE', 'OPEN_AREA', 'STAGING', 'BERTH'];
 
 const emptyForm = {
@@ -34,10 +51,7 @@ const emptyForm = {
   maxWeight: '', maxDimension: '', area: '', isActive: true,
 };
 
-interface LocationListResponse {
-  items: Location[];
-  total: number;
-}
+interface LocationListResponse { items: Location[]; total: number; }
 
 export function LocationsPage() {
   const [locations, setLocations] = useState<Location[]>([]);
@@ -48,21 +62,21 @@ export function LocationsPage() {
   const [deleting, setDeleting] = useState<Location | null>(null);
   const [form, setForm] = useState(emptyForm);
   const [submitting, setSubmitting] = useState(false);
+  const [detailOpen, setDetailOpen] = useState(false);
+  const [detailLocation, setDetailLocation] = useState<Location | null>(null);
+  const [detailCargo, setDetailCargo] = useState<CargoItem[]>([]);
+  const [detailLoading, setDetailLoading] = useState(false);
   const { t } = useTranslation();
 
   const fetchLocations = useCallback(async () => {
     setLoading(true);
     const params = new URLSearchParams({ limit: '100', ...(typeFilter && { type: typeFilter }) });
     try {
-      const res = await fetch(`/api/locations?${params}`);
+      const res = await fetch('/api/locations?' + params);
       const data: LocationListResponse = await res.json();
       if (!res.ok) { setLocations([]); return; }
       setLocations(data.items || []);
-    } catch {
-      toast.error(t('locations.toast.fetchFailed'));
-    } finally {
-      setLoading(false);
-    }
+    } catch { toast.error(t('locations.toast.fetchFailed')); } finally { setLoading(false); }
   }, [typeFilter, t]);
 
   useEffect(() => { fetchLocations(); }, [fetchLocations]);
@@ -70,262 +84,206 @@ export function LocationsPage() {
   const handleSubmit = async () => {
     setSubmitting(true);
     const payload: Record<string, unknown> = {
-      code: form.code,
-      name: form.name,
-      type: form.type,
-      zone: form.zone || null,
+      code: form.code, name: form.name, type: form.type, zone: form.zone || null,
       maxWeight: form.maxWeight ? parseFloat(form.maxWeight) : null,
-      maxDimension: form.maxDimension || null,
-      area: form.area ? parseFloat(form.area) : null,
-      isActive: form.isActive,
+      maxDimension: form.maxDimension || null, area: form.area ? parseFloat(form.area) : null, isActive: form.isActive,
     };
-
     try {
-      const url = editing ? `/api/locations/${editing.id}` : '/api/locations';
-      const method = editing ? 'PUT' : 'POST';
-      const res = await fetch(url, {
-        method,
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload),
-      });
-      if (!res.ok) {
-        const err = await res.json();
-        throw new Error(err.error || 'Failed to save');
-      }
+      const url = editing ? '/api/locations/' + editing.id : '/api/locations';
+      const res = await fetch(url, { method: editing ? 'PUT' : 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+      if (!res.ok) { const err = await res.json(); throw new Error(err.error || 'Failed'); }
       toast.success(editing ? t('locations.toast.updated') : t('locations.toast.created'));
-      setShowAdd(false);
-      setEditing(null);
-      setForm(emptyForm);
-      fetchLocations();
-    } catch (e: unknown) {
-      toast.error(e instanceof Error ? e.message : 'Failed to save');
-    } finally {
-      setSubmitting(false);
-    }
+      setShowAdd(false); setEditing(null); setForm(emptyForm); fetchLocations();
+    } catch (e: unknown) { toast.error(e instanceof Error ? e.message : 'Failed'); } finally { setSubmitting(false); }
   };
 
   const handleDelete = async () => {
     if (!deleting) return;
     try {
-      const res = await fetch(`/api/locations/${deleting.id}`, { method: 'DELETE' });
-      if (!res.ok) {
-        const err = await res.json();
-        throw new Error(err.error || 'Failed to delete');
-      }
-      toast.success(t('locations.toast.deleted'));
-      setDeleting(null);
-      fetchLocations();
-    } catch (e: unknown) {
-      toast.error(e instanceof Error ? e.message : t('locations.toast.deleteFailed'));
-    }
+      const res = await fetch('/api/locations/' + deleting.id, { method: 'DELETE' });
+      if (!res.ok) { const err = await res.json(); throw new Error(err.error || 'Failed'); }
+      toast.success(t('locations.toast.deleted')); setDeleting(null); fetchLocations();
+    } catch (e: unknown) { toast.error(e instanceof Error ? e.message : t('locations.toast.deleteFailed')); }
   };
 
   const openEdit = (loc: Location) => {
     setEditing(loc);
-    setForm({
-      code: loc.code, name: loc.name, type: loc.type, zone: loc.zone || '',
-      maxWeight: loc.maxWeight ? String(loc.maxWeight) : '',
-      maxDimension: loc.maxDimension || '',
-      area: loc.area ? String(loc.area) : '',
-      isActive: loc.isActive,
-    });
+    setForm({ code: loc.code, name: loc.name, type: loc.type, zone: loc.zone || '', maxWeight: loc.maxWeight ? String(loc.maxWeight) : '', maxDimension: loc.maxDimension || '', area: loc.area ? String(loc.area) : '', isActive: loc.isActive });
+  };
+
+  const openDetail = async (loc: Location) => {
+    setDetailLocation(loc); setDetailOpen(true); setDetailLoading(true);
+    try {
+      const res = await fetch('/api/cargo?locationId=' + loc.id + '&limit=200');
+      const data = await res.json();
+      setDetailCargo(data.items || []);
+    } catch { setDetailCargo([]); } finally { setDetailLoading(false); }
   };
 
   const loadPct = (loc: Location) => {
     if (!loc.maxWeight || loc.maxWeight === 0) return 0;
     return Math.min(100, Math.round((loc.currentLoad / loc.maxWeight) * 100));
   };
-
-  const loadColor = (pct: number) => {
-    if (pct >= 90) return 'bg-red-500';
-    if (pct >= 70) return 'bg-amber-500';
-    return 'bg-emerald-500';
-  };
+  const loadColor = (pct: number) => { if (pct >= 90) return 'bg-red-500'; if (pct >= 70) return 'bg-amber-500'; return 'bg-emerald-500'; };
 
   return (
     <div className="space-y-6">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-slate-100">{t('locations.title')}</h1>
-          <p className="text-sm text-slate-500 mt-1">{t('locations.subtitle')}</p>
-        </div>
-        <Button onClick={() => { setForm(emptyForm); setShowAdd(true); }}
-          className="bg-amber-500 hover:bg-amber-600 text-slate-900 font-medium">
+        <div><h1 className="text-2xl font-bold text-slate-100">{t('locations.title')}</h1><p className="text-sm text-slate-500 mt-1">{t('locations.subtitle')}</p></div>
+        <Button onClick={() => { setForm(emptyForm); setShowAdd(true); }} className="bg-amber-500 hover:bg-amber-600 text-slate-900 font-medium">
           <Plus className="h-4 w-4 ml-2" /> {t('locations.addLocation')}
         </Button>
       </div>
 
-      {/* Type Filter */}
       <div className="flex flex-wrap gap-2">
         {locationTypes.map((lt) => (
-          <Button
-            key={lt}
-            variant={typeFilter === lt ? 'default' : 'outline'}
-            size="sm"
-            onClick={() => setTypeFilter(typeFilter === lt ? '' : lt)}
-            className={
-              typeFilter === lt
-                ? 'bg-amber-500/15 text-amber-400 border-amber-500/30 hover:bg-amber-500/20'
-                : 'border-slate-700 bg-slate-900/50 text-slate-400 hover:bg-slate-800 hover:text-slate-300'
-            }
-          >
+          <Button key={lt} variant={typeFilter === lt ? 'default' : 'outline'} size="sm" onClick={() => setTypeFilter(typeFilter === lt ? '' : lt)}
+            className={typeFilter === lt ? 'bg-amber-500/15 text-amber-400 border-amber-500/30 hover:bg-amber-500/20' : 'border-slate-700 bg-slate-900/50 text-slate-400 hover:bg-slate-800 hover:text-slate-300'}>
             {translateLocationType(lt)}
           </Button>
         ))}
-        <Button
-          variant={typeFilter === '' ? 'default' : 'outline'}
-          size="sm"
-          onClick={() => setTypeFilter('')}
-          className={
-            typeFilter === ''
-              ? 'bg-amber-500/15 text-amber-400 border-amber-500/30 hover:bg-amber-500/20'
-              : 'border-slate-700 bg-slate-900/50 text-slate-400 hover:bg-slate-800 hover:text-slate-300'
-          }
-        >
+        <Button variant={typeFilter === '' ? 'default' : 'outline'} size="sm" onClick={() => setTypeFilter('')}
+          className={typeFilter === '' ? 'bg-amber-500/15 text-amber-400 border-amber-500/30 hover:bg-amber-500/20' : 'border-slate-700 bg-slate-900/50 text-slate-400 hover:bg-slate-800 hover:text-slate-300'}>
           {t('locations.allTypes')}
         </Button>
       </div>
 
-      {/* Location Cards Grid */}
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-        {loading
-          ? Array.from({ length: 8 }).map((_, i) => (
-              <Card key={i} className="border-slate-800 bg-slate-900/50">
-                <CardContent className="p-5 space-y-3">
-                  <Skeleton className="h-5 w-2/3 bg-slate-800" />
-                  <Skeleton className="h-4 w-1/2 bg-slate-800" />
-                  <Skeleton className="h-2 w-full bg-slate-800" />
-                </CardContent>
-              </Card>
-            ))
-          : locations.length === 0
-            ? <div className="col-span-full text-center py-12 text-slate-500">{t('locations.noLocationsFound')}</div>
-            : locations.map((loc) => {
-                const pct = loadPct(loc);
-                return (
-                  <Card key={loc.id} className={`border-slate-800 bg-slate-900/50 transition-all duration-200 ${!loc.isActive ? 'opacity-50' : ''}`}>
-                    <CardContent className="p-5 space-y-3">
-                      <div className="flex items-start justify-between">
-                        <div className="min-w-0">
-                          <h3 className="text-sm font-semibold text-slate-100 truncate">{loc.name}</h3>
-                          <p className="text-[11px] font-mono text-slate-600 mt-0.5">{loc.code}</p>
-                        </div>
-                        <div className="flex items-center gap-1 shrink-0">
-                          <Button variant="ghost" size="icon" className="h-7 w-7 text-slate-500 hover:text-amber-400" onClick={() => openEdit(loc)}>
-                            <Pencil className="h-3.5 w-3.5" />
-                          </Button>
-                          <Button variant="ghost" size="icon" className="h-7 w-7 text-slate-500 hover:text-red-400" onClick={() => setDeleting(loc)}>
-                            <Trash2 className="h-3.5 w-3.5" />
-                          </Button>
-                        </div>
-                      </div>
-                      <Badge variant="outline" className={`text-[10px] ${typeStyles[loc.type]}`}>{translateLocationType(loc.type)}</Badge>
-                      <div className="grid grid-cols-2 gap-2 text-xs text-slate-400">
-                        {loc.zone && <div className="flex items-center gap-1.5"><Layers className="h-3 w-3 text-slate-600" />{loc.zone}</div>}
-                        {loc.maxWeight && <div className="flex items-center gap-1.5"><Weight className="h-3 w-3 text-slate-600" />{loc.maxWeight}{t('common.tonnes')}</div>}
-                        {loc.area && <div className="flex items-center gap-1.5"><Maximize className="h-3 w-3 text-slate-600" />{loc.area}m²</div>}
-                        <div className="flex items-center gap-1.5"><MapPin className="h-3 w-3 text-slate-600" />{loc.currentLoad} {t('common.items')}</div>
-                      </div>
-                      {loc.maxWeight && loc.maxWeight > 0 && (
-                        <div className="space-y-1">
-                          <div className="flex justify-between text-[11px]">
-                            <span className="text-slate-500">{t('common.load')}</span>
-                            <span className={`font-medium ${pct >= 90 ? 'text-red-400' : pct >= 70 ? 'text-amber-400' : 'text-slate-400'}`}>{pct}%</span>
-                          </div>
-                          <div className="h-1.5 w-full overflow-hidden rounded-full bg-slate-800">
-                            <div className={`h-full rounded-full ${loadColor(pct)} transition-all`} style={{ width: `${pct}%` }} />
-                          </div>
-                        </div>
-                      )}
-                      <div className="flex items-center gap-1.5">
-                        <div className={`h-1.5 w-1.5 rounded-full ${loc.isActive ? 'bg-emerald-400' : 'bg-slate-600'}`} />
-                        <span className="text-[11px] text-slate-500">{loc.isActive ? t('common.active') : t('common.inactive')}</span>
-                      </div>
-                    </CardContent>
-                  </Card>
-                );
-              })}
+        {loading ? Array.from({ length: 8 }).map((_, i) => (
+          <Card key={i} className="border-slate-800 bg-slate-900/50"><CardContent className="p-5 space-y-3"><Skeleton className="h-5 w-2/3 bg-slate-800" /><Skeleton className="h-4 w-1/2 bg-slate-800" /><Skeleton className="h-2 w-full bg-slate-800" /></CardContent></Card>
+        )) : locations.length === 0 ? (
+          <div className="col-span-full text-center py-12 text-slate-500">{t('locations.noLocationsFound')}</div>
+        ) : locations.map((loc) => {
+          const pct = loadPct(loc);
+          return (
+            <Card key={loc.id} className={cn('border-slate-800 bg-slate-900/50 transition-all duration-200 cursor-pointer hover:border-slate-700', !loc.isActive && 'opacity-50')} onClick={() => openDetail(loc)}>
+              <CardContent className="p-5 space-y-3" onClick={(e) => { if ((e.target as HTMLElement).closest('button')) return; }}>
+                <div className="flex items-start justify-between">
+                  <div className="min-w-0">
+                    <h3 className="text-sm font-semibold text-slate-100 truncate">{loc.name}</h3>
+                    <p className="text-[11px] font-mono text-slate-600 mt-0.5">{loc.code}</p>
+                  </div>
+                  <div className="flex items-center gap-1 shrink-0" onClick={(e) => e.stopPropagation()}>
+                    <Button variant="ghost" size="icon" className="h-7 w-7 text-slate-500 hover:text-amber-400" onClick={() => openEdit(loc)}><Pencil className="h-3.5 w-3.5" /></Button>
+                    <Button variant="ghost" size="icon" className="h-7 w-7 text-slate-500 hover:text-red-400" onClick={() => setDeleting(loc)}><Trash2 className="h-3.5 w-3.5" /></Button>
+                  </div>
+                </div>
+                <Badge variant="outline" className={cn('text-[10px]', typeStyles[loc.type])}>{translateLocationType(loc.type)}</Badge>
+                <div className="grid grid-cols-2 gap-2 text-xs text-slate-400">
+                  {loc.zone && <div className="flex items-center gap-1.5"><Layers className="h-3 w-3 text-slate-600" />{loc.zone}</div>}
+                  {loc.maxWeight && <div className="flex items-center gap-1.5"><Weight className="h-3 w-3 text-slate-600" />{loc.maxWeight}{t('common.tonnes')}</div>}
+                  {loc.area && <div className="flex items-center gap-1.5"><Maximize className="h-3 w-3 text-slate-600" />{loc.area}m²</div>}
+                  <div className="flex items-center gap-1.5"><Package className="h-3 w-3 text-slate-600" />{loc.currentLoad} {t('common.items')}</div>
+                </div>
+                {loc.maxWeight && loc.maxWeight > 0 && (
+                  <div className="space-y-1">
+                    <div className="flex justify-between text-[11px]"><span className="text-slate-500">{t('common.load')}</span><span className={cn('font-medium', pct >= 90 ? 'text-red-400' : pct >= 70 ? 'text-amber-400' : 'text-slate-400')}>{pct}%</span></div>
+                    <div className="h-1.5 w-full overflow-hidden rounded-full bg-slate-800"><div className={cn('h-full rounded-full transition-all', loadColor(pct))} style={{ width: pct + '%' }} /></div>
+                  </div>
+                )}
+                <div className="flex items-center gap-1.5"><div className={cn('h-1.5 w-1.5 rounded-full', loc.isActive ? 'bg-emerald-400' : 'bg-slate-600')} /><span className="text-[11px] text-slate-500">{loc.isActive ? t('common.active') : t('common.inactive')}</span></div>
+              </CardContent>
+            </Card>
+          );
+        })}
       </div>
 
-      {/* Add/Edit Dialog */}
+      <Sheet open={detailOpen} onOpenChange={setDetailOpen}>
+        <SheetContent side="left" className="w-full sm:max-w-lg border-slate-700 bg-slate-900 p-0 overflow-hidden flex flex-col">
+          {detailLocation && (
+            <>
+              <SheetHeader className="p-4 border-b border-slate-800 shrink-0">
+                <div className="flex items-center justify-between">
+                  <SheetTitle className="text-sm text-slate-100">{detailLocation.name}</SheetTitle>
+                  <Badge variant="outline" className={cn('text-[10px]', typeStyles[detailLocation.type])}>{translateLocationType(detailLocation.type)}</Badge>
+                </div>
+                <p className="text-xs font-mono text-slate-500 mt-1">{detailLocation.code} {detailLocation.zone ? '— ' + detailLocation.zone : ''}</p>
+              </SheetHeader>
+              <ScrollArea className="flex-1">
+                <div className="p-4 space-y-4">
+                  <div className="grid grid-cols-2 gap-3">
+                    {detailLocation.maxWeight && (
+                      <div className="rounded-lg border border-slate-800 bg-slate-900/60 p-3">
+                        <span className="text-[10px] text-slate-500 uppercase tracking-wider">{t('common.capacity')}</span>
+                        <p className="text-lg font-bold text-slate-100 mt-1">{loadPct(detailLocation)}%</p>
+                        <p className="text-xs text-slate-500">{detailLocation.currentLoad.toLocaleString()} / {detailLocation.maxWeight.toLocaleString()} {t('common.tonnes')}</p>
+                      </div>
+                    )}
+                    {detailLocation.area && (
+                      <div className="rounded-lg border border-slate-800 bg-slate-900/60 p-3">
+                        <span className="text-[10px] text-slate-500 uppercase tracking-wider">{t('locations.card.area')}</span>
+                        <p className="text-lg font-bold text-slate-100 mt-1">{detailLocation.area} m²</p>
+                      </div>
+                    )}
+                  </div>
+                  <div className="rounded-xl border border-slate-800 bg-slate-900/80 p-4">
+                    <h3 className="text-xs font-semibold text-slate-400 mb-3">{t('detail.location.itemsStored')}</h3>
+                    {detailLoading ? (
+                      <div className="space-y-2">{Array.from({ length: 3 }).map((_, i) => <Skeleton key={i} className="h-8 bg-slate-800" />)}</div>
+                    ) : detailCargo.length === 0 ? (
+                      <p className="text-xs text-slate-500 text-center py-6">{t('detail.location.noItems')}</p>
+                    ) : (
+                      <div className="max-h-[400px] overflow-y-auto">
+                        <Table>
+                          <TableHeader>
+                            <TableRow className="border-slate-800 hover:bg-transparent">
+                              <TableHead className="text-[10px] text-slate-500">{t('cargo.table.code')}</TableHead>
+                              <TableHead className="text-[10px] text-slate-500">{t('cargo.table.description')}</TableHead>
+                              <TableHead className="text-[10px] text-slate-500 hidden sm:table-cell">{t('cargo.table.weight')}</TableHead>
+                              <TableHead className="text-[10px] text-slate-500">{t('cargo.table.status')}</TableHead>
+                            </TableRow>
+                          </TableHeader>
+                          <TableBody>
+                            {detailCargo.map((c) => (
+                              <TableRow key={c.id} className="border-slate-800 hover:bg-slate-800/50">
+                                <TableCell className="py-2 text-xs font-mono text-amber-400/80">{c.cargoCode}</TableCell>
+                                <TableCell className="py-2 text-xs text-slate-300 max-w-[160px] truncate">{c.description}</TableCell>
+                                <TableCell className="py-2 text-xs text-slate-400 hidden sm:table-cell">{c.weight.toLocaleString()}</TableCell>
+                                <TableCell className="py-2"><Badge variant="outline" className={cn('text-[10px]', cargoStatusStyles[c.status] || 'bg-slate-700/50 text-slate-400 border-slate-600')}>{translateStatus(c.status)}</Badge></TableCell>
+                              </TableRow>
+                            ))}
+                          </TableBody>
+                        </Table>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </ScrollArea>
+            </>
+          )}
+        </SheetContent>
+      </Sheet>
+
       <Dialog open={showAdd || !!editing} onOpenChange={(open) => { if (!open) { setShowAdd(false); setEditing(null); setForm(emptyForm); } }}>
         <DialogContent className="border-slate-700 bg-slate-900 max-w-lg">
-          <DialogHeader>
-            <DialogTitle className="text-slate-100">{editing ? t('locations.editLocation') : t('locations.addNewLocation')}</DialogTitle>
-          </DialogHeader>
+          <DialogHeader><DialogTitle className="text-slate-100">{editing ? t('locations.editLocation') : t('locations.addNewLocation')}</DialogTitle></DialogHeader>
           <div className="grid gap-4 py-4">
             <div className="grid grid-cols-2 gap-4">
-              <div>
-                <Label className="text-slate-400">{t('locations.form.code')}</Label>
-                <Input value={form.code} onChange={(e) => setForm({ ...form, code: e.target.value })}
-                  className="border-slate-700 bg-slate-800 text-slate-200 mt-1" />
-              </div>
-              <div>
-                <Label className="text-slate-400">{t('locations.form.name')}</Label>
-                <Input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })}
-                  className="border-slate-700 bg-slate-800 text-slate-200 mt-1" />
-              </div>
+              <div><Label className="text-slate-400">{t('locations.form.code')}</Label><Input value={form.code} onChange={(e) => setForm({ ...form, code: e.target.value })} className="border-slate-700 bg-slate-800 text-slate-200 mt-1" /></div>
+              <div><Label className="text-slate-400">{t('locations.form.name')}</Label><Input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} className="border-slate-700 bg-slate-800 text-slate-200 mt-1" /></div>
             </div>
             <div className="grid grid-cols-2 gap-4">
-              <div>
-                <Label className="text-slate-400">{t('locations.form.type')}</Label>
-                <Select value={form.type} onValueChange={(v) => setForm({ ...form, type: v })}>
-                  <SelectTrigger className="border-slate-700 bg-slate-800 text-slate-200 mt-1"><SelectValue placeholder={t('common.select')} /></SelectTrigger>
-                  <SelectContent className="border-slate-700 bg-slate-800">
-                    {locationTypes.map((lt) => (
-                      <SelectItem key={lt} value={lt} className="text-slate-200 focus:bg-slate-700">{translateLocationType(lt)}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div>
-                <Label className="text-slate-400">{t('locations.form.zone')}</Label>
-                <Input value={form.zone} onChange={(e) => setForm({ ...form, zone: e.target.value })}
-                  className="border-slate-700 bg-slate-800 text-slate-200 mt-1" />
-              </div>
+              <div><Label className="text-slate-400">{t('locations.form.type')}</Label><Select value={form.type} onValueChange={(v) => setForm({ ...form, type: v })}><SelectTrigger className="border-slate-700 bg-slate-800 text-slate-200 mt-1"><SelectValue placeholder={t('common.select')} /></SelectTrigger><SelectContent className="border-slate-700 bg-slate-800">{locationTypes.map((lt) => (<SelectItem key={lt} value={lt} className="text-slate-200 focus:bg-slate-700">{translateLocationType(lt)}</SelectItem>))}</SelectContent></Select></div>
+              <div><Label className="text-slate-400">{t('locations.form.zone')}</Label><Input value={form.zone} onChange={(e) => setForm({ ...form, zone: e.target.value })} className="border-slate-700 bg-slate-800 text-slate-200 mt-1" /></div>
             </div>
             <div className="grid grid-cols-3 gap-4">
-              <div>
-                <Label className="text-slate-400">{t('locations.form.maxWeight')}</Label>
-                <Input type="number" value={form.maxWeight} onChange={(e) => setForm({ ...form, maxWeight: e.target.value })}
-                  className="border-slate-700 bg-slate-800 text-slate-200 mt-1" />
-              </div>
-              <div>
-                <Label className="text-slate-400">{t('locations.form.maxDimension')}</Label>
-                <Input value={form.maxDimension} onChange={(e) => setForm({ ...form, maxDimension: e.target.value })}
-                  className="border-slate-700 bg-slate-800 text-slate-200 mt-1" placeholder={t('locations.form.maxDimensionPlaceholder')} />
-              </div>
-              <div>
-                <Label className="text-slate-400">{t('locations.form.area')}</Label>
-                <Input type="number" value={form.area} onChange={(e) => setForm({ ...form, area: e.target.value })}
-                  className="border-slate-700 bg-slate-800 text-slate-200 mt-1" />
-              </div>
+              <div><Label className="text-slate-400">{t('locations.form.maxWeight')}</Label><Input type="number" value={form.maxWeight} onChange={(e) => setForm({ ...form, maxWeight: e.target.value })} className="border-slate-700 bg-slate-800 text-slate-200 mt-1" /></div>
+              <div><Label className="text-slate-400">{t('locations.form.maxDimension')}</Label><Input value={form.maxDimension} onChange={(e) => setForm({ ...form, maxDimension: e.target.value })} className="border-slate-700 bg-slate-800 text-slate-200 mt-1" placeholder={t('locations.form.maxDimensionPlaceholder')} /></div>
+              <div><Label className="text-slate-400">{t('locations.form.area')}</Label><Input type="number" value={form.area} onChange={(e) => setForm({ ...form, area: e.target.value })} className="border-slate-700 bg-slate-800 text-slate-200 mt-1" /></div>
             </div>
-            <div className="flex items-center gap-3">
-              <Switch checked={form.isActive} onCheckedChange={(v) => setForm({ ...form, isActive: v })} />
-              <Label className="text-slate-400">{t('locations.form.active')}</Label>
-            </div>
+            <div className="flex items-center gap-3"><Switch checked={form.isActive} onCheckedChange={(v) => setForm({ ...form, isActive: v })} /><Label className="text-slate-400">{t('locations.form.active')}</Label></div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => { setShowAdd(false); setEditing(null); setForm(emptyForm); }}
-              className="border-slate-700 text-slate-300 hover:bg-slate-800">{t('common.cancel')}</Button>
-            <Button onClick={handleSubmit} disabled={submitting || !form.code || !form.name || !form.type}
-              className="bg-amber-500 hover:bg-amber-600 text-slate-900">
-              {submitting ? t('common.saving') : editing ? t('common.update') : t('common.create')}
-            </Button>
+            <Button variant="outline" onClick={() => { setShowAdd(false); setEditing(null); setForm(emptyForm); }} className="border-slate-700 text-slate-300 hover:bg-slate-800">{t('common.cancel')}</Button>
+            <Button onClick={handleSubmit} disabled={submitting || !form.code || !form.name || !form.type} className="bg-amber-500 hover:bg-amber-600 text-slate-900">{submitting ? t('common.saving') : editing ? t('common.update') : t('common.create')}</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
 
-      {/* Delete Confirmation */}
       <Dialog open={!!deleting} onOpenChange={(open) => { if (!open) setDeleting(null); }}>
         <DialogContent className="border-slate-700 bg-slate-900 max-w-md">
-          <DialogHeader>
-            <DialogTitle className="text-slate-100">{t('common.confirmDelete')}</DialogTitle>
-          </DialogHeader>
-          <p className="text-sm text-slate-400">
-            {t('locations.delete.message')} <span className="text-amber-400 font-medium">{deleting?.code}</span>{t('locations.delete.warning')}
-          </p>
+          <DialogHeader><DialogTitle className="text-slate-100">{t('common.confirmDelete')}</DialogTitle></DialogHeader>
+          <p className="text-sm text-slate-400">{t('locations.delete.message')} <span className="text-amber-400 font-medium">{deleting?.code}</span>{t('locations.delete.warning')}</p>
           <DialogFooter>
             <Button variant="outline" onClick={() => setDeleting(null)} className="border-slate-700 text-slate-300 hover:bg-slate-800">{t('common.cancel')}</Button>
             <Button variant="destructive" onClick={handleDelete} className="bg-red-600 hover:bg-red-700">{t('common.delete')}</Button>

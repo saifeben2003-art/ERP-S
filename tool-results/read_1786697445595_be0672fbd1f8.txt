@@ -1,0 +1,504 @@
+     1→     1→'use client';
+     2→     2→
+     3→     3→import { useEffect, useState, useCallback } from 'react';
+     4→     4→import { Plus, Search, Pencil, Eye, Trash2 } from 'lucide-react';
+     5→     5→import { Card, CardContent } from '@/components/ui/card';
+     6→     6→import { Button } from '@/components/ui/button';
+     7→     7→import { Input } from '@/components/ui/input';
+     8→     8→import { Label } from '@/components/ui/label';
+     9→     9→import { Textarea } from '@/components/ui/textarea';
+    10→    10→import { Badge } from '@/components/ui/badge';
+    11→    11→import { Skeleton } from '@/components/ui/skeleton';
+    12→    12→import {
+    13→    13→  Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
+    14→    14→} from '@/components/ui/table';
+    15→    15→import {
+    16→    16→  Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter,
+    17→    17→} from '@/components/ui/dialog';
+    18→    18→import {
+    19→    19→  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
+    20→    20→} from '@/components/ui/select';
+    21→    21→import { toast } from 'sonner';
+    22→    22→import { useTranslation, translateStatus, translateCategory, translateCommodity } from '@/lib/translations';
+    23→    23→import type { CargoItem, LiftCategory, CommodityType, CargoStatus, Location, Project } from '@/types/wms';
+    24→    24→
+    25→    25→const statusStyles: Record<CargoStatus, string> = {
+    26→    26→  IN_YARD: 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20',
+    27→    27→  IN_TRANSIT: 'bg-amber-500/10 text-amber-400 border-amber-500/20',
+    28→    28→  DISPATCHED: 'bg-slate-500/10 text-slate-400 border-slate-500/20',
+    29→    29→  RECEIVED: 'bg-cyan-500/10 text-cyan-400 border-cyan-500/20',
+    30→    30→  IN_WAREHOUSE: 'bg-teal-500/10 text-teal-400 border-teal-500/20',
+    31→    31→  DELIVERED: 'bg-slate-400/10 text-slate-500 border-slate-400/20',
+    32→    32→};
+    33→    33→
+    34→    34→const categoryStyles: Record<LiftCategory, string> = {
+    35→    35→  HEAVY_LIFT: 'bg-red-500/10 text-red-400 border-red-500/20',
+    36→    36→  OVERSIZE: 'bg-orange-500/10 text-orange-400 border-orange-500/20',
+    37→    37→  STANDARD: 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20',
+    38→    38→  PROJECT_CARGO: 'bg-amber-500/10 text-amber-400 border-amber-500/20',
+    39→    39→};
+    40→    40→
+    41→    41→interface CargoListResponse {
+    42→    42→  items: CargoItem[];
+    43→    43→  total: number;
+    44→    44→  page: number;
+    45→    45→  totalPages: number;
+    46→    46→}
+    47→    47→
+    48→    48→const emptyForm = {
+    49→    49→  description: '', weight: '', length: '', width: '', height: '',
+    50→    50→  liftCategory: '' as string, commodityType: '' as string,
+    51→    51→  specialHandling: '', clientName: '', poReference: '', blReference: '',
+    52→    52→  centerOfGravity: '', liftingPoints: '', projectId: '',
+    53→    53→};
+    54→    54→
+    55→    55→export function CargoPage() {
+    56→    56→  const [cargo, setCargo] = useState<CargoItem[]>([]);
+    57→    57→  const [totalPages, setTotalPages] = useState(1);
+    58→    58→  const [page, setPage] = useState(1);
+    59→    59→  const [loading, setLoading] = useState(true);
+    60→    60→  const [search, setSearch] = useState('');
+    61→    61→  const [statusFilter, setStatusFilter] = useState('');
+    62→    62→  const [categoryFilter, setCategoryFilter] = useState('');
+    63→    63→  const [commodityFilter, setCommodityFilter] = useState('');
+    64→    64→  const [showAdd, setShowAdd] = useState(false);
+    65→    65→  const [editing, setEditing] = useState<CargoItem | null>(null);
+    66→    66→  const [viewing, setViewing] = useState<CargoItem | null>(null);
+    67→    67→  const [deleting, setDeleting] = useState<CargoItem | null>(null);
+    68→    68→  const [form, setForm] = useState(emptyForm);
+    69→    69→  const [submitting, setSubmitting] = useState(false);
+    70→    70→  const [locations, setLocations] = useState<Location[]>([]);
+    71→    71→  const [projects, setProjects] = useState<Project[]>([]);
+    72→    72→  const { t } = useTranslation();
+    73→    73→
+    74→    74→  const fetchCargo = useCallback(async () => {
+    75→    75→    setLoading(true);
+    76→    76→    const params = new URLSearchParams({
+    77→    77→      page: String(page),
+    78→    78→      limit: '10',
+    79→    79→      ...(search && { search }),
+    80→    80→      ...(statusFilter && { status: statusFilter }),
+    81→    81→      ...(categoryFilter && { liftCategory: categoryFilter }),
+    82→    82→      ...(commodityFilter && { commodityType: commodityFilter }),
+    83→    83→    });
+    84→    84→    try {
+    85→    85→      const res = await fetch(`/api/cargo?${params}`);
+    86→    86→      const data: CargoListResponse = await res.json();
+    87→    87→      if (!res.ok) { setCargo([]); return; }
+    88→    88→      setCargo(data.items || []);
+    89→    89→      setTotalPages(data.totalPages);
+    90→    90→    } catch {
+    91→    91→      toast.error(t('cargo.toast.fetchFailed'));
+    92→    92→    } finally {
+    93→    93→      setLoading(false);
+    94→    94→    }
+    95→    95→  }, [page, search, statusFilter, categoryFilter, commodityFilter, t]);
+    96→    96→
+    97→    97→  const fetchLookups = useCallback(async () => {
+    98→    98→    try {
+    99→    99→      const [locRes, projRes] = await Promise.all([
+   100→   100→        fetch('/api/locations?limit=100'),
+   101→   101→        fetch('/api/projects?limit=100'),
+   102→   102→      ]);
+   103→   103→      const locData = await locRes.json();
+   104→   104→      const projData = await projRes.json();
+   105→   105→      setLocations(locData.items || []);
+   106→   106→      setProjects(projData.items || []);
+   107→   107→    } catch {
+   108→   108→      // silent
+   109→   109→    }
+   110→   110→  }, []);
+   111→   111→
+   112→   112→  useEffect(() => { fetchCargo(); }, [fetchCargo]);
+   113→   113→  useEffect(() => { fetchLookups(); }, [fetchLookups]);
+   114→   114→  useEffect(() => { setPage(1); }, [search, statusFilter, categoryFilter, commodityFilter]);
+   115→   115→
+   116→   116→  const handleSubmit = async () => {
+   117→   117→    setSubmitting(true);
+   118→   118→    const payload: Record<string, unknown> = {
+   119→   119→      description: form.description,
+   120→   120→      weight: parseFloat(form.weight) || 0,
+   121→   121→      length: parseFloat(form.length) || 0,
+   122→   122→      width: parseFloat(form.width) || 0,
+   123→   123→      height: parseFloat(form.height) || 0,
+   124→   124→      liftCategory: form.liftCategory,
+   125→   125→      commodityType: form.commodityType,
+   126→   126→      specialHandling: form.specialHandling || null,
+   127→   127→      clientName: form.clientName || null,
+   128→   128→      poReference: form.poReference || null,
+   129→   129→      blReference: form.blReference || null,
+   130→   130→      centerOfGravity: form.centerOfGravity || null,
+   131→   131→      liftingPoints: form.liftingPoints ? parseInt(form.liftingPoints) : null,
+   132→   132→      projectId: form.projectId && form.projectId !== '_none' ? form.projectId : null,
+   133→   133→    };
+   134→   134→
+   135→   135→    try {
+   136→   136→      const url = editing ? `/api/cargo/${editing.id}` : '/api/cargo';
+   137→   137→      const method = editing ? 'PUT' : 'POST';
+   138→   138→      const res = await fetch(url, {
+   139→   139→        method,
+   140→   140→        headers: { 'Content-Type': 'application/json' },
+   141→   141→        body: JSON.stringify(payload),
+   142→   142→      });
+   143→   143→      if (!res.ok) {
+   144→   144→        const err = await res.json();
+   145→   145→        throw new Error(err.error || 'Failed to save');
+   146→   146→      }
+   147→   147→      toast.success(editing ? t('cargo.toast.updated') : t('cargo.toast.created'));
+   148→   148→      setShowAdd(false);
+   149→   149→      setEditing(null);
+   150→   150→      setForm(emptyForm);
+   151→   151→      fetchCargo();
+   152→   152→    } catch (e: unknown) {
+   153→   153→      toast.error(e instanceof Error ? e.message : t('cargo.toast.saveFailed'));
+   154→   154→    } finally {
+   155→   155→      setSubmitting(false);
+   156→   156→    }
+   157→   157→  };
+   158→   158→
+   159→   159→  const handleDelete = async () => {
+   160→   160→    if (!deleting) return;
+   161→   161→    try {
+   162→   162→      const res = await fetch(`/api/cargo/${deleting.id}`, { method: 'DELETE' });
+   163→   163→      if (!res.ok) throw new Error('Failed to delete');
+   164→   164→      toast.success(t('cargo.toast.deleted'));
+   165→   165→      setDeleting(null);
+   166→   166→      fetchCargo();
+   167→   167→    } catch {
+   168→   168→      toast.error(t('cargo.toast.deleteFailed'));
+   169→   169→    }
+   170→   170→  };
+   171→   171→
+   172→   172→  const openEdit = (item: CargoItem) => {
+   173→   173→    setEditing(item);
+   174→   174→    setForm({
+   175→   175→      description: item.description,
+   176→   176→      weight: String(item.weight),
+   177→   177→      length: String(item.length),
+   178→   178→      width: String(item.width),
+   179→   179→      height: String(item.height),
+   180→   180→      liftCategory: item.liftCategory,
+   181→   181→      commodityType: item.commodityType,
+   182→   182→      specialHandling: item.specialHandling || '',
+   183→   183→      clientName: item.clientName || '',
+   184→   184→      poReference: item.poReference || '',
+   185→   185→      blReference: item.blReference || '',
+   186→   186→      centerOfGravity: item.centerOfGravity || '',
+   187→   187→      liftingPoints: item.liftingPoints ? String(item.liftingPoints) : '',
+   188→   188→      projectId: item.projectId || '',
+   189→   189→    });
+   190→   190→  };
+   191→   191→
+   192→   192→  return (
+   193→   193→    <div className="space-y-6">
+   194→   194→      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+   195→   195→        <div>
+   196→   196→          <h1 className="text-2xl font-bold text-slate-100">{t('cargo.title')}</h1>
+   197→   197→          <p className="text-sm text-slate-500 mt-1">{t('cargo.subtitle')}</p>
+   198→   198→        </div>
+   199→   199→        <Button
+   200→   200→          onClick={() => { setForm(emptyForm); setShowAdd(true); }}
+   201→   201→          className="bg-amber-500 hover:bg-amber-600 text-slate-900 font-medium"
+   202→   202→        >
+   203→   203→          <Plus className="h-4 w-4 ml-2" /> {t('cargo.addCargo')}
+   204→   204→        </Button>
+   205→   205→      </div>
+   206→   206→
+   207→   207→      {/* Filters */}
+   208→   208→      <Card className="border-slate-800 bg-slate-900/50">
+   209→   209→        <CardContent className="p-4">
+   210→   210→          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+   211→   211→            <div className="relative">
+   212→   212→              <Search className="absolute right-2.5 top-2.5 h-4 w-4 text-slate-500" />
+   213→   213→              <Input
+   214→   214→                placeholder={t('cargo.searchPlaceholder')}
+   215→   215→                value={search}
+   216→   216→                onChange={(e) => setSearch(e.target.value)}
+   217→   217→                className="border-slate-700 bg-slate-800 pr-9 text-slate-200 placeholder:text-slate-600"
+   218→   218→              />
+   219→   219→            </div>
+   220→   220→            <Select value={statusFilter} onValueChange={setStatusFilter}>
+   221→   221→              <SelectTrigger className="border-slate-700 bg-slate-800 text-slate-300">
+   222→   222→                <SelectValue placeholder={t('common.allStatuses')} />
+   223→   223→              </SelectTrigger>
+   224→   224→              <SelectContent className="border-slate-700 bg-slate-800">
+   225→   225→                {['IN_TRANSIT', 'RECEIVED', 'IN_YARD', 'IN_WAREHOUSE', 'DISPATCHED', 'DELIVERED'].map((s) => (
+   226→   226→                  <SelectItem key={s} value={s} className="text-slate-300 focus:bg-slate-700 focus:text-slate-100">
+   227→   227→                    {translateStatus(s)}
+   228→   228→                  </SelectItem>
+   229→   229→                ))}
+   230→   230→              </SelectContent>
+   231→   231→            </Select>
+   232→   232→            <Select value={categoryFilter} onValueChange={setCategoryFilter}>
+   233→   233→              <SelectTrigger className="border-slate-700 bg-slate-800 text-slate-300">
+   234→   234→                <SelectValue placeholder={t('common.allCategories')} />
+   235→   235→              </SelectTrigger>
+   236→   236→              <SelectContent className="border-slate-700 bg-slate-800">
+   237→   237→                {['HEAVY_LIFT', 'OVERSIZE', 'STANDARD', 'PROJECT_CARGO'].map((c) => (
+   238→   238→                  <SelectItem key={c} value={c} className="text-slate-300 focus:bg-slate-700 focus:text-slate-100">
+   239→   239→                    {translateCategory(c)}
+   240→   240→                  </SelectItem>
+   241→   241→                ))}
+   242→   242→              </SelectContent>
+   243→   243→            </Select>
+   244→   244→            <Select value={commodityFilter} onValueChange={setCommodityFilter}>
+   245→   245→              <SelectTrigger className="border-slate-700 bg-slate-800 text-slate-300">
+   246→   246→                <SelectValue placeholder={t('common.allCommodities')} />
+   247→   247→              </SelectTrigger>
+   248→   248→              <SelectContent className="border-slate-700 bg-slate-800">
+   249→   249→                {['GENERAL', 'MACHINERY', 'STEEL', 'EQUIPMENT', 'MODULE'].map((c) => (
+   250→   250→                  <SelectItem key={c} value={c} className="text-slate-300 focus:bg-slate-700 focus:text-slate-100">
+   251→   251→                    {translateCommodity(c)}
+   252→   252→                  </SelectItem>
+   253→   253→                ))}
+   254→   254→              </SelectContent>
+   255→   255→            </Select>
+   256→   256→          </div>
+   257→   257→        </CardContent>
+   258→   258→      </Card>
+   259→   259→
+   260→   260→      {/* Table */}
+   261→   261→      <Card className="border-slate-800 bg-slate-900/50">
+   262→   262→        <CardContent className="p-0">
+   263→   263→          <div className="max-h-96 overflow-y-auto">
+   264→   264→            <Table>
+   265→   265→              <TableHeader>
+   266→   266→                <TableRow className="border-slate-800 hover:bg-transparent">
+   267→   267→                  <TableHead className="text-xs text-slate-500">{t('cargo.table.code')}</TableHead>
+   268→   268→                  <TableHead className="text-xs text-slate-500">{t('cargo.table.description')}</TableHead>
+   269→   269→                  <TableHead className="text-xs text-slate-500 hidden md:table-cell">{t('cargo.table.weight')}</TableHead>
+   270→   270→                  <TableHead className="text-xs text-slate-500 hidden lg:table-cell">{t('cargo.table.dimensions')}</TableHead>
+   271→   271→                  <TableHead className="text-xs text-slate-500 hidden sm:table-cell">{t('cargo.table.category')}</TableHead>
+   272→   272→                  <TableHead className="text-xs text-slate-500">{t('cargo.table.status')}</TableHead>
+   273→   273→                  <TableHead className="text-xs text-slate-500 hidden lg:table-cell">{t('cargo.table.location')}</TableHead>
+   274→   274→                  <TableHead className="text-xs text-slate-500 hidden xl:table-cell">{t('cargo.table.project')}</TableHead>
+   275→   275→                  <TableHead className="text-xs text-slate-500 text-left">{t('common.actions')}</TableHead>
+   276→   276→                </TableRow>
+   277→   277→              </TableHeader>
+   278→   278→              <TableBody>
+   279→   279→                {loading
+   280→   280→                  ? Array.from({ length: 5 }).map((_, i) => (
+   281→   281→                      <TableRow key={i} className="border-slate-800 hover:bg-transparent">
+   282→   282→                        {Array.from({ length: 9 }).map((_, j) => (
+   283→   283→                          <TableCell key={j} className="py-3"><Skeleton className="h-4 w-16 bg-slate-800" /></TableCell>
+   284→   284→                        ))}
+   285→   285→                      </TableRow>
+   286→   286→                    ))
+   287→   287→                  : cargo.length === 0
+   288→   288→                    ? (
+   289→   289→                      <TableRow className="border-slate-800 hover:bg-transparent">
+   290→   290→                        <TableCell colSpan={9} className="text-center py-8 text-slate-500">
+   291→   291→                          {t('cargo.noCargoFound')}
+   292→   292→                        </TableCell>
+   293→   293→                      </TableRow>
+   294→   294→                    )
+   295→   295→                    : cargo.map((item) => (
+   296→   296→                      <TableRow key={item.id} className="border-slate-800 hover:bg-slate-800/50">
+   297→   297→                        <TableCell className="py-3 text-xs font-mono font-medium text-amber-400/80">{item.cargoCode}</TableCell>
+   298→   298→                        <TableCell className="py-3 text-xs text-slate-300 max-w-[200px] truncate">{item.description}</TableCell>
+   299→   299→                        <TableCell className="py-3 text-xs text-slate-400 hidden md:table-cell">{item.weight.toLocaleString()}</TableCell>
+   300→   300→                        <TableCell className="py-3 text-xs text-slate-400 hidden lg:table-cell font-mono">
+   301→   301→                          {item.length}×{item.width}×{item.height}
+   302→   302→                        </TableCell>
+   303→   303→                        <TableCell className="py-3 hidden sm:table-cell">
+   304→   304→                          <Badge variant="outline" className={`text-[10px] ${categoryStyles[item.liftCategory]}`}>{translateCategory(item.liftCategory)}</Badge>
+   305→   305→                        </TableCell>
+   306→   306→                        <TableCell className="py-3">
+   307→   307→                          <Badge variant="outline" className={`text-[10px] ${statusStyles[item.status]}`}>{translateStatus(item.status)}</Badge>
+   308→   308→                        </TableCell>
+   309→   309→                        <TableCell className="py-3 text-xs text-slate-400 hidden lg:table-cell">{item.location?.code || '—'}</TableCell>
+   310→   310→                        <TableCell className="py-3 text-xs text-slate-400 hidden xl:table-cell max-w-[120px] truncate">{item.project?.name || '—'}</TableCell>
+   311→   311→                        <TableCell className="py-3 text-left">
+   312→   312→                          <div className="flex items-center justify-start gap-1">
+   313→   313→                            <Button variant="ghost" size="icon" className="h-7 w-7 text-slate-500 hover:text-cyan-400" onClick={() => setViewing(item)}>
+   314→   314→                              <Eye className="h-3.5 w-3.5" />
+   315→   315→                            </Button>
+   316→   316→                            <Button variant="ghost" size="icon" className="h-7 w-7 text-slate-500 hover:text-amber-400" onClick={() => openEdit(item)}>
+   317→   317→                              <Pencil className="h-3.5 w-3.5" />
+   318→   318→                            </Button>
+   319→   319→                            <Button variant="ghost" size="icon" className="h-7 w-7 text-slate-500 hover:text-red-400" onClick={() => setDeleting(item)}>
+   320→   320→                              <Trash2 className="h-3.5 w-3.5" />
+   321→   321→                            </Button>
+   322→   322→                          </div>
+   323→   323→                        </TableCell>
+   324→   324→                      </TableRow>
+   325→   325→                    ))}
+   326→   326→              </TableBody>
+   327→   327→            </Table>
+   328→   328→          </div>
+   329→   329→        </CardContent>
+   330→   330→      </Card>
+   331→   331→
+   332→   332→      {/* Pagination */}
+   333→   333→      {totalPages > 1 && (
+   334→   334→        <div className="flex items-center justify-center gap-2">
+   335→   335→          <Button variant="outline" size="sm" disabled={page <= 1} onClick={() => setPage(page - 1)}
+   336→   336→            className="border-slate-700 bg-slate-800 text-slate-300 hover:bg-slate-700">
+   337→   337→            {t('common.previous')}
+   338→   338→          </Button>
+   339→   339→          <span className="text-xs text-slate-500">{t('common.page')} {page} {t('common.of')} {totalPages}</span>
+   340→   340→          <Button variant="outline" size="sm" disabled={page >= totalPages} onClick={() => setPage(page + 1)}
+   341→   341→            className="border-slate-700 bg-slate-800 text-slate-300 hover:bg-slate-700">
+   342→   342→            {t('common.next')}
+   343→   343→          </Button>
+   344→   344→        </div>
+   345→   345→      )}
+   346→   346→
+   347→   347→      {/* Add/Edit Dialog */}
+   348→   348→      <Dialog open={showAdd || !!editing} onOpenChange={(open) => { if (!open) { setShowAdd(false); setEditing(null); setForm(emptyForm); } }}>
+   349→   349→        <DialogContent className="border-slate-700 bg-slate-900 max-h-[90vh] overflow-y-auto max-w-2xl">
+   350→   350→          <DialogHeader>
+   351→   351→            <DialogTitle className="text-slate-100">{editing ? t('cargo.editCargo') : t('cargo.addNewCargo')}</DialogTitle>
+   352→   352→          </DialogHeader>
+   353→   353→          <div className="grid gap-4 py-4 sm:grid-cols-2">
+   354→   354→            <div className="sm:col-span-2">
+   355→   355→              <Label className="text-slate-400">{t('cargo.form.description')}</Label>
+   356→   356→              <Input value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })}
+   357→   357→                className="border-slate-700 bg-slate-800 text-slate-200 mt-1" />
+   358→   358→            </div>
+   359→   359→            <div>
+   360→   360→              <Label className="text-slate-400">{t('cargo.form.weight')}</Label>
+   361→   361→              <Input type="number" value={form.weight} onChange={(e) => setForm({ ...form, weight: e.target.value })}
+   362→   362→                className="border-slate-700 bg-slate-800 text-slate-200 mt-1" />
+   363→   363→            </div>
+   364→   364→            <div>
+   365→   365→              <Label className="text-slate-400">{t('cargo.form.dimensions')}</Label>
+   366→   366→              <div className="grid grid-cols-3 gap-2 mt-1">
+   367→   367→                <Input placeholder="L" type="number" value={form.length} onChange={(e) => setForm({ ...form, length: e.target.value })}
+   368→   368→                  className="border-slate-700 bg-slate-800 text-slate-200 text-center" />
+   369→   369→                <Input placeholder="W" type="number" value={form.width} onChange={(e) => setForm({ ...form, width: e.target.value })}
+   370→   370→                  className="border-slate-700 bg-slate-800 text-slate-200 text-center" />
+   371→   371→                <Input placeholder="H" type="number" value={form.height} onChange={(e) => setForm({ ...form, height: e.target.value })}
+   372→   372→                  className="border-slate-700 bg-slate-800 text-slate-200 text-center" />
+   373→   373→              </div>
+   374→   374→            </div>
+   375→   375→            <div>
+   376→   376→              <Label className="text-slate-400">{t('cargo.form.liftCategory')}</Label>
+   377→   377→              <Select value={form.liftCategory} onValueChange={(v) => setForm({ ...form, liftCategory: v })}>
+   378→   378→                <SelectTrigger className="border-slate-700 bg-slate-800 text-slate-200 mt-1"><SelectValue placeholder={t('common.select')} /></SelectTrigger>
+   379→   379→                <SelectContent className="border-slate-700 bg-slate-800">
+   380→   380→                  {(['HEAVY_LIFT', 'OVERSIZE', 'STANDARD', 'PROJECT_CARGO'] as LiftCategory[]).map((c) => (
+   381→   381→                    <SelectItem key={c} value={c} className="text-slate-200 focus:bg-slate-700">{translateCategory(c)}</SelectItem>
+   382→   382→                  ))}
+   383→   383→                </SelectContent>
+   384→   384→              </Select>
+   385→   385→            </div>
+   386→   386→            <div>
+   387→   387→              <Label className="text-slate-400">{t('cargo.form.commodityType')}</Label>
+   388→   388→              <Select value={form.commodityType} onValueChange={(v) => setForm({ ...form, commodityType: v })}>
+   389→   389→                <SelectTrigger className="border-slate-700 bg-slate-800 text-slate-200 mt-1"><SelectValue placeholder={t('common.select')} /></SelectTrigger>
+   390→   390→                <SelectContent className="border-slate-700 bg-slate-800">
+   391→   391→                  {(['GENERAL', 'MACHINERY', 'STEEL', 'EQUIPMENT', 'MODULE'] as CommodityType[]).map((c) => (
+   392→   392→                    <SelectItem key={c} value={c} className="text-slate-200 focus:bg-slate-700">{translateCommodity(c)}</SelectItem>
+   393→   393→                  ))}
+   394→   394→                </SelectContent>
+   395→   395→              </Select>
+   396→   396→            </div>
+   397→   397→            <div>
+   398→   398→              <Label className="text-slate-400">{t('cargo.form.project')}</Label>
+   399→   399→              <Select value={form.projectId} onValueChange={(v) => setForm({ ...form, projectId: v })}>
+   400→   400→                <SelectTrigger className="border-slate-700 bg-slate-800 text-slate-200 mt-1"><SelectValue placeholder={t('common.none')} /></SelectTrigger>
+   401→   401→                <SelectContent className="border-slate-700 bg-slate-800">
+   402→   402→                  <SelectItem value="_none" className="text-slate-200 focus:bg-slate-700">{t('common.none')}</SelectItem>
+   403→   403→                  {projects.map((p) => (
+   404→   404→                    <SelectItem key={p.id} value={p.id} className="text-slate-200 focus:bg-slate-700">{p.name}</SelectItem>
+   405→   405→                  ))}
+   406→   406→                </SelectContent>
+   407→   407→              </Select>
+   408→   408→            </div>
+   409→   409→            <div>
+   410→   410→              <Label className="text-slate-400">{t('cargo.form.clientName')}</Label>
+   411→   411→              <Input value={form.clientName} onChange={(e) => setForm({ ...form, clientName: e.target.value })}
+   412→   412→                className="border-slate-700 bg-slate-800 text-slate-200 mt-1" />
+   413→   413→            </div>
+   414→   414→            <div>
+   415→   415→              <Label className="text-slate-400">{t('cargo.form.poReference')}</Label>
+   416→   416→              <Input value={form.poReference} onChange={(e) => setForm({ ...form, poReference: e.target.value })}
+   417→   417→                className="border-slate-700 bg-slate-800 text-slate-200 mt-1" />
+   418→   418→            </div>
+   419→   419→            <div>
+   420→   420→              <Label className="text-slate-400">{t('cargo.form.blReference')}</Label>
+   421→   421→              <Input value={form.blReference} onChange={(e) => setForm({ ...form, blReference: e.target.value })}
+   422→   422→                className="border-slate-700 bg-slate-800 text-slate-200 mt-1" />
+   423→   423→            </div>
+   424→   424→            <div>
+   425→   425→              <Label className="text-slate-400">{t('cargo.form.centerOfGravity')}</Label>
+   426→   426→              <Input value={form.centerOfGravity} onChange={(e) => setForm({ ...form, centerOfGravity: e.target.value })}
+   427→   427→                className="border-slate-700 bg-slate-800 text-slate-200 mt-1" placeholder={t('cargo.form.cogPlaceholder')} />
+   428→   428→            </div>
+   429→   429→            <div>
+   430→   430→              <Label className="text-slate-400">{t('cargo.form.liftingPoints')}</Label>
+   431→   431→              <Input type="number" value={form.liftingPoints} onChange={(e) => setForm({ ...form, liftingPoints: e.target.value })}
+   432→   432→                className="border-slate-700 bg-slate-800 text-slate-200 mt-1" placeholder={t('cargo.form.liftingPointsPlaceholder')} />
+   433→   433→            </div>
+   434→   434→            <div className="sm:col-span-2">
+   435→   435→              <Label className="text-slate-400">{t('cargo.form.specialHandling')}</Label>
+   436→   436→              <Textarea value={form.specialHandling} onChange={(e) => setForm({ ...form, specialHandling: e.target.value })}
+   437→   437→                className="border-slate-700 bg-slate-800 text-slate-200 mt-1 min-h-[80px]" placeholder={t('cargo.form.specialHandlingPlaceholder')} />
+   438→   438→            </div>
+   439→   439→          </div>
+   440→   440→          <DialogFooter>
+   441→   441→            <Button variant="outline" onClick={() => { setShowAdd(false); setEditing(null); setForm(emptyForm); }}
+   442→   442→              className="border-slate-700 text-slate-300 hover:bg-slate-800">{t('common.cancel')}</Button>
+   443→   443→            <Button onClick={handleSubmit} disabled={submitting || !form.description || !form.weight || !form.length || !form.width || !form.height || !form.liftCategory || !form.commodityType}
+   444→   444→              className="bg-amber-500 hover:bg-amber-600 text-slate-900">
+   445→   445→              {submitting ? t('common.saving') : editing ? t('common.update') : t('common.create')}
+   446→   446→            </Button>
+   447→   447→          </DialogFooter>
+   448→   448→        </DialogContent>
+   449→   449→      </Dialog>
+   450→   450→
+   451→   451→      {/* View Details Dialog */}
+   452→   452→      <Dialog open={!!viewing} onOpenChange={(open) => { if (!open) setViewing(null); }}>
+   453→   453→        <DialogContent className="border-slate-700 bg-slate-900 max-w-2xl max-h-[80vh] overflow-y-auto">
+   454→   454→          <DialogHeader>
+   455→   455→            <DialogTitle className="text-slate-100">{t('cargo.details.title')} {viewing?.cargoCode}</DialogTitle>
+   456→   456→          </DialogHeader>
+   457→   457→          {viewing && (
+   458→   458→            <div className="grid gap-4 sm:grid-cols-2 text-sm">
+   459→   459→              <div className="sm:col-span-2">
+   460→   460→                <span className="text-slate-500">{t('cargo.details.description')}</span>
+   461→   461→                <p className="text-slate-200 font-medium mt-0.5">{viewing.description}</p>
+   462→   462→              </div>
+   463→   463→              <div><span className="text-slate-500">{t('cargo.details.weight')}</span><p className="text-slate-200 mt-0.5">{viewing.weight.toLocaleString()} kg</p></div>
+   464→   464→              <div><span className="text-slate-500">{t('cargo.details.dimensions')}</span><p className="text-slate-200 font-mono mt-0.5">{viewing.length}m × {viewing.width}m × {viewing.height}m</p></div>
+   465→   465→              <div><span className="text-slate-500">{t('cargo.details.category')}</span><div className="mt-1"><Badge variant="outline" className={`text-[10px] ${categoryStyles[viewing.liftCategory]}`}>{translateCategory(viewing.liftCategory)}</Badge></div></div>
+   466→   466→              <div><span className="text-slate-500">{t('cargo.details.status')}</span><div className="mt-1"><Badge variant="outline" className={`text-[10px] ${statusStyles[viewing.status]}`}>{translateStatus(viewing.status)}</Badge></div></div>
+   467→   467→              <div><span className="text-slate-500">{t('cargo.details.location')}</span><p className="text-slate-200 mt-0.5">{viewing.location?.name || viewing.location?.code || t('cargo.details.unassigned')}</p></div>
+   468→   468→              <div><span className="text-slate-500">{t('cargo.details.project')}</span><p className="text-slate-200 mt-0.5">{viewing.project?.name || t('common.none')}</p></div>
+   469→   469→              <div><span className="text-slate-500">{t('cargo.details.commodity')}</span><p className="text-slate-200 mt-0.5">{translateCommodity(viewing.commodityType)}</p></div>
+   470→   470→              <div><span className="text-slate-500">{t('cargo.details.client')}</span><p className="text-slate-200 mt-0.5">{viewing.clientName || '—'}</p></div>
+   471→   471→              <div><span className="text-slate-500">{t('cargo.details.poRef')}</span><p className="text-slate-200 mt-0.5">{viewing.poReference || '—'}</p></div>
+   472→   472→              <div><span className="text-slate-500">{t('cargo.details.blRef')}</span><p className="text-slate-200 mt-0.5">{viewing.blReference || '—'}</p></div>
+   473→   473→              <div><span className="text-slate-500">{t('cargo.details.cog')}</span><p className="text-slate-200 mt-0.5">{viewing.centerOfGravity || '—'}</p></div>
+   474→   474→              <div><span className="text-slate-500">{t('cargo.details.liftingPoints')}</span><p className="text-slate-200 mt-0.5">{viewing.liftingPoints ?? '—'}</p></div>
+   475→   475→              {viewing.specialHandling && (
+   476→   476→                <div className="sm:col-span-2">
+   477→   477→                  <span className="text-slate-500">{t('cargo.details.specialHandling')}</span>
+   478→   478→                  <p className="text-slate-200 mt-0.5 bg-slate-800 rounded-lg p-3 text-xs">{viewing.specialHandling}</p>
+   479→   479→                </div>
+   480→   480→              )}
+   481→   481→            </div>
+   482→   482→          )}
+   483→   483→        </DialogContent>
+   484→   484→      </Dialog>
+   485→   485→
+   486→   486→      {/* Delete Confirmation */}
+   487→   487→      <Dialog open={!!deleting} onOpenChange={(open) => { if (!open) setDeleting(null); }}>
+   488→   488→        <DialogContent className="border-slate-700 bg-slate-900 max-w-md">
+   489→   489→          <DialogHeader>
+   490→   490→            <DialogTitle className="text-slate-100">{t('common.confirmDelete')}</DialogTitle>
+   491→   491→          </DialogHeader>
+   492→   492→          <p className="text-sm text-slate-400">
+   493→   493→            {t('cargo.delete.message')} <span className="text-amber-400 font-medium">{deleting?.cargoCode}</span>{t('cargo.delete.cannotUndo')}
+   494→   494→          </p>
+   495→   495→          <DialogFooter>
+   496→   496→            <Button variant="outline" onClick={() => setDeleting(null)} className="border-slate-700 text-slate-300 hover:bg-slate-800">{t('common.cancel')}</Button>
+   497→   497→            <Button variant="destructive" onClick={handleDelete} className="bg-red-600 hover:bg-red-700">{t('common.delete')}</Button>
+   498→   498→          </DialogFooter>
+   499→   499→        </DialogContent>
+   500→   500→      </Dialog>
+   501→   501→    </div>
+   502→   502→  );
+   503→   503→}
+   504→   504→

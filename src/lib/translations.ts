@@ -5,6 +5,9 @@ import { en } from './en';
 // ==================== COMPREHENSIVE ARABIC TRANSLATIONS ====================
 
 const translations: Record<string, string> = {
+  // ===== App Title =====
+  'appTitle': 'نظام إدارة المستودعات',
+
   // ===== Navigation (Sidebar) =====
   'nav.dashboard': 'لوحة التحكم',
   'nav.cargoItems': 'البضائع',
@@ -282,6 +285,54 @@ const translations: Record<string, string> = {
   'projects.toast.createFailed': 'فشل في إنشاء المشروع',
   'projects.toast.cargoFetchFailed': 'فشل في جلب بضائع المشروع',
 
+  // ===== Enhanced Detail Views =====
+  'detail.overview': 'نظرة عامة',
+  'detail.cargo': 'البضائع',
+  'detail.movements': 'الحركات',
+  'detail.timeline': 'الجدول الزمني',
+  'detail.quickActions': 'إجراءات سريعة',
+  'detail.changeStatus': 'تغيير الحالة',
+  'detail.assignLocation': 'تعيين موقع',
+  'detail.recordMovement': 'تسجيل حركة',
+  'detail.movementHistory': 'سجل الحركات',
+  'detail.noMovements': 'لا توجد حركات مسجلة',
+  'detail.statusChanged': 'تم تغيير الحالة بنجاح',
+  'detail.locationAssigned': 'تم تعيين الموقع',
+  'detail.statusChangeFailed': 'فشل في تغيير الحالة',
+  'detail.workflow.title': 'مسار الحالة',
+  'detail.workflow.current': 'الحالة الحالية',
+  'detail.workflow.next': 'الخطوة التالية',
+  'detail.info.specifications': 'المواصفات',
+  'detail.info.references': 'المراجع',
+  'detail.info.shipping': 'الشحن',
+  'detail.info.volume': 'الحجم',
+  'detail.info.createdAt': 'تاريخ الإنشاء',
+  'detail.info.receivedAt': 'تاريخ الاستلام',
+  'detail.info.dispatchedAt': 'تاريخ الإرسال',
+  'detail.cargo.clickToView': 'اضغط لعرض التفاصيل',
+  'detail.cargo.viewDetail': 'عرض التفاصيل',
+  'detail.cargo.changeCargoStatus': 'تغيير حالة البضاعة',
+  'detail.cargo.moveCargo': 'نقل البضاعة',
+  'detail.cargo.removeFromProject': 'إزالة من المشروع',
+  'detail.project.statusManagement': 'إدارة حالة المشروع',
+  'detail.project.changeStatus': 'تغيير حالة المشروع',
+  'detail.project.statusChanged': 'تم تغيير حالة المشروع',
+  'detail.project.overview.title': 'ملخص المشروع',
+  'detail.project.overview.description': 'الوصف',
+  'detail.project.overview.client': 'العميل',
+  'detail.project.overview.contact': 'تواصل العميل',
+  'detail.project.overview.destination': 'الوجهة',
+  'detail.project.overview.shippingLine': 'خط الملاحة',
+  'detail.project.overview.vessel': 'السفينة',
+  'detail.project.stats.totalItems': 'إجمالي العناصر',
+  'detail.project.stats.totalWeight': 'إجمالي الوزن',
+  'detail.project.stats.totalVolume': 'إجمالي الحجم',
+  'detail.project.stats.byStatus': 'حسب الحالة',
+  'detail.location.itemsStored': 'البضائع المخزنة',
+  'detail.location.noItems': 'لا توجد بضائع في هذا الموقع',
+  'detail.location.capacity': 'السعة المستخدمة',
+  'detail.location.free': 'متاح',
+
   // ===== Locations Page =====
   'locations.title': 'المواقع',
   'locations.subtitle': 'إدارة مواقع المستودعات والساحات',
@@ -517,14 +568,16 @@ export function translateCategory(value: string, locale?: 'ar' | 'en'): string {
   return key ? map[key] || value : value;
 }
 
-export function translateCommodity(value: string): string {
+export function translateCommodity(value: string, locale?: 'ar' | 'en'): string {
   const key = commodityMap[value];
-  return key ? translations[key] || value : value;
+  const map = locale === 'en' ? en : translations;
+  return key ? map[key] || value : value;
 }
 
-export function translateEquipmentType(value: string): string {
+export function translateEquipmentType(value: string, locale?: 'ar' | 'en'): string {
   const key = equipmentTypeMap[value];
-  return key ? translations[key] || value : value;
+  const map = locale === 'en' ? en : translations;
+  return key ? map[key] || value : value;
 }
 
 export function translateMovementType(value: string, locale?: 'ar' | 'en'): string {
@@ -533,19 +586,22 @@ export function translateMovementType(value: string, locale?: 'ar' | 'en'): stri
   return key ? map[key] || value : value;
 }
 
-export function translateLocationType(value: string): string {
+export function translateLocationType(value: string, locale?: 'ar' | 'en'): string {
   const key = locationTypeMap[value];
-  return key ? translations[key] || value : value;
+  const map = locale === 'en' ? en : translations;
+  return key ? map[key] || value : value;
 }
 
-export function translateSyncStatus(value: string): string {
+export function translateSyncStatus(value: string, locale?: 'ar' | 'en'): string {
   const key = syncStatusMap[value];
-  return key ? translations[key] || value : value;
+  const map = locale === 'en' ? en : translations;
+  return key ? map[key] || value : value;
 }
 
-export function translateSyncDirection(value: string): string {
+export function translateSyncDirection(value: string, locale?: 'ar' | 'en'): string {
   const key = syncDirectionMap[value];
-  return key ? translations[key] || value : value;
+  const map = locale === 'en' ? en : translations;
+  return key ? map[key] || value : value;
 }
 
 // Welcome guide data

@@ -38,7 +38,7 @@ function ExportBtn({ page }: { page: WmsPage }) {
     finally { setLoading(false); }
   };
   return (
-    <Button variant="ghost" size="sm" onClick={doExport} disabled={loading} className="text-slate-400 hover:text-emerald-400 hover:bg-slate-800/50 gap-1.5 h-8 px-3">
+    <Button variant="ghost" size="sm" onClick={doExport} disabled={loading} className="dark:text-slate-400 text-slate-500 dark:hover:text-emerald-400 hover:text-emerald-600 dark:hover:bg-slate-800/50 hover:bg-slate-100 gap-1.5 h-8 px-3">
       {loading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Download className="h-3.5 w-3.5" />}
       <span className="hidden sm:inline text-xs">{t('common.export')}</span>
     </Button>
@@ -53,7 +53,14 @@ export default function WmsApp() {
   const setLocale = useAppStore((s) => s.setLocale);
   const theme = useAppStore((s) => s.theme);
   const setAppTheme = useAppStore((s) => s.setTheme);
+  const sidebarCollapsed = useAppStore((s) => s.sidebarCollapsed);
   const { setTheme } = useTheme();
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setMounted(true);
+  }, []);
 
   useEffect(() => {
     let m = true;
@@ -66,26 +73,37 @@ export default function WmsApp() {
   const hm: Record<WmsPage, string> = { dashboard: t('header.dashboard'), cargo: t('header.cargoManagement'), projects: t('header.projectCargo'), locations: t('header.locations'), equipment: t('header.equipmentLifting'), movements: t('header.movementLog'), integration: t('header.sapIntegration') };
   const pg = () => { const k = `${activePage}-${rk}`; switch (activePage) { case 'dashboard': return <DashboardPage key={k} onNavigate={setActivePage} />; case 'cargo': return <CargoPage key={k} />; case 'projects': return <ProjectsPage key={k} />; case 'locations': return <LocationsPage key={k} />; case 'equipment': return <EquipmentPage key={k} />; case 'movements': return <MovementsPage key={k} />; case 'integration': return <IntegrationPage key={k} />; default: return <DashboardPage key={k} onNavigate={setActivePage} />; } };
 
+  if (!mounted) {
+    return (
+      <div className="min-h-screen flex items-center justify-center dark:bg-[#0e1019] bg-slate-50">
+        <div className="text-center">
+          <div className="h-8 w-8 border-2 border-amber-400 border-t-transparent rounded-full animate-spin mx-auto mb-4" />
+          <p className="text-sm dark:text-slate-500 text-slate-400">{t('init.wmsSystem')}</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className={cn('min-h-screen flex', 'dark:bg-[#0e1019] bg-slate-50', 'dark:text-slate-100 text-slate-900')} dir={locale === 'ar' ? 'rtl' : 'ltr'}>
       <AppSidebar activePage={activePage} onPageChange={setActivePage} />
-      <main className={cn('flex-1 min-h-screen transition-all duration-300', locale === 'ar' ? 'lg:mr-64' : 'lg:ml-64')}>
+      <main className={cn('flex-1 min-h-screen transition-all duration-300', sidebarCollapsed ? (locale === 'ar' ? 'lg:mr-[68px]' : 'lg:ml-[68px]') : (locale === 'ar' ? 'lg:mr-64' : 'lg:ml-64'))}>
         <div className="h-14 lg:hidden" />
         <header className={cn('sticky top-0 z-20 border-b backdrop-blur-md', 'dark:border-slate-800/60 border-slate-200', 'dark:bg-[#0e1019]/80 bg-white/80')}>
           <div className="flex h-14 items-center justify-between px-4 md:px-6">
             <h1 className={cn('text-lg font-semibold', 'dark:text-slate-100 text-slate-900')}>{hm[activePage]}</h1>
             <div className="flex items-center gap-1.5">
               <ExportBtn page={activePage} />
-              <Button variant="ghost" size="icon" className="h-8 w-8 text-slate-400 hover:text-slate-200" onClick={() => setRk((k) => k + 1)}><RefreshCw className="h-3.5 w-3.5" /></Button>
+              <Button variant="ghost" size="icon" className="h-8 w-8 dark:text-slate-400 text-slate-500 dark:hover:text-slate-200 hover:text-slate-700" onClick={() => setRk((k) => k + 1)}><RefreshCw className="h-3.5 w-3.5" /></Button>
               <DropdownMenu>
-                <DropdownMenuTrigger asChild><Button variant="ghost" size="sm" className="text-slate-400 hover:text-amber-400 gap-1.5 h-8 px-2"><Languages className="h-3.5 w-3.5" /><span className="text-xs font-medium uppercase">{locale}</span></Button></DropdownMenuTrigger>
+                <DropdownMenuTrigger asChild><Button variant="ghost" size="sm" className="dark:text-slate-400 text-slate-500 dark:hover:text-amber-400 hover:text-amber-600 gap-1.5 h-8 px-2"><Languages className="h-3.5 w-3.5" /><span className="text-xs font-medium uppercase">{locale}</span></Button></DropdownMenuTrigger>
                 <DropdownMenuContent align="end" className="w-36">
                   <DropdownMenuItem onClick={() => setLocale('ar')} className={locale === 'ar' ? 'bg-amber-500/10 text-amber-400' : ''}><span className="ml-2">العربية</span></DropdownMenuItem>
                   <DropdownMenuItem onClick={() => setLocale('en')} className={locale === 'en' ? 'bg-amber-500/10 text-amber-400' : ''}><span className="ml-2">English</span></DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
               <DropdownMenu>
-                <DropdownMenuTrigger asChild><Button variant="ghost" size="icon" className="h-8 w-8 text-slate-400 hover:text-amber-400">{theme === 'light' ? <Sun className="h-3.5 w-3.5" /> : <Moon className="h-3.5 w-3.5" />}</Button></DropdownMenuTrigger>
+                <DropdownMenuTrigger asChild><Button variant="ghost" size="icon" className="h-8 w-8 dark:text-slate-400 text-slate-500 dark:hover:text-amber-400 hover:text-amber-600">{theme === 'light' ? <Sun className="h-3.5 w-3.5" /> : <Moon className="h-3.5 w-3.5" />}</Button></DropdownMenuTrigger>
                 <DropdownMenuContent align="end" className="w-36">
                   <DropdownMenuItem onClick={() => onTheme('dark')} className={theme === 'dark' ? 'bg-amber-500/10 text-amber-400' : ''}><Moon className="h-4 w-4 ml-2" /><span>{t('common.dark')}</span></DropdownMenuItem>
                   <DropdownMenuItem onClick={() => onTheme('light')} className={theme === 'light' ? 'bg-amber-500/10 text-amber-400' : ''}><Sun className="h-4 w-4 ml-2" /><span>{t('common.light')}</span></DropdownMenuItem>
@@ -95,7 +113,7 @@ export default function WmsApp() {
             </div>
           </div>
         </header>
-        <div className="p-4 md:p-6">{seeded ? pg() : <div className="flex items-center justify-center min-h-[60vh]"><div className="text-center"><div className="h-8 w-8 border-2 border-amber-400 border-t-transparent rounded-full animate-spin mx-auto mb-4" /><p className="text-sm text-slate-400">{t('init.wmsSystem')}</p></div></div>}</div>
+        <div className="p-4 md:p-6">{seeded ? pg() : <div className="flex items-center justify-center min-h-[60vh]"><div className="text-center"><div className="h-8 w-8 border-2 border-amber-400 border-t-transparent rounded-full animate-spin mx-auto mb-4" /><p className="text-sm dark:text-slate-400 text-slate-500">{t('init.wmsSystem')}</p></div></div>}</div>
         <footer className={cn('mt-auto border-t backdrop-blur-md', 'dark:border-slate-800/60 border-slate-200', 'dark:bg-[#0e1019]/80 bg-white/80')}><div className="flex h-12 items-center justify-between px-6"><p className={cn('text-[11px]', 'dark:text-slate-600 text-slate-400')}>{t('footer.left')}</p><p className={cn('text-[11px]', 'dark:text-slate-600 text-slate-400')}>{t('footer.right')}</p></div></footer>
       </main>
     </div>
