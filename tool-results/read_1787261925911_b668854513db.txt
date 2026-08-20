@@ -1,0 +1,873 @@
+     1→'use client';
+     2→
+     3→import { useEffect, useState, useCallback, useMemo } from 'react';
+     4→import {
+     5→  Plus, Package, Ship, MapPin, ArrowRight, Weight, Volume2, Users, Calendar, Loader2,
+     6→  Pencil, Download, ArrowLeft, ClipboardCheck, Warehouse, ArrowRightLeft, PackageCheck,
+     7→  CheckCircle2, Truck, MoveRight, Clock, UserCircle, Eye,
+     8→} from 'lucide-react';
+     9→import { Card, CardContent } from '@/components/ui/card';
+    10→import { Button } from '@/components/ui/button';
+    11→import { Input } from '@/components/ui/input';
+    12→import { Label } from '@/components/ui/label';
+    13→import { Textarea } from '@/components/ui/textarea';
+    14→import { Badge } from '@/components/ui/badge';
+    15→import { Skeleton } from '@/components/ui/skeleton';
+    16→import { ScrollArea } from '@/components/ui/scroll-area';
+    17→import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
+    18→import {
+    19→  Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter,
+    20→} from '@/components/ui/dialog';
+    21→import {
+    22→  Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
+    23→} from '@/components/ui/table';
+    24→import { toast } from 'sonner';
+    25→import { useTranslation, translateStatus, translateCategory, translateMovementType } from '@/lib/translations';
+    26→import type { Project, ProjectStatus, CargoItem, Movement } from '@/types/wms';
+    27→
+    28→// ==================== CONSTANTS ====================
+    29→
+    30→const PROJECT_STATUSES: ProjectStatus[] = ['PLANNED', 'RECEIVING', 'IN_STORAGE', 'STAGING', 'LOADED', 'SHIPPED', 'COMPLETED'];
+    31→
+    32→const PROJECT_WORKFLOW: Record<ProjectStatus, ProjectStatus[]> = {
+    33→  PLANNED: ['RECEIVING'],
+    34→  RECEIVING: ['IN_STORAGE', 'STAGING'],
+    35→  IN_STORAGE: ['STAGING', 'LOADED'],
+    36→  STAGING: ['LOADED', 'IN_STORAGE'],
+    37→  LOADED: ['SHIPPED', 'STAGING'],
+    38→  SHIPPED: ['COMPLETED'],
+    39→  COMPLETED: [],
+    40→};
+    41→
+    42→const STATUS_ICON_MAP: Record<ProjectStatus, React.ReactNode> = {
+    43→  PLANNED: <ClipboardCheck className="h-4 w-4" />,
+    44→  RECEIVING: <Download className="h-4 w-4" />,
+    45→  IN_STORAGE: <Warehouse className="h-4 w-4" />,
+    46→  STAGING: <ArrowRightLeft className="h-4 w-4" />,
+    47→  LOADED: <PackageCheck className="h-4 w-4" />,
+    48→  SHIPPED: <Ship className="h-4 w-4" />,
+    49→  COMPLETED: <CheckCircle2 className="h-4 w-4" />,
+    50→};
+    51→
+    52→const STATUS_COLORS: Record<ProjectStatus, { bg: string; text: string; border: string; accent: string }> = {
+    53→  PLANNED: { bg: 'bg-slate-500/10 dark:bg-slate-400/10', text: 'text-slate-400 dark:text-slate-300', border: 'border-slate-500/20 dark:border-slate-500/30', accent: 'bg-slate-500' },
+    54→  RECEIVING: { bg: 'bg-amber-500/10 dark:bg-amber-400/10', text: 'text-amber-400 dark:text-amber-500', border: 'border-amber-500/20 dark:border-amber-500/30', accent: 'bg-amber-500' },
+    55→  IN_STORAGE: { bg: 'bg-emerald-500/10 dark:bg-emerald-400/10', text: 'text-emerald-400 dark:text-emerald-500', border: 'border-emerald-500/20 dark:border-emerald-500/30', accent: 'bg-emerald-500' },
+    56→  STAGING: { bg: 'bg-orange-500/10 dark:bg-orange-400/10', text: 'text-orange-400 dark:text-orange-500', border: 'border-orange-500/20 dark:border-orange-500/30', accent: 'bg-orange-500' },
+    57→  LOADED: { bg: 'bg-yellow-600/10 dark:bg-yellow-500/10', text: 'text-yellow-500 dark:text-yellow-400', border: 'border-yellow-600/20 dark:border-yellow-500/30', accent: 'bg-yellow-500' },
+    58→  SHIPPED: { bg: 'bg-cyan-500/10 dark:bg-cyan-400/10', text: 'text-cyan-400 dark:text-cyan-500', border: 'border-cyan-500/20 dark:border-cyan-500/30', accent: 'bg-cyan-500' },
+    59→  COMPLETED: { bg: 'bg-teal-500/10 dark:bg-teal-400/10', text: 'text-teal-400 dark:text-teal-500', border: 'border-teal-500/20 dark:border-teal-500/30', accent: 'bg-teal-500' },
+    60→};
+    61→
+    62→const CARGO_STATUS_COLORS: Record<string, { bg: string; text: string; border: string; donut: string }> = {
+    63→  IN_YARD: { bg: 'bg-emerald-500/10 dark:bg-emerald-400/10', text: 'text-emerald-400 dark:text-emerald-500', border: 'border-emerald-500/20', donut: '#10b981' },
+    64→  IN_TRANSIT: { bg: 'bg-amber-500/10 dark:bg-amber-400/10', text: 'text-amber-400 dark:text-amber-500', border: 'border-amber-500/20', donut: '#f59e0b' },
+    65→  DISPATCHED: { bg: 'bg-slate-500/10 dark:bg-slate-400/10', text: 'text-slate-400 dark:text-slate-300', border: 'border-slate-500/20', donut: '#64748b' },
+    66→  RECEIVED: { bg: 'bg-cyan-500/10 dark:bg-cyan-400/10', text: 'text-cyan-400 dark:text-cyan-500', border: 'border-cyan-500/20', donut: '#06b6d4' },
+    67→  IN_WAREHOUSE: { bg: 'bg-teal-500/10 dark:bg-teal-400/10', text: 'text-teal-400 dark:text-teal-500', border: 'border-teal-500/20', donut: '#14b8a6' },
+    68→  DELIVERED: { bg: 'bg-slate-400/10 dark:bg-slate-300/10', text: 'text-slate-500 dark:text-slate-400', border: 'border-slate-400/20', donut: '#94a3b8' },
+    69→  STAGING: { bg: 'bg-orange-500/10 dark:bg-orange-400/10', text: 'text-orange-400 dark:text-orange-500', border: 'border-orange-500/20', donut: '#f97316' },
+    70→};
+    71→
+    72→const MOVEMENT_TYPE_COLORS: Record<string, string> = {
+    73→  RECEIVE: 'bg-emerald-500 dark:bg-emerald-400',
+    74→  MOVE: 'bg-amber-500 dark:bg-amber-400',
+    75→  DISPATCH: 'bg-slate-500 dark:bg-slate-400',
+    76→  INSPECT: 'bg-cyan-500 dark:bg-cyan-400',
+    77→};
+    78→
+    79→const statusTabsKeys = [
+    80→  { value: '', key: 'common.all' },
+    81→  { value: 'PLANNED', key: 'status.PLANNED' },
+    82→  { value: 'RECEIVING', key: 'status.RECEIVING' },
+    83→  { value: 'IN_STORAGE', key: 'status.IN_STORAGE' },
+    84→  { value: 'STAGING', key: 'status.STAGING' },
+    85→  { value: 'LOADED', key: 'status.LOADED' },
+    86→  { value: 'SHIPPED', key: 'status.SHIPPED' },
+    87→  { value: 'COMPLETED', key: 'status.COMPLETED' },
+    88→];
+    89→
+    90→const emptyForm = {
+    91→  name: '', description: '', clientName: '', clientContact: '',
+    92→  destination: '', shippingLine: '', vesselName: '', etd: '', eta: '',
+    93→};
+    94→
+    95→interface ProjectListResponse { items: Project[]; total: number; }
+    96→
+    97→// ==================== COMPONENT ====================
+    98→
+    99→export function ProjectsPage() {
+   100→  const [projects, setProjects] = useState<Project[]>([]);
+   101→  const [loading, setLoading] = useState(true);
+   102→  const [statusFilter, setStatusFilter] = useState('');
+   103→  const [showAdd, setShowAdd] = useState(false);
+   104→  const [selectedProject, setSelectedProject] = useState<Project | null>(null);
+   105→  const [projectCargo, setProjectCargo] = useState<CargoItem[]>([]);
+   106→  const [projectMovements, setProjectMovements] = useState<Movement[]>([]);
+   107→  const [detailLoading, setDetailLoading] = useState(false);
+   108→  const [statusChanging, setStatusChanging] = useState(false);
+   109→  const [form, setForm] = useState(emptyForm);
+   110→  const [submitting, setSubmitting] = useState(false);
+   111→  const { t } = useTranslation();
+   112→
+   113→  const fetchProjects = useCallback(async () => {
+   114→    setLoading(true);
+   115→    const params = new URLSearchParams({ limit: '100', ...(statusFilter && { status: statusFilter }) });
+   116→    try {
+   117→      const res = await fetch(`/api/projects?${params}`);
+   118→      const data: ProjectListResponse = await res.json();
+   119→      if (!res.ok) { setProjects([]); return; }
+   120→      setProjects(data.items || []);
+   121→    } catch { toast.error(t('projects.toast.fetchFailed')); } finally { setLoading(false); }
+   122→  }, [statusFilter, t]);
+   123→
+   124→  useEffect(() => { fetchProjects(); }, [fetchProjects]);
+   125→
+   126→  const handleCreate = async () => {
+   127→    setSubmitting(true);
+   128→    try {
+   129→      const res = await fetch('/api/projects', {
+   130→        method: 'POST', headers: { 'Content-Type': 'application/json' },
+   131→        body: JSON.stringify({ name: form.name, description: form.description || null, clientName: form.clientName, clientContact: form.clientContact || null, destination: form.destination || null, shippingLine: form.shippingLine || null, vesselName: form.vesselName || null, etd: form.etd || null, eta: form.eta || null }),
+   132→      });
+   133→      if (!res.ok) { const err = await res.json(); throw new Error(err.error || 'Failed'); }
+   134→      toast.success(t('projects.toast.created')); setShowAdd(false); setForm(emptyForm); fetchProjects();
+   135→    } catch (e: unknown) { toast.error(e instanceof Error ? e.message : t('projects.toast.createFailed')); } finally { setSubmitting(false); }
+   136→  };
+   137→
+   138→  const openProjectDetail = async (project: Project) => {
+   139→    setSelectedProject(project);
+   140→    setDetailLoading(true);
+   141→    try {
+   142→      const [cargoRes, moveRes] = await Promise.all([
+   143→        fetch(`/api/cargo?projectId=${project.id}&limit=200`),
+   144→        fetch(`/api/movements?limit=100`),
+   145→      ]);
+   146→      const cargoData = await cargoRes.json();
+   147→      const moveData = await moveRes.json();
+   148→      const allMoves: Movement[] = moveData.items || [];
+   149→      const cargoIds = new Set((cargoData.items || []).map((c: CargoItem) => c.id));
+   150→      setProjectCargo(cargoData.items || []);
+   151→      setProjectMovements(allMoves.filter((m) => cargoIds.has(m.cargoItemId)));
+   152→    } catch { toast.error(t('projects.toast.cargoFetchFailed')); } finally { setDetailLoading(false); }
+   153→  };
+   154→
+   155→  const handleProjectStatusChange = async (newStatus: ProjectStatus) => {
+   156→    if (!selectedProject) return;
+   157→    setStatusChanging(true);
+   158→    try {
+   159→      const res = await fetch(`/api/projects/${selectedProject.id}/status`, {
+   160→        method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ status: newStatus }),
+   161→      });
+   162→      if (!res.ok) { const err = await res.json(); throw new Error(err.error || 'Failed'); }
+   163→      toast.success(t('detail.project.statusChanged'));
+   164→      const data = await res.json();
+   165→      setSelectedProject(data.data);
+   166→      fetchProjects();
+   167→    } catch (e: unknown) { toast.error(e instanceof Error ? e.message : t('detail.statusChangeFailed')); } finally { setStatusChanging(false); }
+   168→  };
+   169→
+   170→  const currentStep = selectedProject ? PROJECT_STATUSES.indexOf(selectedProject.status) : -1;
+   171→
+   172→  const cargoStatusCounts = useMemo(() => 
+   173→    (Array.isArray(projectCargo) ? projectCargo : []).reduce((acc, c) => { acc[c.status] = (acc[c.status] || 0) + 1; return acc; }, {} as Record<string, number>),
+   174→    [projectCargo]
+   175→  );
+   176→
+   177→  const completionPct = useMemo(() => {
+   178→    if (!Array.isArray(projectCargo) || projectCargo.length === 0) return 0;
+   179→    const completed = projectCargo.filter((c) => c.status === 'DISPATCHED' || c.status === 'DELIVERED').length;
+   180→    return Math.round((completed / projectCargo.length) * 100);
+   181→  }, [projectCargo]);
+   182→
+   183→  // Donut chart data
+   184→  const donutData = useMemo(() => {
+   185→    const entries = Object.entries(cargoStatusCounts).sort((a, b) => b[1] - a[1]);
+   186→    const total = entries.reduce((s, [, c]) => s + c, 0);
+   187→    let cumulative = 0;
+   188→    return entries.map(([status, count]) => {
+   189→      const start = (cumulative / total) * 100;
+   190→      cumulative += count;
+   191→      const end = (cumulative / total) * 100;
+   192→      const color = CARGO_STATUS_COLORS[status]?.donut || '#64748b';
+   193→      return { status, count, start, end, color };
+   194→    });
+   195→  }, [cargoStatusCounts]);
+   196→
+   197→  const donutGradient = useMemo(() => {
+   198→    if (!Array.isArray(donutData) || donutData.length === 0) return '';
+   199→    return donutData.map((d) => `${d.color} ${d.start}% ${d.end}%`).join(', ');
+   200→  }, [donutData]);
+   201→
+   202→  // ETD/ETA timeline calculations
+   203→  const etdEtaInfo = useMemo(() => {
+   204→    if (!selectedProject?.etd || !selectedProject?.eta) return null;
+   205→    const etd = new Date(selectedProject.etd).getTime();
+   206→    const eta = new Date(selectedProject.eta).getTime();
+   207→    const now = Date.now();
+   208→    const totalDays = Math.max(1, Math.ceil((eta - etd) / (1000 * 60 * 60 * 24)));
+   209→    const elapsed = Math.ceil((now - etd) / (1000 * 60 * 60 * 24));
+   210→    const pct = Math.min(100, Math.max(0, (elapsed / totalDays) * 100));
+   211→    const remaining = Math.max(0, Math.ceil((eta - now) / (1000 * 60 * 60 * 24)));
+   212→    return { totalDays, elapsed, pct, remaining, isOverdue: now > eta };
+   213→  }, [selectedProject]);
+   214→
+   215→  return (
+   216→    <div className="space-y-6">
+   217→      {/* Page Header */}
+   218→      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+   219→        <div>
+   220→          <h1 className="text-2xl font-bold dark:text-slate-100 text-slate-900">{t('projects.title')}</h1>
+   221→          <p className="text-sm dark:text-slate-500 text-slate-400 mt-1">{t('projects.subtitle')}</p>
+   222→        </div>
+   223→        <Button onClick={() => { setForm(emptyForm); setShowAdd(true); }} className="bg-amber-500 hover:bg-amber-600 text-slate-900 font-medium shadow-lg shadow-amber-500/20 transition-all duration-200 hover:shadow-xl hover:shadow-amber-500/30">
+   224→          <Plus className="h-4 w-4 ml-2" /> {t('projects.addProject')}
+   225→        </Button>
+   226→      </div>
+   227→
+   228→      {/* Status Filter Tabs */}
+   229→      <Tabs value={statusFilter} onValueChange={setStatusFilter}>
+   230→        <TabsList className="dark:bg-slate-800/50 bg-slate-100 dark:border-slate-700/50 border border-slate-200 h-auto p-1 flex-wrap gap-1">
+   231→          {statusTabsKeys.map((tab) => (
+   232→            <TabsTrigger key={tab.value} value={tab.value} className="data-[state=active]:bg-amber-500/15 data-[state=active]:text-amber-500 dark:text-slate-400 text-slate-500 text-xs px-3 py-1.5">{t(tab.key)}</TabsTrigger>
+   233→          ))}
+   234→        </TabsList>
+   235→      </Tabs>
+   236→
+   237→      {/* ========== PROJECT DETAIL VIEW ========== */}
+   238→      {selectedProject ? (
+   239→        <div className="space-y-6">
+   240→          {/* Back Button */}
+   241→          <Button variant="ghost" onClick={() => setSelectedProject(null)} className="dark:text-slate-400 text-slate-500 hover:dark:text-slate-200 hover:text-slate-900 -mr-2 transition-colors duration-200">
+   242→            <ArrowLeft className="h-4 w-4 ml-2" /> {t('projects.backToProjects')}
+   243→          </Button>
+   244→
+   245→          {/* ===== Hero Header ===== */}
+   246→          <Card className="dark:border-slate-800 border-slate-200 dark:bg-slate-900/50 bg-white overflow-hidden">
+   247→            {/* Gradient top accent bar */}
+   248→            <div className={`h-1.5 w-full ${STATUS_COLORS[selectedProject.status].accent}`} />
+   249→            <CardContent className="p-6 pt-5">
+   250→              <div className="flex flex-col gap-5">
+   251→                {/* Top row: avatar, info, actions */}
+   252→                <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
+   253→                  <div className="flex items-start gap-4">
+   254→                    {/* Client avatar */}
+   255→                    <div className={`h-14 w-14 rounded-2xl flex items-center justify-center text-xl font-bold shrink-0 ${STATUS_COLORS[selectedProject.status].bg} ${STATUS_COLORS[selectedProject.status].text}`}>
+   256→                      {selectedProject.clientName?.charAt(0)?.toUpperCase() || 'P'}
+   257→                    </div>
+   258→                    <div className="min-w-0">
+   259→                      <div className="flex items-center gap-3 flex-wrap">
+   260→                        <h2 className="text-xl font-bold dark:text-slate-100 text-slate-900">{selectedProject.name}</h2>
+   261→                        <Badge variant="outline" className={`shrink-0 text-xs ${STATUS_COLORS[selectedProject.status].bg} ${STATUS_COLORS[selectedProject.status].text} ${STATUS_COLORS[selectedProject.status].border}`}>
+   262→                          {translateStatus(selectedProject.status)}
+   263→                        </Badge>
+   264→                      </div>
+   265→                      <p className="text-sm font-mono dark:text-slate-500 text-slate-400 mt-0.5">{selectedProject.projectCode}</p>
+   266→                      {selectedProject.description && <p className="text-sm dark:text-slate-400 text-slate-500 mt-2 max-w-xl leading-relaxed">{selectedProject.description}</p>}
+   267→                    </div>
+   268→                  </div>
+   269→                  {/* Action buttons */}
+   270→                  <div className="flex items-center gap-2 shrink-0">
+   271→                    <Button variant="outline" size="sm" className="dark:border-slate-700 border-slate-300 dark:text-slate-300 text-slate-600 dark:hover:bg-slate-800 hover:bg-slate-100 transition-all duration-200">
+   272→                      <Pencil className="h-3.5 w-3.5 ml-1.5" /> {t('detail.project.editProject')}
+   273→                    </Button>
+   274→                    <Button variant="outline" size="sm" className="dark:border-slate-700 border-slate-300 dark:text-slate-300 text-slate-600 dark:hover:bg-slate-800 hover:bg-slate-100 transition-all duration-200">
+   275→                      <Download className="h-3.5 w-3.5 ml-1.5" /> {t('detail.project.exportReport')}
+   276→                    </Button>
+   277→                  </div>
+   278→                </div>
+   279→
+   280→                {/* Shipping Info Row */}
+   281→                <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4 text-sm">
+   282→                  <div className="flex items-center gap-2.5">
+   283→                    <div className="h-8 w-8 rounded-lg dark:bg-amber-500/10 bg-amber-500/10 flex items-center justify-center">
+   284→                      <Users className="h-4 w-4 dark:text-amber-400 text-amber-600" />
+   285→                    </div>
+   286→                    <div>
+   287→                      <p className="text-[10px] uppercase tracking-wider dark:text-slate-600 text-slate-400">{t('detail.project.overview.client')}</p>
+   288→                      <p className="dark:text-slate-200 text-slate-800 font-medium">{selectedProject.clientName}</p>
+   289→                    </div>
+   290→                  </div>
+   291→                  <div className="flex items-center gap-2.5">
+   292→                    <div className="h-8 w-8 rounded-lg dark:bg-amber-500/10 bg-amber-500/10 flex items-center justify-center">
+   293→                      <Ship className="h-4 w-4 dark:text-amber-400 text-amber-600" />
+   294→                    </div>
+   295→                    <div>
+   296→                      <p className="text-[10px] uppercase tracking-wider dark:text-slate-600 text-slate-400">{t('detail.project.overview.vessel')}</p>
+   297→                      <p className="dark:text-slate-200 text-slate-800 font-medium">{selectedProject.vesselName || t('projects.tbd')}</p>
+   298→                    </div>
+   299→                  </div>
+   300→                  {(selectedProject.etd || selectedProject.eta) && (
+   301→                    <div className="flex items-center gap-2.5">
+   302→                      <div className="h-8 w-8 rounded-lg dark:bg-amber-500/10 bg-amber-500/10 flex items-center justify-center">
+   303→                        <Calendar className="h-4 w-4 dark:text-amber-400 text-amber-600" />
+   304→                      </div>
+   305→                      <div>
+   306→                        <p className="text-[10px] uppercase tracking-wider dark:text-slate-600 text-slate-400">ETD / ETA</p>
+   307→                        <p className="dark:text-slate-200 text-slate-800 font-medium">
+   308→                          {selectedProject.etd ? new Date(selectedProject.etd).toLocaleDateString() : '—'} / {selectedProject.eta ? new Date(selectedProject.eta).toLocaleDateString() : '—'}
+   309→                        </p>
+   310→                      </div>
+   311→                    </div>
+   312→                  )}
+   313→                  {selectedProject.shippingLine && (
+   314→                    <div className="flex items-center gap-2.5">
+   315→                      <div className="h-8 w-8 rounded-lg dark:bg-amber-500/10 bg-amber-500/10 flex items-center justify-center">
+   316→                        <Ship className="h-4 w-4 dark:text-amber-400 text-amber-600" />
+   317→                      </div>
+   318→                      <div>
+   319→                        <p className="text-[10px] uppercase tracking-wider dark:text-slate-600 text-slate-400">{t('detail.project.overview.shippingLine')}</p>
+   320→                        <p className="dark:text-slate-200 text-slate-800 font-medium">{selectedProject.shippingLine}</p>
+   321→                      </div>
+   322→                    </div>
+   323→                  )}
+   324→                </div>
+   325→
+   326→                {/* ETD/ETA Visual Timeline Bar */}
+   327→                {etdEtaInfo && (
+   328→                  <div className="rounded-xl dark:border-slate-800 border-slate-200 border dark:bg-slate-900/60 bg-slate-50 p-4">
+   329→                    <div className="flex items-center justify-between mb-2">
+   330→                      <div className="flex items-center gap-2">
+   331→                        <Clock className="h-4 w-4 dark:text-amber-400 text-amber-600" />
+   332→                        <span className="text-xs font-semibold dark:text-slate-300 text-slate-700">{t('detail.project.shippingTimeline')}</span>
+   333→                      </div>
+   334→                      <div className="flex items-center gap-3 text-[11px]">
+   335→                        <span className="dark:text-slate-500 text-slate-400">{etdEtaInfo.elapsed} {t('detail.project.daysElapsed')}</span>
+   336→                        <span className={etdEtaInfo.isOverdue ? 'text-red-400 dark:text-red-400' : 'dark:text-slate-500 text-slate-400'}>
+   337→                          {etdEtaInfo.isOverdue ? 'Overdue' : `${etdEtaInfo.remaining} ${t('detail.project.daysRemaining')}`}
+   338→                        </span>
+   339→                      </div>
+   340→                    </div>
+   341→                    <div className="relative h-3 w-full overflow-hidden rounded-full dark:bg-slate-800 bg-slate-200">
+   342→                      {/* Elapsed bar */}
+   343→                      <div
+   344→                        className={`absolute inset-y-0 left-0 rounded-full transition-all duration-700 ${etdEtaInfo.isOverdue ? 'bg-gradient-to-r from-red-500 to-red-400' : 'bg-gradient-to-r from-amber-500 to-orange-400'}`}
+   345→                        style={{ width: `${Math.min(etdEtaInfo.pct, 100)}%` }}
+   346→                      />
+   347→                      {/* Current position dot */}
+   348→                      <div
+   349→                        className={`absolute top-1/2 -translate-y-1/2 h-5 w-5 rounded-full border-2 border-white dark:border-slate-900 shadow-lg transition-all duration-700 ${etdEtaInfo.isOverdue ? 'bg-red-400' : 'bg-amber-400'}`}
+   350→                        style={{ left: `calc(${Math.min(etdEtaInfo.pct, 100)}% - 10px)` }}
+   351→                      />
+   352→                    </div>
+   353→                    <div className="flex justify-between mt-1.5 text-[10px] dark:text-slate-600 text-slate-400">
+   354→                      <span>ETD: {new Date(selectedProject.etd!).toLocaleDateString()}</span>
+   355→                      <span>ETA: {new Date(selectedProject.eta!).toLocaleDateString()}</span>
+   356→                    </div>
+   357→                  </div>
+   358→                )}
+   359→
+   360→                {/* ===== Visual Status Workflow Stepper ===== */}
+   361→                <div className="rounded-xl dark:border-slate-800 border-slate-200 border dark:bg-slate-900/60 bg-slate-50 p-5">
+   362→                  <div className="flex items-center justify-between mb-4">
+   363→                    <h3 className="text-xs font-semibold dark:text-slate-300 text-slate-700 uppercase tracking-wider">{t('detail.project.statusManagement')}</h3>
+   364→                    {statusChanging && <Loader2 className="h-3.5 w-3.5 animate-spin dark:text-amber-400 text-amber-600" />}
+   365→                  </div>
+   366→                  <div className="flex items-center gap-0 overflow-x-auto pb-2">
+   367→                    {PROJECT_STATUSES.map((s, idx) => {
+   368→                      const isCompleted = idx <= currentStep;
+   369→                      const isCurrent = idx === currentStep;
+   370→                      const isNext = PROJECT_WORKFLOW[selectedProject.status]?.includes(s);
+   371→                      const colors = STATUS_COLORS[s];
+   372→                      return (
+   373→                        <div key={s} className="flex items-center shrink-0">
+   374→                          <button
+   375→                            disabled={!isNext || statusChanging}
+   376→                            onClick={() => isNext && handleProjectStatusChange(s)}
+   377→                            className={`flex flex-col items-center gap-2 px-3 py-2 rounded-xl transition-all duration-300 min-w-[72px] ${
+   378→                              isCurrent
+   379→                                ? `relative ${colors.bg} ring-2 ring-offset-2 ring-offset-transparent ${colors.text.replace('text-', 'ring-')}`
+   380→                                : isCompleted
+   381→                                  ? 'opacity-60'
+   382→                                  : isNext
+   383→                                    ? 'dark:hover:bg-slate-800 hover:bg-slate-200 cursor-pointer opacity-70 hover:opacity-100'
+   384→                                    : 'opacity-25 pointer-events-none'
+   385→                            }`}
+   386→                          >
+   387→                            {/* Pulsing ring for current step */}
+   388→                            {isCurrent && (
+   389→                              <span className="absolute inset-0 rounded-xl animate-ping opacity-10" style={{ animationDuration: '2s' }} />
+   390→                            )}
+   391→                            {/* Icon circle */}
+   392→                            <div className={`relative h-10 w-10 rounded-full flex items-center justify-center transition-all duration-300 ${
+   393→                              isCurrent
+   394→                                ? `${colors.bg} ${colors.text} shadow-lg`
+   395→                                : isCompleted
+   396→                                  ? 'dark:bg-emerald-500/20 bg-emerald-500/20 dark:text-emerald-400 text-emerald-600'
+   397→                                  : 'dark:bg-slate-800 bg-slate-200 dark:text-slate-600 text-slate-400'
+   398→                            }`}>
+   399→                              {isCompleted && !isCurrent ? (
+   400→                                <CheckCircle2 className="h-5 w-5" />
+   401→                              ) : (
+   402→                                STATUS_ICON_MAP[s]
+   403→                              )}
+   404→                            </div>
+   405→                            <span className={`text-[10px] leading-tight text-center font-medium ${
+   406→                              isCurrent ? colors.text : isCompleted ? 'dark:text-emerald-400 text-emerald-600' : 'dark:text-slate-500 text-slate-400'
+   407→                            }`}>
+   408→                              {translateStatus(s)}
+   409→                            </span>
+   410→                            {/* Hover arrow for next step */}
+   411→                            {isNext && (
+   412→                              <MoveRight className={`h-3 w-3 absolute -top-1 -right-1 ${colors.text} opacity-60`} />
+   413→                            )}
+   414→                          </button>
+   415→                          {/* Connecting line */}
+   416→                          {idx < PROJECT_STATUSES.length - 1 && (
+   417→                            <div className="relative w-8 lg:w-12 flex items-center justify-center mx-0.5">
+   418→                              <div className={`h-0.5 w-full rounded-full transition-all duration-500 ${
+   419→                                idx < currentStep
+   420→                                  ? 'bg-gradient-to-r from-emerald-400 to-emerald-400/50 dark:from-emerald-500 dark:to-emerald-500/50'
+   421→                                  : idx === currentStep
+   422→                                    ? 'bg-gradient-to-r from-amber-400 to-amber-400/30 dark:from-amber-500 dark:to-amber-500/30'
+   423→                                    : 'dark:bg-slate-800 bg-slate-200'
+   424→                              }`} />
+   425→                            </div>
+   426→                          )}
+   427→                        </div>
+   428→                      );
+   429→                    })}
+   430→                  </div>
+   431→                </div>
+   432→              </div>
+   433→            </CardContent>
+   434→          </Card>
+   435→
+   436→          {/* ===== Enhanced KPI Cards ===== */}
+   437→          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+   438→            {/* Total Items */}
+   439→            <Card className="dark:border-slate-800 border-slate-200 dark:bg-slate-900/50 bg-white overflow-hidden transition-all duration-200 hover:shadow-md">
+   440→              <div className="h-full border-l-4 border-l-amber-500 dark:border-l-amber-500">
+   441→                <CardContent className="p-4">
+   442→                  <div className="flex items-center justify-between">
+   443→                    <div className="h-9 w-9 rounded-lg dark:bg-amber-500/10 bg-amber-500/10 flex items-center justify-center">
+   444→                      <Package className="h-4.5 w-4.5 dark:text-amber-400 text-amber-600" />
+   445→                    </div>
+   446→                    <div className="flex items-end gap-0.5 h-8">
+   447→                      {[40, 65, 45, 80, 55, 90, 70].map((h, i) => (
+   448→                        <div key={i} className="w-1 rounded-t-sm dark:bg-amber-500/40 bg-amber-500/30" style={{ height: `${h}%` }} />
+   449→                      ))}
+   450→                    </div>
+   451→                  </div>
+   452→                  <p className="text-2xl font-bold dark:text-slate-100 text-slate-900 mt-3">{selectedProject.totalItems}</p>
+   453→                  <p className="text-xs dark:text-slate-500 text-slate-400 mt-0.5">{t('detail.project.stats.totalItems')}</p>
+   454→                </CardContent>
+   455→              </div>
+   456→            </Card>
+   457→
+   458→            {/* Total Weight */}
+   459→            <Card className="dark:border-slate-800 border-slate-200 dark:bg-slate-900/50 bg-white overflow-hidden transition-all duration-200 hover:shadow-md">
+   460→              <div className="h-full border-l-4 border-l-emerald-500 dark:border-l-emerald-500">
+   461→                <CardContent className="p-4">
+   462→                  <div className="flex items-center justify-between">
+   463→                    <div className="h-9 w-9 rounded-lg dark:bg-emerald-500/10 bg-emerald-500/10 flex items-center justify-center">
+   464→                      <Weight className="h-4.5 w-4.5 dark:text-emerald-400 text-emerald-600" />
+   465→                    </div>
+   466→                    <div className="flex items-end gap-0.5 h-8">
+   467→                      {[60, 80, 55, 70, 85, 50, 95].map((h, i) => (
+   468→                        <div key={i} className="w-1 rounded-t-sm dark:bg-emerald-500/40 bg-emerald-500/30" style={{ height: `${h}%` }} />
+   469→                      ))}
+   470→                    </div>
+   471→                  </div>
+   472→                  <p className="text-2xl font-bold dark:text-slate-100 text-slate-900 mt-3">
+   473→                    {selectedProject.totalWeight.toLocaleString()}
+   474→                    <span className="text-sm font-normal dark:text-slate-500 text-slate-400 ml-1">{t('common.tonnes')}</span>
+   475→                  </p>
+   476→                  <p className="text-xs dark:text-slate-500 text-slate-400 mt-0.5">{t('detail.project.stats.totalWeight')}</p>
+   477→                </CardContent>
+   478→              </div>
+   479→            </Card>
+   480→
+   481→            {/* Total Volume */}
+   482→            <Card className="dark:border-slate-800 border-slate-200 dark:bg-slate-900/50 bg-white overflow-hidden transition-all duration-200 hover:shadow-md">
+   483→              <div className="h-full border-l-4 border-l-cyan-500 dark:border-l-cyan-500">
+   484→                <CardContent className="p-4">
+   485→                  <div className="flex items-center justify-between">
+   486→                    <div className="h-9 w-9 rounded-lg dark:bg-cyan-500/10 bg-cyan-500/10 flex items-center justify-center">
+   487→                      <Volume2 className="h-4.5 w-4.5 dark:text-cyan-400 text-cyan-600" />
+   488→                    </div>
+   489→                    <div className="flex items-end gap-0.5 h-8">
+   490→                      {[50, 70, 60, 85, 75, 65, 80].map((h, i) => (
+   491→                        <div key={i} className="w-1 rounded-t-sm dark:bg-cyan-500/40 bg-cyan-500/30" style={{ height: `${h}%` }} />
+   492→                      ))}
+   493→                    </div>
+   494→                  </div>
+   495→                  <p className="text-2xl font-bold dark:text-slate-100 text-slate-900 mt-3">
+   496→                    {selectedProject.totalVolume}
+   497→                    <span className="text-sm font-normal dark:text-slate-500 text-slate-400 ml-1">m³</span>
+   498→                  </p>
+   499→                  <p className="text-xs dark:text-slate-500 text-slate-400 mt-0.5">{t('detail.project.stats.totalVolume')}</p>
+   500→                </CardContent>
+   501→              </div>
+   502→            </Card>
+   503→
+   504→            {/* Completion % */}
+   505→            <Card className="dark:border-slate-800 border-slate-200 dark:bg-slate-900/50 bg-white overflow-hidden transition-all duration-200 hover:shadow-md">
+   506→              <div className="h-full border-l-4 border-l-purple-500 dark:border-l-purple-500">
+   507→                <CardContent className="p-4">
+   508→                  <div className="flex items-center justify-between">
+   509→                    <div className="h-9 w-9 rounded-lg dark:bg-purple-500/10 bg-purple-500/10 flex items-center justify-center">
+   510→                      <CheckCircle2 className="h-4.5 w-4.5 dark:text-purple-400 text-purple-600" />
+   511→                    </div>
+   512→                    <div className="flex items-end gap-0.5 h-8">
+   513→                      {[20, 35, 50, 60, 70, 80, completionPct].map((h, i) => (
+   514→                        <div key={i} className="w-1 rounded-t-sm dark:bg-purple-500/40 bg-purple-500/30" style={{ height: `${h}%` }} />
+   515→                      ))}
+   516→                    </div>
+   517→                  </div>
+   518→                  <p className="text-2xl font-bold dark:text-slate-100 text-slate-900 mt-3">{completionPct}%</p>
+   519→                  <p className="text-xs dark:text-slate-500 text-slate-400 mt-0.5">{t('detail.project.stats.completion')}</p>
+   520→                </CardContent>
+   521→              </div>
+   522→            </Card>
+   523→          </div>
+   524→
+   525→          {/* ===== Cargo Table + Donut Chart ===== */}
+   526→          <div className="grid gap-4 lg:grid-cols-3">
+   527→            {/* Cargo Items Table */}
+   528→            <Card className="dark:border-slate-800 border-slate-200 dark:bg-slate-900/50 bg-white lg:col-span-2 transition-all duration-200">
+   529→              <CardContent className="p-5">
+   530→                <div className="flex items-center justify-between mb-4">
+   531→                  <h3 className="text-sm font-semibold dark:text-slate-200 text-slate-800">{t('projects.cargoItems')}</h3>
+   532→                  <span className="text-xs dark:text-slate-500 text-slate-400 bg-slate-100 dark:bg-slate-800 px-2.5 py-1 rounded-full">{Array.isArray(projectCargo) ? projectCargo.length : 0} {t('common.items')}</span>
+   533→                </div>
+   534→                {detailLoading ? (
+   535→                  <div className="space-y-3">{Array.from({ length: 5 }).map((_, i) => <Skeleton key={i} className="h-12 dark:bg-slate-800 bg-slate-100" />)}</div>
+   536→                ) : !Array.isArray(projectCargo) || projectCargo.length === 0 ? (
+   537→                  <div className="flex flex-col items-center justify-center py-12 text-center">
+   538→                    <div className="h-12 w-12 rounded-full dark:bg-slate-800 bg-slate-100 flex items-center justify-center mb-3">
+   539→                      <Package className="h-5 w-5 dark:text-slate-600 text-slate-400" />
+   540→                    </div>
+   541→                    <p className="text-sm dark:text-slate-500 text-slate-400">{t('projects.noCargoItems')}</p>
+   542→                  </div>
+   543→                ) : (
+   544→                  <div className="max-h-[420px] overflow-y-auto custom-scrollbar">
+   545→                    <Table>
+   546→                      <TableHeader>
+   547→                        <TableRow className="dark:border-slate-800 border-slate-200 hover:bg-transparent">
+   548→                          <TableHead className="text-xs dark:text-slate-500 text-slate-400 font-medium">{t('projects.table.code')}</TableHead>
+   549→                          <TableHead className="text-xs dark:text-slate-500 text-slate-400 font-medium">{t('cargo.table.description')}</TableHead>
+   550→                          <TableHead className="text-xs dark:text-slate-500 text-slate-400 font-medium hidden sm:table-cell">{t('cargo.table.weight')}</TableHead>
+   551→                          <TableHead className="text-xs dark:text-slate-500 text-slate-400 font-medium hidden md:table-cell">{t('cargo.table.category')}</TableHead>
+   552→                          <TableHead className="text-xs dark:text-slate-500 text-slate-400 font-medium">{t('cargo.table.status')}</TableHead>
+   553→                          <TableHead className="text-xs dark:text-slate-500 text-slate-400 font-medium hidden lg:table-cell">{t('cargo.table.location')}</TableHead>
+   554→                        </TableRow>
+   555→                      </TableHeader>
+   556→                      <TableBody>
+   557→                        {projectCargo.map((c) => {
+   558→                          const cs = CARGO_STATUS_COLORS[c.status] || { bg: 'dark:bg-slate-700/50 bg-slate-100', text: 'dark:text-slate-400 text-slate-500', border: 'border-slate-600' };
+   559→                          return (
+   560→                            <TableRow key={c.id} className="dark:border-slate-800 border-slate-200 dark:hover:bg-slate-800/50 hover:bg-slate-50 cursor-pointer group transition-colors duration-150">
+   561→                              <TableCell className="py-2.5 text-xs font-mono dark:text-amber-400/80 text-amber-600 group-hover:dark:text-amber-400 group-hover:text-amber-600 transition-colors">{c.cargoCode}</TableCell>
+   562→                              <TableCell className="py-2.5 text-xs dark:text-slate-300 text-slate-700 max-w-[180px] truncate">{c.description}</TableCell>
+   563→                              <TableCell className="py-2.5 text-xs dark:text-slate-400 text-slate-500 hidden sm:table-cell">
+   564→                                {c.weight.toLocaleString()} <span className="dark:text-slate-600 text-slate-300">{t('detail.cargo.weightUnit')}</span>
+   565→                              </TableCell>
+   566→                              <TableCell className="py-2.5 hidden md:table-cell">
+   567→                                <Badge variant="outline" className="text-[10px] dark:bg-slate-800/50 bg-slate-100 dark:text-slate-300 text-slate-600 dark:border-slate-700 border-slate-200">{translateCategory(c.liftCategory)}</Badge>
+   568→                              </TableCell>
+   569→                              <TableCell className="py-2.5">
+   570→                                <Badge variant="outline" className={`text-[10px] ${cs.bg} ${cs.text} ${cs.border} flex items-center gap-1 w-fit`}>{translateStatus(c.status)}</Badge>
+   571→                              </TableCell>
+   572→                              <TableCell className="py-2.5 text-xs dark:text-slate-400 text-slate-500 hidden lg:table-cell font-mono">{c.location?.code || '—'}</TableCell>
+   573→                            </TableRow>
+   574→                          );
+   575→                        })}
+   576→                      </TableBody>
+   577→                    </Table>
+   578→                  </div>
+   579→                )}
+   580→              </CardContent>
+   581→            </Card>
+   582→
+   583→            {/* Cargo Status Donut Chart */}
+   584→            <Card className="dark:border-slate-800 border-slate-200 dark:bg-slate-900/50 bg-white transition-all duration-200">
+   585→              <CardContent className="p-5">
+   586→                <h3 className="text-sm font-semibold dark:text-slate-200 text-slate-800 mb-5">{t('detail.project.cargoStatusBreakdown')}</h3>
+   587→                {!Array.isArray(projectCargo) || projectCargo.length === 0 ? (
+   588→                  <div className="flex flex-col items-center justify-center py-10">
+   589→                    <div className="h-10 w-10 rounded-full dark:bg-slate-800 bg-slate-100 flex items-center justify-center mb-2">
+   590→                      <Package className="h-4 w-4 dark:text-slate-600 text-slate-400" />
+   591→                    </div>
+   592→                    <p className="text-xs dark:text-slate-500 text-slate-400">{t('projects.noCargoItems')}</p>
+   593→                  </div>
+   594→                ) : (
+   595→                  <div className="flex flex-col items-center">
+   596→                    {/* Donut Chart using conic-gradient */}
+   597→                    <div className="relative h-44 w-44 mb-5">
+   598→                      <div
+   599→                        className="h-full w-full rounded-full"
+   600→                        style={{
+   601→                          background: Array.isArray(donutData) && donutData.length > 0
+   602→                            ? `conic-gradient(${donutGradient})`
+   603→                            : 'conic-gradient(dark:bg-slate-800 bg-slate-100 0% 100%)',
+   604→                        }}
+   605→                      />
+   606→                      {/* Center circle (donut hole) */}
+   607→                      <div className="absolute inset-0 m-auto h-28 w-28 rounded-full dark:bg-slate-900/50 bg-white shadow-inner flex flex-col items-center justify-center">
+   608→                        <p className="text-2xl font-bold dark:text-slate-100 text-slate-900">{Array.isArray(projectCargo) ? projectCargo.length : 0}</p>
+   609→                        <p className="text-[10px] dark:text-slate-500 text-slate-400">{t('common.items')}</p>
+   610→                      </div>
+   611→                    </div>
+   612→                    {/* Legend */}
+   613→                    <div className="w-full space-y-2.5">
+   614→                      {Object.entries(cargoStatusCounts).sort((a, b) => b[1] - a[1]).map(([status, count]) => {
+   615→                        const pct = Math.round((count / (Array.isArray(projectCargo) ? projectCargo.length : 1)) * 100);
+   616→                        const color = CARGO_STATUS_COLORS[status]?.donut || '#64748b';
+   617→                        return (
+   618→                          <div key={status} className="flex items-center justify-between text-xs">
+   619→                            <div className="flex items-center gap-2">
+   620→                              <div className="h-2.5 w-2.5 rounded-full shrink-0" style={{ backgroundColor: color }} />
+   621→                              <span className="dark:text-slate-300 text-slate-600">{translateStatus(status)}</span>
+   622→                            </div>
+   623→                            <div className="flex items-center gap-2">
+   624→                              <span className="dark:text-slate-200 text-slate-800 font-medium">{count}</span>
+   625→                              <span className="dark:text-slate-600 text-slate-300 w-9 text-right">({pct}%)</span>
+   626→                            </div>
+   627→                          </div>
+   628→                        );
+   629→                      })}
+   630→                    </div>
+   631→                  </div>
+   632→                )}
+   633→              </CardContent>
+   634→            </Card>
+   635→          </div>
+   636→
+   637→          {/* ===== Activity Timeline ===== */}
+   638→          <Card className="dark:border-slate-800 border-slate-200 dark:bg-slate-900/50 bg-white transition-all duration-200">
+   639→            <CardContent className="p-5">
+   640→              <div className="flex items-center justify-between mb-5">
+   641→                <h3 className="text-sm font-semibold dark:text-slate-200 text-slate-800">{t('detail.project.timeline')}</h3>
+   642→                <span className="text-xs dark:text-slate-500 text-slate-400 bg-slate-100 dark:bg-slate-800 px-2.5 py-1 rounded-full">{Array.isArray(projectMovements) ? projectMovements.length : 0} {t('common.all')}</span>
+   643→              </div>
+   644→              {!Array.isArray(projectMovements) || projectMovements.length === 0 ? (
+   645→                <div className="flex flex-col items-center justify-center py-10 text-center">
+   646→                  <div className="h-12 w-12 rounded-full dark:bg-slate-800 bg-slate-100 flex items-center justify-center mb-3">
+   647→                    <Clock className="h-5 w-5 dark:text-slate-600 text-slate-400" />
+   648→                  </div>
+   649→                  <p className="text-sm dark:text-slate-500 text-slate-400">{t('detail.project.noActivity')}</p>
+   650→                </div>
+   651→              ) : (
+   652→                <div className="max-h-[400px] overflow-y-auto custom-scrollbar">
+   653→                  <div className="relative pl-8">
+   654→                    {/* Vertical connecting line */}
+   655→                    <div className="absolute left-3 top-2 bottom-2 w-px dark:bg-slate-800 bg-slate-200" />
+   656→                    {projectMovements.slice(0, 20).map((m, idx) => {
+   657→                      const dotColor = MOVEMENT_TYPE_COLORS[m.type] || 'dark:bg-slate-500 bg-slate-400';
+   658→                      return (
+   659→                        <div key={m.id} className={`relative pb-6 last:pb-0 ${idx === 0 ? 'pt-0' : ''}`}>
+   660→                          {/* Timeline dot */}
+   661→                          <div className={`absolute left-0 top-1 h-6 w-6 rounded-full ${dotColor} flex items-center justify-center shadow-sm`}>
+   662→                            {m.type === 'RECEIVE' && <Download className="h-3 w-3 text-white" />}
+   663→                            {m.type === 'MOVE' && <MoveRight className="h-3 w-3 text-white" />}
+   664→                            {m.type === 'DISPATCH' && <Truck className="h-3 w-3 text-white" />}
+   665→                            {m.type === 'INSPECT' && <Eye className="h-3 w-3 text-white" />}
+   666→                          </div>
+   667→                          {/* Content card */}
+   668→                          <div className="ml-4 p-3 rounded-xl dark:bg-slate-900/40 bg-slate-50 border dark:border-slate-800 border-slate-200 transition-colors duration-150 dark:hover:bg-slate-900/60 hover:bg-slate-100">
+   669→                            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1.5">
+   670→                              <div className="flex items-center gap-2">
+   671→                                <span className="text-sm font-medium dark:text-slate-200 text-slate-800">{translateMovementType(m.type)}</span>
+   672→                                <span className="text-xs font-mono dark:text-amber-400/70 text-amber-600">{m.cargoCode}</span>
+   673→                              </div>
+   674→                              <div className="flex items-center gap-3 text-[11px] dark:text-slate-500 text-slate-400">
+   675→                                {m.operatorName && (
+   676→                                  <div className="flex items-center gap-1">
+   677→                                    <UserCircle className="h-3 w-3" />
+   678→                                    <span>{m.operatorName}</span>
+   679→                                  </div>
+   680→                                )}
+   681→                                <div className="flex items-center gap-1">
+   682→                                  <Clock className="h-3 w-3" />
+   683→                                  <span>{new Date(m.createdAt).toLocaleString()}</span>
+   684→                                </div>
+   685→                              </div>
+   686→                            </div>
+   687→                            <div className="flex items-center gap-2 mt-1.5 text-xs dark:text-slate-400 text-slate-500">
+   688→                              {m.fromLocation?.code && (
+   689→                                <span>{m.fromLocation.code}</span>
+   690→                              )}
+   691→                              {(m.fromLocation?.code && m.toLocation?.code) && (
+   692→                                <ArrowRight className="h-3 w-3" />
+   693→                              )}
+   694→                              {m.toLocation?.code && (
+   695→                                <span>{m.toLocation.code}</span>
+   696→                              )}
+   697→                              {m.equipmentUsed && (
+   698→                                <span className="dark:text-slate-600 text-slate-300 ml-2">
+   699→                                  <span className="dark:text-slate-600 text-slate-300">·</span> {m.equipmentUsed}
+   700→                                </span>
+   701→                              )}
+   702→                            </div>
+   703→                          </div>
+   704→                        </div>
+   705→                      );
+   706→                    })}
+   707→                  </div>
+   708→                </div>
+   709→              )}
+   710→            </CardContent>
+   711→          </Card>
+   712→        </div>
+   713→      ) : (
+   714→        /* ========== PROJECT CARDS GRID ========== */
+   715→        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+   716→          {loading ? Array.from({ length: 6 }).map((_, i) => (
+   717→            <Card key={i} className="dark:border-slate-800 border-slate-200 dark:bg-slate-900/50 bg-white">
+   718→              <CardContent className="p-5 space-y-4">
+   719→                <Skeleton className="h-5 w-3/4 dark:bg-slate-800 bg-slate-100" />
+   720→                <Skeleton className="h-4 w-1/2 dark:bg-slate-800 bg-slate-100" />
+   721→                <Skeleton className="h-4 w-full dark:bg-slate-800 bg-slate-100" />
+   722→                <Skeleton className="h-2 w-full dark:bg-slate-800 bg-slate-100" />
+   723→              </CardContent>
+   724→            </Card>
+   725→          )) : !Array.isArray(projects) || projects.length === 0 ? (
+   726→            <div className="col-span-full text-center py-16">
+   727→              <div className="h-14 w-14 rounded-full dark:bg-slate-800 bg-slate-100 flex items-center justify-center mx-auto mb-4">
+   728→                <Package className="h-6 w-6 dark:text-slate-600 text-slate-400" />
+   729→              </div>
+   730→              <p className="dark:text-slate-500 text-slate-400">{t('projects.noProjectsFound')}</p>
+   731→            </div>
+   732→          ) : projects.map((p) => {
+   733→            const received = p.cargoItems?.filter((c) => c.status === 'RECEIVED' || c.status === 'IN_YARD' || c.status === 'IN_WAREHOUSE').length || 0;
+   734→            const total = p.totalItems || 0;
+   735→            const pct = total > 0 ? Math.round((received / total) * 100) : 0;
+   736→            const statusColor = STATUS_COLORS[p.status];
+   737→            return (
+   738→              <Card
+   739→                key={p.id}
+   740→                className="dark:border-slate-800 border-slate-200 dark:bg-slate-900/50 bg-white cursor-pointer transition-all duration-300 hover:shadow-lg hover:dark:border-slate-700 hover:border-slate-300 group relative overflow-hidden"
+   741→                onClick={() => openProjectDetail(p)}
+   742→              >
+   743→                {/* Hover gradient overlay */}
+   744→                <div className="absolute inset-0 bg-gradient-to-br from-amber-500/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none" />
+   745→                <CardContent className="p-5 space-y-4 relative z-10">
+   746→                  {/* Header: name, code, status badge */}
+   747→                  <div className="flex items-start justify-between gap-2">
+   748→                    <div className="min-w-0">
+   749→                      <h3 className="text-sm font-semibold dark:text-slate-100 text-slate-900 truncate group-hover:dark:text-amber-400 group-hover:text-amber-600 transition-colors duration-200">{p.name}</h3>
+   750→                      <p className="text-[11px] font-mono dark:text-slate-600 text-slate-400 mt-0.5">{p.projectCode}</p>
+   751→                    </div>
+   752→                    <Badge variant="outline" className={`shrink-0 text-[10px] ${statusColor.bg} ${statusColor.text} ${statusColor.border}`}>
+   753→                      {translateStatus(p.status)}
+   754→                    </Badge>
+   755→                  </div>
+   756→
+   757→                  {/* Client & Vessel */}
+   758→                  <div className="grid grid-cols-2 gap-2 text-xs">
+   759→                    <div className="flex items-center gap-1.5 dark:text-slate-400 text-slate-500">
+   760→                      <Users className="h-3 w-3 dark:text-slate-600 text-slate-300" />
+   761→                      <span className="truncate">{p.clientName}</span>
+   762→                    </div>
+   763→                    <div className="flex items-center gap-1.5 dark:text-slate-400 text-slate-500">
+   764→                      <Ship className="h-3 w-3 dark:text-slate-600 text-slate-300" />
+   765→                      <span className="truncate">{p.vesselName || t('projects.tbd')}</span>
+   766→                    </div>
+   767→                  </div>
+   768→
+   769→                  {/* Quick stats row */}
+   770→                  <div className="flex items-center gap-4 text-xs">
+   771→                    <div className="flex items-center gap-1.5">
+   772→                      <Package className="h-3.5 w-3.5 dark:text-amber-500/60 text-amber-500" />
+   773→                      <span className="dark:text-slate-300 text-slate-700 font-medium">{total}</span>
+   774→                      <span className="dark:text-slate-600 text-slate-400">{t('projects.card.items')}</span>
+   775→                    </div>
+   776→                    <div className="flex items-center gap-1.5">
+   777→                      <Weight className="h-3.5 w-3.5 dark:text-amber-500/60 text-amber-500" />
+   778→                      <span className="dark:text-slate-300 text-slate-700 font-medium">{p.totalWeight}</span>
+   779→                      <span className="dark:text-slate-600 text-slate-400">{t('projects.card.weight')}</span>
+   780→                    </div>
+   781→                    <div className="flex items-center gap-1.5">
+   782→                      <Volume2 className="h-3.5 w-3.5 dark:text-amber-500/60 text-amber-500" />
+   783→                      <span className="dark:text-slate-300 text-slate-700 font-medium">{p.totalVolume}</span>
+   784→                      <span className="dark:text-slate-600 text-slate-400">m³</span>
+   785→                    </div>
+   786→                  </div>
+   787→
+   788→                  {/* ETD/ETA dates */}
+   789→                  {(p.etd || p.eta) && (
+   790→                    <div className="flex gap-4 text-[11px] dark:text-slate-500 text-slate-400">
+   791→                      {p.etd && <span>ETD {new Date(p.etd).toLocaleDateString()}</span>}
+   792→                      {p.eta && <span>ETA {new Date(p.eta).toLocaleDateString()}</span>}
+   793→                    </div>
+   794→                  )}
+   795→
+   796→                  {/* Progress bar with percentage */}
+   797→                  <div className="space-y-1.5">
+   798→                    <div className="flex justify-between text-[11px]">
+   799→                      <span className="dark:text-slate-500 text-slate-400">{t('common.progress')}</span>
+   800→                      <span className="dark:text-slate-300 text-slate-600 font-medium">{received}/{total} ({pct}%)</span>
+   801→                    </div>
+   802→                    <div className="h-2 w-full overflow-hidden rounded-full dark:bg-slate-800 bg-slate-100">
+   803→                      <div
+   804→                        className={`h-full rounded-full transition-all duration-700 ${pct >= 75 ? 'bg-gradient-to-r from-emerald-500 to-teal-400' : pct >= 40 ? 'bg-gradient-to-r from-amber-500 to-orange-400' : 'bg-gradient-to-r from-amber-500/60 to-amber-400/60'}`}
+   805→                        style={{ width: `${pct}%` }}
+   806→                      />
+   807→                    </div>
+   808→                  </div>
+   809→                </CardContent>
+   810→              </Card>
+   811→            );
+   812→          })}
+   813→        </div>
+   814→      )}
+   815→
+   816→      {/* Add Project Dialog */}
+   817→      <Dialog open={showAdd} onOpenChange={(open) => { if (!open) { setShowAdd(false); setForm(emptyForm); } }}>
+   818→        <DialogContent className="dark:border-slate-700 border-slate-200 dark:bg-slate-900 bg-white max-w-lg">
+   819→          <DialogHeader><DialogTitle className="dark:text-slate-100 text-slate-900">{t('projects.addNewProject')}</DialogTitle></DialogHeader>
+   820→          <div className="grid gap-4 py-4">
+   821→            <div>
+   822→              <Label className="dark:text-slate-400 text-slate-500">{t('projects.form.projectName')}</Label>
+   823→              <Input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} className="dark:border-slate-700 border-slate-300 dark:bg-slate-800 bg-white dark:text-slate-200 text-slate-900 mt-1" />
+   824→            </div>
+   825→            <div>
+   826→              <Label className="dark:text-slate-400 text-slate-500">{t('projects.form.description')}</Label>
+   827→              <Textarea value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} className="dark:border-slate-700 border-slate-300 dark:bg-slate-800 bg-white dark:text-slate-200 text-slate-900 mt-1 min-h-[60px]" />
+   828→            </div>
+   829→            <div className="grid grid-cols-2 gap-4">
+   830→              <div>
+   831→                <Label className="dark:text-slate-400 text-slate-500">{t('projects.form.clientName')}</Label>
+   832→                <Input value={form.clientName} onChange={(e) => setForm({ ...form, clientName: e.target.value })} className="dark:border-slate-700 border-slate-300 dark:bg-slate-800 bg-white dark:text-slate-200 text-slate-900 mt-1" />
+   833→              </div>
+   834→              <div>
+   835→                <Label className="dark:text-slate-400 text-slate-500">{t('projects.form.clientContact')}</Label>
+   836→                <Input value={form.clientContact} onChange={(e) => setForm({ ...form, clientContact: e.target.value })} className="dark:border-slate-700 border-slate-300 dark:bg-slate-800 bg-white dark:text-slate-200 text-slate-900 mt-1" />
+   837→              </div>
+   838→            </div>
+   839→            <div>
+   840→              <Label className="dark:text-slate-400 text-slate-500">{t('projects.form.destination')}</Label>
+   841→              <Input value={form.destination} onChange={(e) => setForm({ ...form, destination: e.target.value })} className="dark:border-slate-700 border-slate-300 dark:bg-slate-800 bg-white dark:text-slate-200 text-slate-900 mt-1" />
+   842→            </div>
+   843→            <div className="grid grid-cols-2 gap-4">
+   844→              <div>
+   845→                <Label className="dark:text-slate-400 text-slate-500">{t('projects.form.shippingLine')}</Label>
+   846→                <Input value={form.shippingLine} onChange={(e) => setForm({ ...form, shippingLine: e.target.value })} className="dark:border-slate-700 border-slate-300 dark:bg-slate-800 bg-white dark:text-slate-200 text-slate-900 mt-1" />
+   847→              </div>
+   848→              <div>
+   849→                <Label className="dark:text-slate-400 text-slate-500">{t('projects.form.vesselName')}</Label>
+   850→                <Input value={form.vesselName} onChange={(e) => setForm({ ...form, vesselName: e.target.value })} className="dark:border-slate-700 border-slate-300 dark:bg-slate-800 bg-white dark:text-slate-200 text-slate-900 mt-1" />
+   851→              </div>
+   852→            </div>
+   853→            <div className="grid grid-cols-2 gap-4">
+   854→              <div>
+   855→                <Label className="dark:text-slate-400 text-slate-500">{t('projects.form.etd')}</Label>
+   856→                <Input type="date" value={form.etd} onChange={(e) => setForm({ ...form, etd: e.target.value })} className="dark:border-slate-700 border-slate-300 dark:bg-slate-800 bg-white dark:text-slate-200 text-slate-900 mt-1" />
+   857→              </div>
+   858→              <div>
+   859→                <Label className="dark:text-slate-400 text-slate-500">{t('projects.form.eta')}</Label>
+   860→                <Input type="date" value={form.eta} onChange={(e) => setForm({ ...form, eta: e.target.value })} className="dark:border-slate-700 border-slate-300 dark:bg-slate-800 bg-white dark:text-slate-200 text-slate-900 mt-1" />
+   861→              </div>
+   862→            </div>
+   863→          </div>
+   864→          <DialogFooter>
+   865→            <Button variant="outline" onClick={() => { setShowAdd(false); setForm(emptyForm); }} className="dark:border-slate-700 border-slate-300 dark:text-slate-300 text-slate-600 dark:hover:bg-slate-800 hover:bg-slate-100">{t('common.cancel')}</Button>
+   866→            <Button onClick={handleCreate} disabled={submitting || !form.name || !form.clientName} className="bg-amber-500 hover:bg-amber-600 text-slate-900 font-medium">{submitting ? t('common.creating') : t('common.create')}</Button>
+   867→          </DialogFooter>
+   868→        </DialogContent>
+   869→      </Dialog>
+   870→    </div>
+   871→  );
+   872→}
+   873→

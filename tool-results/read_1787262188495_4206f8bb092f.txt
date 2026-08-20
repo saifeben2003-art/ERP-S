@@ -1,0 +1,922 @@
+     1→'use client';
+     2→
+     3→import { useEffect, useState, useRef, useCallback } from 'react';
+     4→import {
+     5→  ScanLine, Camera, CameraOff, Type, History, Package, MapPin,
+     6→  ChevronRight, Zap, RotateCcw, Search, Loader2, XCircle,
+     7→  CheckCircle2, Eye, ArrowRightLeft, AlertTriangle, Trash2,
+     8→} from 'lucide-react';
+     9→import { Card, CardContent } from '@/components/ui/card';
+    10→import { Button } from '@/components/ui/button';
+    11→import { Input } from '@/components/ui/input';
+    12→import { Badge } from '@/components/ui/badge';
+    13→import { Separator } from '@/components/ui/separator';
+    14→import { ScrollArea } from '@/components/ui/scroll-area';
+    15→import { Skeleton } from '@/components/ui/skeleton';
+    16→import { useTranslation, translateStatus, translateLocationType } from '@/lib/translations';
+    17→import type { CargoStatus, LocationType } from '@/types/wms';
+    18→
+    19→// ==================== LOCAL TRANSLATIONS ====================
+    20→
+    21→const scannerLocal: Record<string, string> = {
+    22→  'scanner.title': 'ماسح البضائع',
+    23→  'scanner.subtitle': 'امسح الباركود أو أدخل الرمز يدوياً',
+    24→  'scanner.scan': 'مسح',
+    25→  'scanner.manual': 'إدخال يدوي',
+    26→  'scanner.placeholder': 'أدخل رمز الباركود...',
+    27→  'scanner.search': 'بحث',
+    28→  'scanner.found': 'تم العثور',
+    29→  'scanner.notFound': 'لم يتم العثور على نتائج',
+    30→  'scanner.recentScans': 'عمليات المسح الأخيرة',
+    31→  'scanner.clearHistory': 'مسح السجل',
+    32→  'scanner.switchCamera': 'تبديل الكاميرا',
+    33→  'scanner.cargoItem': 'بضاعة',
+    34→  'scanner.location': 'موقع',
+    35→  'scanner.viewDetails': 'عرض التفاصيل',
+    36→  'scanner.viewInventory': 'عرض المخزون',
+    37→  'scanner.changeStatus': 'تغيير الحالة',
+    38→  'scanner.scanning': 'جاري المسح...',
+    39→  'scanner.cameraUnavailable': 'الكاميرا متاحة للمراقبة - استخدم الإدخال اليدوي للمسح',
+    40→  'scanner.cameraError': 'تعذر الوصول إلى الكاميرا',
+    41→  'scanner.torchOn': 'تشغيل المصباح',
+    42→  'scanner.torchOff': 'إيقاف المصباح',
+    43→  'scanner.noRecentScans': 'لا توجد عمليات مسح سابقة',
+    44→  'scanner.weight': 'الوزن',
+    45→  'scanner.client': 'العميل',
+    46→  'scanner.zone': 'المنطقة',
+    47→  'scanner.currentLoad': 'الحمولة الحالية',
+    48→  'scanner.ton': 'طن',
+    49→  'scanner.items': 'قطعة',
+    50→  'scanner.days': 'يوم',
+    51→  'scanner.paste': 'لصق',
+    52→};
+    53→
+    54→const scannerLocalEn: Record<string, string> = {
+    55→  'scanner.title': 'Barcode Scanner',
+    56→  'scanner.subtitle': 'Scan a barcode or enter the code manually',
+    57→  'scanner.scan': 'Scan',
+    58→  'scanner.manual': 'Manual Entry',
+    59→  'scanner.placeholder': 'Enter barcode...',
+    60→  'scanner.search': 'Search',
+    61→  'scanner.found': 'Found',
+    62→  'scanner.notFound': 'No results found',
+    63→  'scanner.recentScans': 'Recent Scans',
+    64→  'scanner.clearHistory': 'Clear History',
+    65→  'scanner.switchCamera': 'Switch Camera',
+    66→  'scanner.cargoItem': 'Cargo',
+    67→  'scanner.location': 'Location',
+    68→  'scanner.viewDetails': 'View Details',
+    69→  'scanner.viewInventory': 'View Inventory',
+    70→  'scanner.changeStatus': 'Change Status',
+    71→  'scanner.scanning': 'Scanning...',
+    72→  'scanner.cameraUnavailable': 'Camera available for monitoring - use manual entry to scan',
+    73→  'scanner.cameraError': 'Cannot access camera',
+    74→  'scanner.torchOn': 'Torch On',
+    75→  'scanner.torchOff': 'Torch Off',
+    76→  'scanner.noRecentScans': 'No recent scans',
+    77→  'scanner.weight': 'Weight',
+    78→  'scanner.client': 'Client',
+    79→  'scanner.zone': 'Zone',
+    80→  'scanner.currentLoad': 'Current Load',
+    81→  'scanner.ton': 'ton',
+    82→  'scanner.items': 'items',
+    83→  'scanner.days': 'days',
+    84→  'scanner.paste': 'Paste',
+    85→};
+    86→
+    87→// ==================== TYPES ====================
+    88→
+    89→interface ScanRecord {
+    90→  barcode: string;
+    91→  type: 'CARGO' | 'LOCATION' | 'NOT_FOUND';
+    92→  timestamp: number;
+    93→  result: ScannerResponse | null;
+    94→}
+    95→
+    96→interface ScannerResponse {
+    97→  type: 'CARGO' | 'LOCATION';
+    98→  data: Record<string, unknown>;
+    99→}
+   100→
+   101→// ==================== STATUS STYLES ====================
+   102→
+   103→const statusStyles: Record<string, string> = {
+   104→  IN_YARD: 'bg-emerald-500/10 text-emerald-500 dark:text-emerald-400 border-emerald-500/20',
+   105→  IN_TRANSIT: 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20',
+   106→  DISPATCHED: 'bg-slate-500/10 text-slate-600 dark:text-slate-400 border-slate-500/20',
+   107→  RECEIVED: 'bg-cyan-500/10 text-cyan-600 dark:text-cyan-400 border-cyan-500/20',
+   108→  IN_WAREHOUSE: 'bg-teal-500/10 text-teal-600 dark:text-teal-400 border-teal-500/20',
+   109→  DELIVERED: 'bg-slate-400/10 text-slate-500 dark:text-slate-500 border-slate-400/20',
+   110→};
+   111→
+   112→// ==================== COMPONENT ====================
+   113→
+   114→export function ScannerPage() {
+   115→  const { t, locale } = useTranslation();
+   116→
+   117→  // Local scanner translations
+   118→  const st = useCallback((key: string): string => {
+   119→    const map = locale === 'en' ? scannerLocalEn : scannerLocal;
+   120→    return map[key] || key;
+   121→  }, [locale]);
+   122→
+   123→  // State
+   124→  const [mode, setMode] = useState<'camera' | 'manual'>('camera');
+   125→  const [manualBarcode, setManualBarcode] = useState('');
+   126→  const [isScanning, setIsScanning] = useState(false);
+   127→  const [scanResult, setScanResult] = useState<ScannerResponse | null>(null);
+   128→  const [scanError, setScanError] = useState<string | null>(null);
+   129→  const [recentScans, setRecentScans] = useState<ScanRecord[]>([]);
+   130→  const [cameraActive, setCameraActive] = useState(false);
+   131→  const [torchOn, setTorchOn] = useState(false);
+   132→  const [facingMode, setFacingMode] = useState<'environment' | 'user'>('environment');
+   133→  const [barcodeDetectorAvailable, setBarcodeDetectorAvailable] = useState(true);
+   134→  const [scanLineY, setScanLineY] = useState(0);
+   135→
+   136→  // Refs
+   137→  const videoRef = useRef<HTMLVideoElement>(null);
+   138→  const canvasRef = useRef<HTMLCanvasElement>(null);
+   139→  const animationRef = useRef<number>(0);
+   140→  const streamRef = useRef<MediaStream | null>(null);
+   141→  const scanIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+   142→  const scanLineDirection = useRef<1 | -1>(1);
+   143→
+   144→  // ==================== BARCODE LOOKUP ====================
+   145→
+   146→  const lookupBarcode = useCallback(async (barcode: string) => {
+   147→    if (!barcode.trim()) return;
+   148→
+   149→    setIsScanning(true);
+   150→    setScanError(null);
+   151→    setScanResult(null);
+   152→
+   153→    try {
+   154→      const res = await fetch(`/api/scanner?barcode=${encodeURIComponent(barcode.trim())}`);
+   155→      const data = await res.json();
+   156→
+   157→      if (res.ok) {
+   158→        setScanResult(data as ScannerResponse);
+   159→
+   160→        // Add to recent scans
+   161→        setRecentScans((prev) => {
+   162→          const record: ScanRecord = {
+   163→            barcode: barcode.trim(),
+   164→            type: (data as ScannerResponse).type,
+   165→            timestamp: Date.now(),
+   166→            result: data as ScannerResponse,
+   167→          };
+   168→          const filtered = prev.filter((r) => r.barcode !== barcode.trim());
+   169→          return [record, ...filtered].slice(0, 10);
+   170→        });
+   171→      } else {
+   172→        setScanError(data.error || st('scanner.notFound'));
+   173→        setRecentScans((prev) => {
+   174→          const record: ScanRecord = {
+   175→            barcode: barcode.trim(),
+   176→            type: 'NOT_FOUND',
+   177→            timestamp: Date.now(),
+   178→            result: null,
+   179→          };
+   180→          const filtered = prev.filter((r) => r.barcode !== barcode.trim());
+   181→          return [record, ...filtered].slice(0, 10);
+   182→        });
+   183→      }
+   184→    } catch {
+   185→      setScanError(st('scanner.notFound'));
+   186→    } finally {
+   187→      setIsScanning(false);
+   188→    }
+   189→  }, [st]);
+   190→
+   191→  // ==================== BARCODE DETECTION ====================
+   192→
+   193→  const detectBarcode = useCallback(async () => {
+   194→    if (!videoRef.current || !barcodeDetectorAvailable) return;
+   195→
+   196→    try {
+   197→      // Type assertion for BarcodeDetector which may not be in TypeScript's lib
+   198→      const BarcodeDetectorAPI = (window as unknown as { BarcodeDetector?: new (opts: { formats: string[] }) => { detect: (source: HTMLVideoElement) => Promise<{ rawValue: string }[]> } }).BarcodeDetector;
+   199→
+   200→      if (!BarcodeDetectorAPI) return;
+   201→
+   202→      const detector = new BarcodeDetectorAPI({ formats: ['qr_code', 'ean_13', 'ean_8', 'code_128', 'code_39', 'upc_a', 'upc_e'] });
+   203→      const barcodes = await detector.detect(videoRef.current);
+   204→
+   205→      if (barcodes.length > 0) {
+   206→        const code = barcodes[0].rawValue;
+   207→        if (code && !isScanning) {
+   208→          await lookupBarcode(code);
+   209→        }
+   210→      }
+   211→    } catch {
+   212→      // Silently fail - user can use manual entry
+   213→    }
+   214→  }, [barcodeDetectorAvailable, isScanning, lookupBarcode]);
+   215→
+   216→  // ==================== CAMERA MANAGEMENT ====================
+   217→
+   218→  const startCamera = useCallback(async () => {
+   219→    try {
+   220→      // Stop existing stream
+   221→      if (streamRef.current) {
+   222→        streamRef.current.getTracks().forEach((track) => track.stop());
+   223→      }
+   224→
+   225→      const constraints: MediaStreamConstraints = {
+   226→        video: {
+   227→          facingMode,
+   228→          width: { ideal: 1280 },
+   229→          height: { ideal: 720 },
+   230→        },
+   231→        audio: false,
+   232→      };
+   233→
+   234→      const stream = await navigator.mediaDevices.getUserMedia(constraints);
+   235→      streamRef.current = stream;
+   236→
+   237→      if (videoRef.current) {
+   238→        videoRef.current.srcObject = stream;
+   239→        await videoRef.current.play();
+   240→      }
+   241→
+   242→      setCameraActive(true);
+   243→
+   244→      // Check BarcodeDetector support
+   245→      const hasDetector = 'BarcodeDetector' in window;
+   246→      setBarcodeDetectorAvailable(hasDetector);
+   247→
+   248→      if (hasDetector) {
+   249→        // Scan every 500ms
+   250→        scanIntervalRef.current = setInterval(detectBarcode, 500);
+   251→      }
+   252→    } catch {
+   253→      setCameraActive(false);
+   254→      setScanError(st('scanner.cameraError'));
+   255→    }
+   256→  }, [facingMode, detectBarcode, st]);
+   257→
+   258→  const stopCamera = useCallback(() => {
+   259→    if (streamRef.current) {
+   260→      streamRef.current.getTracks().forEach((track) => track.stop());
+   261→      streamRef.current = null;
+   262→    }
+   263→    if (scanIntervalRef.current) {
+   264→      clearInterval(scanIntervalRef.current);
+   265→      scanIntervalRef.current = null;
+   266→    }
+   267→    if (animationRef.current) {
+   268→      cancelAnimationFrame(animationRef.current);
+   269→      animationRef.current = 0;
+   270→    }
+   271→    setCameraActive(false);
+   272→  }, []);
+   273→
+   274→  const toggleTorch = useCallback(async () => {
+   275→    if (!streamRef.current) return;
+   276→    const track = streamRef.current.getVideoTracks()[0];
+   277→    if (!track) return;
+   278→
+   279→    const capabilities = track.getCapabilities?.() as { torch?: boolean } | undefined;
+   280→    if (!capabilities?.torch) return;
+   281→
+   282→    try {
+   283→      const newTorch = !torchOn;
+   284→      await track.applyConstraints({
+   285→        advanced: [{ torch: newTorch } as MediaTrackConstraintSet],
+   286→      });
+   287→      setTorchOn(newTorch);
+   288→    } catch {
+   289→      // Torch not supported
+   290→    }
+   291→  }, [torchOn]);
+   292→
+   293→  const switchCamera = useCallback(() => {
+   294→    setFacingMode((prev) => (prev === 'environment' ? 'user' : 'environment'));
+   295→    setCameraActive(false);
+   296→    if (streamRef.current) {
+   297→      streamRef.current.getTracks().forEach((track) => track.stop());
+   298→      streamRef.current = null;
+   299→    }
+   300→  }, []);
+   301→
+   302→  // ==================== SCAN LINE ANIMATION ====================
+   303→
+   304→  useEffect(() => {
+   305→    if (!cameraActive || !canvasRef.current) return;
+   306→
+   307→    const canvas = canvasRef.current;
+   308→    const ctx = canvas.getContext('2d');
+   309→    if (!ctx) return;
+   310→
+   311→    let linePos = 0;
+   312→
+   313→    const animate = () => {
+   314→      const w = canvas.width;
+   315→      const h = canvas.height;
+   316→
+   317→      ctx.clearRect(0, 0, w, h);
+   318→
+   319→      // Draw corner brackets (viewfinder)
+   320→      const bracketLen = Math.min(w, h) * 0.15;
+   321→      const bracketWidth = 3;
+   322→      const margin = 30;
+   323→      const cornerColor = '#34d399'; // emerald-400
+   324→
+   325→      ctx.strokeStyle = cornerColor;
+   326→      ctx.lineWidth = bracketWidth;
+   327→      ctx.lineCap = 'round';
+   328→
+   329→      // Top-left
+   330→      ctx.beginPath();
+   331→      ctx.moveTo(margin, margin + bracketLen);
+   332→      ctx.lineTo(margin, margin);
+   333→      ctx.lineTo(margin + bracketLen, margin);
+   334→      ctx.stroke();
+   335→
+   336→      // Top-right
+   337→      ctx.beginPath();
+   338→      ctx.moveTo(w - margin - bracketLen, margin);
+   339→      ctx.lineTo(w - margin, margin);
+   340→      ctx.lineTo(w - margin, margin + bracketLen);
+   341→      ctx.stroke();
+   342→
+   343→      // Bottom-left
+   344→      ctx.beginPath();
+   345→      ctx.moveTo(margin, h - margin - bracketLen);
+   346→      ctx.lineTo(margin, h - margin);
+   347→      ctx.lineTo(margin + bracketLen, h - margin);
+   348→      ctx.stroke();
+   349→
+   350→      // Bottom-right
+   351→      ctx.beginPath();
+   352→      ctx.moveTo(w - margin - bracketLen, h - margin);
+   353→      ctx.lineTo(w - margin, h - margin);
+   354→      ctx.lineTo(w - margin, h - margin - bracketLen);
+   355→      ctx.stroke();
+   356→
+   357→      // Draw scanning line (amber gradient)
+   358→      const lineY = margin + (linePos * (h - 2 * margin));
+   359→      const gradient = ctx.createLinearGradient(margin, lineY, w - margin, lineY);
+   360→      gradient.addColorStop(0, 'rgba(251, 191, 36, 0)');
+   361→      gradient.addColorStop(0.2, 'rgba(251, 191, 36, 0.9)');
+   362→      gradient.addColorStop(0.5, 'rgba(251, 146, 60, 1)');
+   363→      gradient.addColorStop(0.8, 'rgba(251, 191, 36, 0.9)');
+   364→      gradient.addColorStop(1, 'rgba(251, 191, 36, 0)');
+   365→
+   366→      ctx.strokeStyle = gradient;
+   367→      ctx.lineWidth = 2;
+   368→      ctx.beginPath();
+   369→      ctx.moveTo(margin, lineY);
+   370→      ctx.lineTo(w - margin, lineY);
+   371→      ctx.stroke();
+   372→
+   373→      // Glow effect
+   374→      const glowGradient = ctx.createLinearGradient(margin, lineY - 15, margin, lineY + 15);
+   375→      glowGradient.addColorStop(0, 'rgba(251, 191, 36, 0)');
+   376→      glowGradient.addColorStop(0.5, 'rgba(251, 191, 36, 0.15)');
+   377→      glowGradient.addColorStop(1, 'rgba(251, 191, 36, 0)');
+   378→      ctx.fillStyle = glowGradient;
+   379→      ctx.fillRect(margin, lineY - 15, w - 2 * margin, 30);
+   380→
+   381→      // Update scan line position
+   382→      linePos += 0.005 * scanLineDirection.current;
+   383→      if (linePos >= 1) {
+   384→        linePos = 1;
+   385→        scanLineDirection.current = -1;
+   386→      } else if (linePos <= 0) {
+   387→        linePos = 0;
+   388→        scanLineDirection.current = 1;
+   389→      }
+   390→
+   391→      animationRef.current = requestAnimationFrame(animate);
+   392→    };
+   393→
+   394→    animationRef.current = requestAnimationFrame(animate);
+   395→
+   396→    return () => {
+   397→      if (animationRef.current) {
+   398→        cancelAnimationFrame(animationRef.current);
+   399→      }
+   400→    };
+   401→  }, [cameraActive]);
+   402→
+   403→  // ==================== CAMERA EFFECTS ====================
+   404→
+   405→  useEffect(() => {
+   406→    if (mode === 'camera') {
+   407→      startCamera();
+   408→    } else {
+   409→      stopCamera();
+   410→    }
+   411→
+   412→    return () => {
+   413→      stopCamera();
+   414→    };
+   415→  }, [mode, facingMode, startCamera, stopCamera]);
+   416→
+   417→  // ==================== MANUAL ENTRY ====================
+   418→
+   419→  const handleManualSearch = useCallback(() => {
+   420→    if (manualBarcode.trim()) {
+   421→      lookupBarcode(manualBarcode);
+   422→    }
+   423→  }, [manualBarcode, lookupBarcode]);
+   424→
+   425→  const handleKeyDown = useCallback((e: React.KeyboardEvent) => {
+   426→    if (e.key === 'Enter') {
+   427→      handleManualSearch();
+   428→    }
+   429→  }, [handleManualSearch]);
+   430→
+   431→  const handlePaste = useCallback(async () => {
+   432→    try {
+   433→      const text = await navigator.clipboard.readText();
+   434→      if (text) {
+   435→        setManualBarcode(text.trim());
+   436→      }
+   437→    } catch {
+   438→      // Clipboard API not available
+   439→    }
+   440→  }, []);
+   441→
+   442→  const handleRecentClick = useCallback((barcode: string) => {
+   443→    setManualBarcode(barcode);
+   444→    setMode('manual');
+   445→    lookupBarcode(barcode);
+   446→  }, [lookupBarcode]);
+   447→
+   448→  const clearHistory = useCallback(() => {
+   449→    setRecentScans([]);
+   450→  }, []);
+   451→
+   452→  // ==================== RENDER HELPERS ====================
+   453→
+   454→  const formatTime = (timestamp: number) => {
+   455→    const d = new Date(timestamp);
+   456→    return d.toLocaleTimeString(locale === 'en' ? 'en-US' : 'ar-SA', {
+   457→      hour: '2-digit',
+   458→      minute: '2-digit',
+   459→    });
+   460→  };
+   461→
+   462→  const getStatusStyle = (status: string) => {
+   463→    return statusStyles[status] || 'bg-slate-500/10 text-slate-500 border-slate-500/20';
+   464→  };
+   465→
+   466→  // ==================== RENDER ====================
+   467→
+   468→  return (
+   469→    <div className="w-full max-w-2xl mx-auto space-y-6" dir={locale === 'en' ? 'ltr' : 'rtl'}>
+   470→      {/* Header */}
+   471→      <div className="flex items-center gap-3">
+   472→        <div className="p-2.5 rounded-xl bg-amber-500/10">
+   473→          <ScanLine className="w-6 h-6 text-amber-500" />
+   474→        </div>
+   475→        <div>
+   476→          <h1 className="text-xl font-bold text-slate-900 dark:text-white">
+   477→            {st('scanner.title')}
+   478→          </h1>
+   479→          <p className="text-sm text-slate-500 dark:text-slate-400">
+   480→            {st('scanner.subtitle')}
+   481→          </p>
+   482→        </div>
+   483→      </div>
+   484→
+   485→      {/* Mode Toggle */}
+   486→      <div className="flex gap-2 p-1 bg-slate-100 dark:bg-slate-800/60 rounded-xl">
+   487→        <button
+   488→          onClick={() => setMode('camera')}
+   489→          className={`flex-1 flex items-center justify-center gap-2 py-2.5 px-4 rounded-lg text-sm font-medium transition-all ${
+   490→            mode === 'camera'
+   491→              ? 'bg-white dark:bg-slate-700 text-amber-600 dark:text-amber-400 shadow-sm'
+   492→              : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-300'
+   493→          }`}
+   494→        >
+   495→          {cameraActive ? (
+   496→            <Camera className="w-4 h-4" />
+   497→          ) : (
+   498→            <CameraOff className="w-4 h-4" />
+   499→          )}
+   500→          {st('scanner.scan')}
+   501→        </button>
+   502→        <button
+   503→          onClick={() => setMode('manual')}
+   504→          className={`flex-1 flex items-center justify-center gap-2 py-2.5 px-4 rounded-lg text-sm font-medium transition-all ${
+   505→            mode === 'manual'
+   506→              ? 'bg-white dark:bg-slate-700 text-amber-600 dark:text-amber-400 shadow-sm'
+   507→              : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-300'
+   508→          }`}
+   509→        >
+   510→          <Type className="w-4 h-4" />
+   511→          {st('scanner.manual')}
+   512→        </button>
+   513→      </div>
+   514→
+   515→      {/* Camera Scanner Area */}
+   516→      {mode === 'camera' && (
+   517→        <Card className="overflow-hidden border-0 dark:bg-slate-800/40 bg-slate-50">
+   518→          <CardContent className="p-0">
+   519→            <div className="relative aspect-[4/3] bg-slate-950 dark:bg-slate-900 rounded-t-xl overflow-hidden">
+   520→              {/* Video Feed */}
+   521→              <video
+   522→                ref={videoRef}
+   523→                className="w-full h-full object-cover"
+   524→                playsInline
+   525→                muted
+   526→                autoPlay
+   527→              />
+   528→
+   529→              {/* Canvas Overlay */}
+   530→              <canvas
+   531→                ref={canvasRef}
+   532→                width={640}
+   533→                height={480}
+   534→                className="absolute inset-0 w-full h-full pointer-events-none"
+   535→              />
+   536→
+   537→              {/* Camera Controls Overlay */}
+   538→              <div className="absolute bottom-0 inset-x-0 bg-gradient-to-t from-black/60 to-transparent p-4">
+   539→                <div className="flex items-center justify-center gap-3">
+   540→                  <Button
+   541→                    size="sm"
+   542→                    variant="ghost"
+   543→                    className="text-white/90 hover:text-white hover:bg-white/20"
+   544→                    onClick={switchCamera}
+   545→                    aria-label={st('scanner.switchCamera')}
+   546→                  >
+   547→                    <RotateCcw className="w-4 h-4" />
+   548→                  </Button>
+   549→                  <Button
+   550→                    size="sm"
+   551→                    variant="ghost"
+   552→                    className={`text-white/90 hover:text-white hover:bg-white/20 ${torchOn ? 'bg-amber-500/30' : ''}`}
+   553→                    onClick={toggleTorch}
+   554→                    aria-label={torchOn ? st('scanner.torchOff') : st('scanner.torchOn')}
+   555→                  >
+   556→                    <Zap className={`w-4 h-4 ${torchOn ? 'text-amber-400' : ''}`} />
+   557→                  </Button>
+   558→                </div>
+   559→              </div>
+   560→
+   561→              {/* Camera not available overlay */}
+   562→              {!cameraActive && (
+   563→                <div className="absolute inset-0 flex flex-col items-center justify-center bg-slate-950/90 text-center p-6">
+   564→                  <CameraOff className="w-12 h-12 text-slate-500 mb-3" />
+   565→                  <p className="text-sm text-slate-400 max-w-xs">
+   566→                    {st('scanner.cameraUnavailable')}
+   567→                  </p>
+   568→                </div>
+   569→              )}
+   570→            </div>
+   571→          </CardContent>
+   572→        </Card>
+   573→      )}
+   574→
+   575→      {/* Manual Entry Area */}
+   576→      {mode === 'manual' && (
+   577→        <Card className="border-0 dark:bg-slate-800/40 bg-slate-50">
+   578→          <CardContent className="p-6 space-y-4">
+   579→            <div className="flex gap-3">
+   580→              <div className="flex-1 relative">
+   581→                <Input
+   582→                  value={manualBarcode}
+   583→                  onChange={(e) => setManualBarcode(e.target.value)}
+   584→                  onKeyDown={handleKeyDown}
+   585→                  placeholder={st('scanner.placeholder')}
+   586→                  className="h-14 text-lg bg-white dark:bg-slate-900/60 border-slate-200 dark:border-slate-700 focus:border-amber-500 dark:focus:border-amber-500 text-right"
+   587→                  dir="ltr"
+   588→                  autoFocus
+   589→                  disabled={isScanning}
+   590→                />
+   591→              </div>
+   592→              <Button
+   593→                onClick={handleManualSearch}
+   594→                disabled={isScanning || !manualBarcode.trim()}
+   595→                className="h-14 px-6 bg-amber-500 hover:bg-amber-600 text-white"
+   596→              >
+   597→                {isScanning ? (
+   598→                  <Loader2 className="w-5 h-5 animate-spin" />
+   599→                ) : (
+   600→                  <Search className="w-5 h-5" />
+   601→                )}
+   602→              </Button>
+   603→            </div>
+   604→            <div className="flex justify-start">
+   605→              <Button
+   606→                variant="ghost"
+   607→                size="sm"
+   608→                onClick={handlePaste}
+   609→                className="text-slate-500 dark:text-slate-400 hover:text-amber-600 dark:hover:text-amber-400"
+   610→              >
+   611→                {st('scanner.paste')}
+   612→              </Button>
+   613→            </div>
+   614→          </CardContent>
+   615→        </Card>
+   616→      )}
+   617→
+   618→      {/* Scanning Indicator */}
+   619→      {isScanning && (
+   620→        <div className="flex items-center justify-center gap-2 py-3">
+   621→          <Loader2 className="w-4 h-4 animate-spin text-amber-500" />
+   622→          <span className="text-sm text-amber-600 dark:text-amber-400 font-medium">
+   623→            {st('scanner.scanning')}
+   624→          </span>
+   625→        </div>
+   626→      )}
+   627→
+   628→      {/* Scan Result - CARGO */}
+   629→      {scanResult?.type === 'CARGO' && !isScanning && (
+   630→        <Card className="border-0 dark:bg-slate-800/40 bg-slate-50 overflow-hidden">
+   631→          <div className="h-1 bg-emerald-500" />
+   632→          <CardContent className="p-5 space-y-4">
+   633→            {/* Type Badge + Found indicator */}
+   634→            <div className="flex items-center justify-between">
+   635→              <Badge
+   636→                variant="outline"
+   637→                className="bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20 gap-1.5 px-3 py-1"
+   638→              >
+   639→                <Package className="w-3.5 h-3.5" />
+   640→                {st('scanner.cargoItem')}
+   641→              </Badge>
+   642→              <div className="flex items-center gap-1.5 text-emerald-600 dark:text-emerald-400">
+   643→                <CheckCircle2 className="w-4 h-4" />
+   644→                <span className="text-xs font-medium">{st('scanner.found')}</span>
+   645→              </div>
+   646→            </div>
+   647→
+   648→            {/* Cargo Info */}
+   649→            <div className="space-y-3">
+   650→              <div className="flex items-start justify-between">
+   651→                <div>
+   652→                  <p className="text-xs text-slate-500 dark:text-slate-400 mb-0.5">Code</p>
+   653→                  <p className="font-bold text-slate-900 dark:text-white text-lg" dir="ltr">
+   654→                    {(scanResult.data as Record<string, string>).cargoCode}
+   655→                  </p>
+   656→                </div>
+   657→                <Badge variant="outline" className={getStatusStyle((scanResult.data as Record<string, string>).status)}>
+   658→                  {translateStatus((scanResult.data as Record<string, string>).status as CargoStatus, locale as 'ar' | 'en')}
+   659→                </Badge>
+   660→              </div>
+   661→
+   662→              {(scanResult.data as Record<string, string>).description && (
+   663→                <p className="text-sm text-slate-600 dark:text-slate-300">
+   664→                  {(scanResult.data as Record<string, string>).description}
+   665→                </p>
+   666→              )}
+   667→
+   668→              <Separator className="bg-slate-200 dark:bg-slate-700/50" />
+   669→
+   670→              {/* Details Grid */}
+   671→              <div className="grid grid-cols-2 gap-3">
+   672→                {(scanResult.data as Record<string, unknown>).location && (
+   673→                  <div className="flex items-center gap-2">
+   674→                    <MapPin className="w-4 h-4 text-slate-400" />
+   675→                    <div>
+   676→                      <p className="text-[10px] text-slate-400">Location</p>
+   677→                      <p className="text-sm font-medium text-slate-700 dark:text-slate-200" dir="ltr">
+   678→                        {((scanResult.data as Record<string, { code?: string }>).location)?.code || '-'}
+   679→                      </p>
+   680→                    </div>
+   681→                  </div>
+   682→                )}
+   683→                <div className="flex items-center gap-2">
+   684→                  <Package className="w-4 h-4 text-slate-400" />
+   685→                  <div>
+   686→                    <p className="text-[10px] text-slate-400">{st('scanner.weight')}</p>
+   687→                    <p className="text-sm font-medium text-slate-700 dark:text-slate-200">
+   688→                      {(scanResult.data as Record<string, number>).weight} {st('scanner.ton')}
+   689→                    </p>
+   690→                  </div>
+   691→                </div>
+   692→                {(scanResult.data as Record<string, string>).clientName && (
+   693→                  <div className="flex items-center gap-2">
+   694→                    <Package className="w-4 h-4 text-slate-400" />
+   695→                    <div>
+   696→                      <p className="text-[10px] text-slate-400">{st('scanner.client')}</p>
+   697→                      <p className="text-sm font-medium text-slate-700 dark:text-slate-200">
+   698→                        {(scanResult.data as Record<string, string>).clientName}
+   699→                      </p>
+   700→                    </div>
+   701→                  </div>
+   702→                )}
+   703→                {(scanResult.data as Record<string, number>).storageDays !== undefined && (
+   704→                  <div className="flex items-center gap-2">
+   705→                    <History className="w-4 h-4 text-slate-400" />
+   706→                    <div>
+   707→                      <p className="text-[10px] text-slate-400">Storage</p>
+   708→                      <p className="text-sm font-medium text-slate-700 dark:text-slate-200">
+   709→                        {(scanResult.data as Record<string, number>).storageDays} {st('scanner.days')}
+   710→                      </p>
+   711→                    </div>
+   712→                  </div>
+   713→                )}
+   714→              </div>
+   715→            </div>
+   716→
+   717→            {/* Action Buttons */}
+   718→            <Separator className="bg-slate-200 dark:bg-slate-700/50" />
+   719→            <div className="flex gap-2">
+   720→              <Button
+   721→                variant="outline"
+   722→                className="flex-1 border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-700/60"
+   723→              >
+   724→                <Eye className="w-4 h-4 me-2" />
+   725→                {st('scanner.viewDetails')}
+   726→              </Button>
+   727→              <Button
+   728→                variant="outline"
+   729→                className="flex-1 border-amber-500/30 text-amber-600 dark:text-amber-400 hover:bg-amber-500/10"
+   730→              >
+   731→                <ArrowRightLeft className="w-4 h-4 me-2" />
+   732→                {st('scanner.changeStatus')}
+   733→              </Button>
+   734→            </div>
+   735→          </CardContent>
+   736→        </Card>
+   737→      )}
+   738→
+   739→      {/* Scan Result - LOCATION */}
+   740→      {scanResult?.type === 'LOCATION' && !isScanning && (
+   741→        <Card className="border-0 dark:bg-slate-800/40 bg-slate-50 overflow-hidden">
+   742→          <div className="h-1 bg-blue-500" />
+   743→          <CardContent className="p-5 space-y-4">
+   744→            {/* Type Badge + Found indicator */}
+   745→            <div className="flex items-center justify-between">
+   746→              <Badge
+   747→                variant="outline"
+   748→                className="bg-blue-500/10 text-blue-600 dark:text-blue-400 border-blue-500/20 gap-1.5 px-3 py-1"
+   749→              >
+   750→                <MapPin className="w-3.5 h-3.5" />
+   751→                {st('scanner.location')}
+   752→              </Badge>
+   753→              <div className="flex items-center gap-1.5 text-emerald-600 dark:text-emerald-400">
+   754→                <CheckCircle2 className="w-4 h-4" />
+   755→                <span className="text-xs font-medium">{st('scanner.found')}</span>
+   756→              </div>
+   757→            </div>
+   758→
+   759→            {/* Location Info */}
+   760→            <div className="space-y-3">
+   761→              <div className="flex items-start justify-between">
+   762→                <div>
+   763→                  <p className="text-xs text-slate-500 dark:text-slate-400 mb-0.5">Code</p>
+   764→                  <p className="font-bold text-slate-900 dark:text-white text-lg" dir="ltr">
+   765→                    {(scanResult.data as Record<string, string>).code}
+   766→                  </p>
+   767→                </div>
+   768→                <Badge variant="outline" className="bg-slate-500/10 text-slate-600 dark:text-slate-400 border-slate-500/20">
+   769→                  {translateLocationType((scanResult.data as Record<string, string>).type as LocationType, locale as 'ar' | 'en')}
+   770→                </Badge>
+   771→              </div>
+   772→
+   773→              {(scanResult.data as Record<string, string>).name && (
+   774→                <p className="text-sm text-slate-600 dark:text-slate-300">
+   775→                  {(scanResult.data as Record<string, string>).name}
+   776→                </p>
+   777→              )}
+   778→
+   779→              <Separator className="bg-slate-200 dark:bg-slate-700/50" />
+   780→
+   781→              {/* Details Grid */}
+   782→              <div className="grid grid-cols-2 gap-3">
+   783→                {(scanResult.data as Record<string, string>).zone && (
+   784→                  <div className="flex items-center gap-2">
+   785→                    <MapPin className="w-4 h-4 text-slate-400" />
+   786→                    <div>
+   787→                      <p className="text-[10px] text-slate-400">{st('scanner.zone')}</p>
+   788→                      <p className="text-sm font-medium text-slate-700 dark:text-slate-200">
+   789→                        {(scanResult.data as Record<string, string>).zone}
+   790→                      </p>
+   791→                    </div>
+   792→                  </div>
+   793→                )}
+   794→                <div className="flex items-center gap-2">
+   795→                  <Package className="w-4 h-4 text-slate-400" />
+   796→                  <div>
+   797→                    <p className="text-[10px] text-slate-400">{st('scanner.currentLoad')}</p>
+   798→                    <p className="text-sm font-medium text-slate-700 dark:text-slate-200">
+   799→                      {(scanResult.data as Record<string, number>).currentItems || 0} {st('scanner.items')}
+   800→                    </p>
+   801→                  </div>
+   802→                </div>
+   803→              </div>
+   804→            </div>
+   805→
+   806→            {/* Action Button */}
+   807→            <Separator className="bg-slate-200 dark:bg-slate-700/50" />
+   808→            <Button
+   809→              variant="outline"
+   810→              className="w-full border-blue-500/30 text-blue-600 dark:text-blue-400 hover:bg-blue-500/10"
+   811→            >
+   812→              <Eye className="w-4 h-4 me-2" />
+   813→              {st('scanner.viewInventory')}
+   814→            </Button>
+   815→          </CardContent>
+   816→        </Card>
+   817→      )}
+   818→
+   819→      {/* Not Found Error State */}
+   820→      {scanError && !isScanning && (
+   821→        <Card className="border-0 dark:bg-slate-800/40 bg-slate-50 overflow-hidden">
+   822→          <CardContent className="p-6">
+   823→            <div className="flex flex-col items-center text-center space-y-3">
+   824→              <div className="p-3 rounded-full bg-red-500/10">
+   825→                <XCircle className="w-8 h-8 text-red-500" />
+   826→              </div>
+   827→              <div>
+   828→                <p className="font-semibold text-slate-900 dark:text-white">
+   829→                  {st('scanner.notFound')}
+   830→                </p>
+   831→                <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
+   832→                  {scanError}
+   833→                </p>
+   834→              </div>
+   835→            </div>
+   836→          </CardContent>
+   837→        </Card>
+   838→      )}
+   839→
+   840→      {/* Recent Scans */}
+   841→      {recentScans.length > 0 && (
+   842→        <div className="space-y-3">
+   843→          <div className="flex items-center justify-between">
+   844→            <div className="flex items-center gap-2">
+   845→              <History className="w-4 h-4 text-slate-400" />
+   846→              <h3 className="text-sm font-semibold text-slate-700 dark:text-slate-200">
+   847→                {st('scanner.recentScans')}
+   848→              </h3>
+   849→              <Badge variant="secondary" className="text-xs">
+   850→                {recentScans.length}
+   851→              </Badge>
+   852→            </div>
+   853→            <Button
+   854→              variant="ghost"
+   855→              size="sm"
+   856→              onClick={clearHistory}
+   857→              className="text-slate-400 hover:text-red-500 h-7 px-2"
+   858→            >
+   859→              <Trash2 className="w-3.5 h-3.5 me-1" />
+   860→              {st('scanner.clearHistory')}
+   861→            </Button>
+   862→          </div>
+   863→
+   864→          <Card className="border-0 dark:bg-slate-800/40 bg-slate-50 overflow-hidden">
+   865→            <ScrollArea className="max-h-96">
+   866→              <div className="divide-y divide-slate-100 dark:divide-slate-700/50">
+   867→                {recentScans.map((record) => (
+   868→                  <button
+   869→                    key={`${record.barcode}-${record.timestamp}`}
+   870→                    onClick={() => handleRecentClick(record.barcode)}
+   871→                    className="w-full flex items-center justify-between px-4 py-3 hover:bg-slate-100 dark:hover:bg-slate-700/30 transition-colors text-start"
+   872→                  >
+   873→                    <div className="flex items-center gap-3 min-w-0">
+   874→                      <div className={`p-1.5 rounded-md ${
+   875→                        record.type === 'CARGO'
+   876→                          ? 'bg-emerald-500/10'
+   877→                          : record.type === 'LOCATION'
+   878→                            ? 'bg-blue-500/10'
+   879→                            : 'bg-red-500/10'
+   880→                      }`}
+   881→                      >
+   882→                        {record.type === 'CARGO' ? (
+   883→                          <Package className={`w-3.5 h-3.5 ${
+   884→                            record.type === 'CARGO' ? 'text-emerald-500' : 'text-blue-500'
+   885→                          }`} />
+   886→                        ) : record.type === 'LOCATION' ? (
+   887→                          <MapPin className="w-3.5 h-3.5 text-blue-500" />
+   888→                        ) : (
+   889→                          <AlertTriangle className="w-3.5 h-3.5 text-red-500" />
+   890→                        )}
+   891→                      </div>
+   892→                      <div className="min-w-0">
+   893→                        <p className="text-sm font-medium text-slate-800 dark:text-slate-200 truncate" dir="ltr">
+   894→                          {record.barcode}
+   895→                        </p>
+   896→                        <p className="text-[11px] text-slate-400">
+   897→                          {record.type === 'CARGO'
+   898→                            ? st('scanner.cargoItem')
+   899→                            : record.type === 'LOCATION'
+   900→                              ? st('scanner.location')
+   901→                              : st('scanner.notFound')
+   902→                          }
+   903→                        </p>
+   904→                      </div>
+   905→                    </div>
+   906→                    <div className="flex items-center gap-2 shrink-0">
+   907→                      <span className="text-[11px] text-slate-400">
+   908→                        {formatTime(record.timestamp)}
+   909→                      </span>
+   910→                      <ChevronRight className={`w-4 h-4 text-slate-300 dark:text-slate-600 ${locale === 'en' ? '' : 'rotate-180'}`} />
+   911→                    </div>
+   912→                  </button>
+   913→                ))}
+   914→              </div>
+   915→            </ScrollArea>
+   916→          </Card>
+   917→        </div>
+   918→      )}
+   919→    </div>
+   920→  );
+   921→}
+   922→

@@ -6,6 +6,8 @@ export async function GET() {
   try {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
+    const thirtyDaysAgo = new Date(today);
+    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
 
     const [
       totalCargo,
@@ -18,71 +20,34 @@ export async function GET() {
       movementsToday,
       recentMovements,
       allProjects,
+      weightByCategoryRaw,
+      movementsLast30Days,
     ] = await Promise.all([
-      // Total cargo count
       db.cargoItem.count(),
-
-      // Cargo count by status
-      db.cargoItem.groupBy({
-        by: ['status'],
-        _count: { id: true },
-      }),
-
-      // Cargo count by lift category
-      db.cargoItem.groupBy({
-        by: ['liftCategory'],
-        _count: { id: true },
-      }),
-
-      // Total weight and volume
-      db.cargoItem.aggregate({
-        _sum: { weight: true, volume: true },
-      }),
-
-      // Active projects (not COMPLETED or SHIPPED)
-      db.project.count({
-        where: {
-          status: { notIn: ['COMPLETED', 'SHIPPED'] },
-        },
-      }),
-
-      // Pending dispatch (IN_YARD or IN_WAREHOUSE)
-      db.cargoItem.count({
-        where: {
-          status: { in: ['IN_YARD', 'IN_WAREHOUSE'] },
-        },
-      }),
-
-      // Equipment available count
-      db.equipment.count({
-        where: { status: 'AVAILABLE' },
-      }),
-
-      // Movements today
-      db.movement.count({
-        where: { createdAt: { gte: today } },
-      }),
-
-      // Recent movements (last 10)
+      db.cargoItem.groupBy({ by: ['status'], _count: { id: true } }),
+      db.cargoItem.groupBy({ by: ['liftCategory'], _count: { id: true } }),
+      db.cargoItem.aggregate({ _sum: { weight: true, volume: true } }),
+      db.project.count({ where: { status: { notIn: ['COMPLETED', 'SHIPPED'] } } }),
+      db.cargoItem.count({ where: { status: { in: ['IN_YARD', 'IN_WAREHOUSE'] } } }),
+      db.equipment.count({ where: { status: 'AVAILABLE' } }),
+      db.movement.count({ where: { createdAt: { gte: today } } }),
       db.movement.findMany({
         take: 10,
-        include: {
-          cargoItem: true,
-          fromLocation: true,
-          toLocation: true,
-        },
+        include: { cargoItem: true, fromLocation: true, toLocation: true },
         orderBy: { createdAt: 'desc' },
       }),
-
-      // All projects with cargo counts for progress
       db.project.findMany({
-        include: {
-          _count: { select: { cargoItems: true } },
-        },
-        where: {
-          status: { notIn: ['COMPLETED', 'SHIPPED'] },
-        },
+        include: { _count: { select: { cargoItems: true } } },
+        where: { status: { notIn: ['COMPLETED', 'SHIPPED'] } },
         orderBy: { createdAt: 'desc' },
+      }),
+      db.cargoItem.groupBy({
+        by: ['liftCategory'],
+        _sum: { weight: true },
+      }),
+      db.movement.findMany({
+        where: { createdAt: { gte: thirtyDaysAgo } },
+        select: { type: true, createdAt: true },
       }),
     ]);
 
@@ -97,6 +62,29 @@ export async function GET() {
       category: c.liftCategory,
       count: c._count.id,
     }));
+
+    // Build weight by category
+    const weightByCategory = weightByCategoryRaw.map((c) => ({
+      category: c.liftCategory,
+      weight: c._sum.weight || 0,
+    }));
+
+    // Build movements by day for the last 30 days
+    const dayMap = new Map<string, { date: string; RECEIVE: number; MOVE: number; DISPATCH: number }>();
+    for (let i = 29; i >= 0; i--) {
+      const d = new Date(today);
+      d.setDate(d.getDate() - i);
+      const key = d.toISOString().split('T')[0];
+      dayMap.set(key, { date: key, RECEIVE: 0, MOVE: 0, DISPATCH: 0 });
+    }
+    for (const m of movementsLast30Days) {
+      const key = m.createdAt.toISOString().split('T')[0];
+      const entry = dayMap.get(key);
+      if (entry && m.type in entry) {
+        (entry as Record<string, number>)[m.type] += 1;
+      }
+    }
+    const movementsByDay = Array.from(dayMap.values());
 
     // Count specific statuses
     const inYard = statusBreakdown.find((s) => s.status === 'IN_YARD')?.count || 0;
@@ -130,6 +118,8 @@ export async function GET() {
       oversizeCount,
       statusBreakdown,
       categoryBreakdown,
+      weightByCategory,
+      movementsByDay,
       recentMovements,
       projectProgress,
     };

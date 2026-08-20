@@ -1,0 +1,922 @@
+     1→'use client';
+     2→
+     3→import { useEffect, useState, useCallback, useRef } from 'react';
+     4→import {
+     5→  Plus, Search, Filter, Download, ArrowLeftRight, Truck, Search as SearchIcon,
+     6→  Package, Warehouse, MapPin, Building2, Container, ArrowRight, User, Wrench,
+     7→  Clock, Activity, Radio, Eye, FileText, Weight, Tag, ChevronLeft, RotateCcw,
+     8→} from 'lucide-react';
+     9→import { Card, CardContent } from '@/components/ui/card';
+    10→import { Button } from '@/components/ui/button';
+    11→import { Input } from '@/components/ui/input';
+    12→import { Label } from '@/components/ui/label';
+    13→import { Textarea } from '@/components/ui/textarea';
+    14→import { Badge } from '@/components/ui/badge';
+    15→import { Skeleton } from '@/components/ui/skeleton';
+    16→import { Switch } from '@/components/ui/switch';
+    17→import { Separator } from '@/components/ui/separator';
+    18→import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+    19→import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/components/ui/dialog';
+    20→import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
+    21→import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+    22→import { toast } from 'sonner';
+    23→import { useTranslation, translateMovementType, translateCategory, translateStatus } from '@/lib/translations';
+    24→import type { Movement, MovementType, CargoItem, Location, Equipment, LiftCategory } from '@/types/wms';
+    25→
+    26→// ==================== CONSTANTS ====================
+    27→
+    28→const movementTypes: MovementType[] = ['RECEIVE', 'MOVE', 'DISPATCH', 'INSPECT'];
+    29→
+    30→const typeStyles: Record<MovementType, string> = {
+    31→  RECEIVE: 'bg-emerald-500/10 text-emerald-500 dark:text-emerald-400 border-emerald-500/20',
+    32→  MOVE: 'bg-cyan-500/10 text-cyan-500 dark:text-cyan-400 border-cyan-500/20',
+    33→  DISPATCH: 'bg-orange-500/10 text-orange-500 dark:text-orange-400 border-orange-500/20',
+    34→  INSPECT: 'bg-purple-500/10 text-purple-500 dark:text-purple-400 border-purple-500/20',
+    35→};
+    36→
+    37→const typeDotColors: Record<MovementType, string> = {
+    38→  RECEIVE: 'bg-emerald-500',
+    39→  MOVE: 'bg-cyan-500',
+    40→  DISPATCH: 'bg-orange-500',
+    41→  INSPECT: 'bg-purple-500',
+    42→};
+    43→
+    44→const emptyForm = {
+    45→  cargoItemId: '', type: '' as string, fromLocationId: '', toLocationId: '',
+    46→  equipmentUsed: '', liftMethod: '', operatorName: '', actualWeight: '', remarks: '',
+    47→};
+    48→
+    49→// ==================== ICONS ====================
+    50→
+    51→function TypeIcon({ type, className = 'h-3.5 w-3.5' }: { type: MovementType; className?: string }) {
+    52→  switch (type) {
+    53→    case 'RECEIVE': return <Download className={className} />;
+    54→    case 'MOVE': return <ArrowLeftRight className={className} />;
+    55→    case 'DISPATCH': return <Truck className={className} />;
+    56→    case 'INSPECT': return <SearchIcon className={className} />;
+    57→  }
+    58→}
+    59→
+    60→function LocationTypeIcon({ type, className = 'h-5 w-5' }: { type: string; className?: string }) {
+    61→  switch (type) {
+    62→    case 'YARD': return <Container className={className} />;
+    63→    case 'WAREHOUSE': return <Warehouse className={className} />;
+    64→    case 'STAGING': return <Building2 className={className} />;
+    65→    case 'BERTH': return <MapPin className={className} />;
+    66→    default: return <MapPin className={className} />;
+    67→  }
+    68→}
+    69→
+    70→// ==================== RELATIVE TIME ====================
+    71→
+    72→function relativeTime(dateStr: string): string {
+    73→  const now = Date.now();
+    74→  const then = new Date(dateStr).getTime();
+    75→  const diffMs = now - then;
+    76→  const diffMin = Math.floor(diffMs / 60000);
+    77→  const diffHr = Math.floor(diffMs / 3600000);
+    78→  const diffDay = Math.floor(diffMs / 86400000);
+    79→  if (diffMin < 1) return 'just now';
+    80→  if (diffMin < 60) return `${diffMin}m ago`;
+    81→  if (diffHr < 24) return `${diffHr}h ago`;
+    82→  if (diffDay < 7) return `${diffDay}d ago`;
+    83→  return new Date(dateStr).toLocaleDateString();
+    84→}
+    85→
+    86→// ==================== STAT CARD ====================
+    87→
+    88→function StatCard({ icon: Icon, label, value, accent }: {
+    89→  icon: React.ElementType; label: string; value: number; accent: string;
+    90→}) {
+    91→  return (
+    92→    <Card className="dark:border-slate-800 border-slate-200 dark:bg-slate-900/50 bg-white transition-all duration-200 hover:shadow-md">
+    93→      <CardContent className="p-4 flex items-center gap-3">
+    94→        <div className={`flex items-center justify-center h-10 w-10 rounded-lg ${accent} transition-all duration-200`}>
+    95→          <Icon className="h-5 w-5" />
+    96→        </div>
+    97→        <div>
+    98→          <p className="text-2xl font-bold dark:text-slate-100 text-slate-900 leading-none">{value}</p>
+    99→          <p className="text-xs dark:text-slate-400 text-slate-500 mt-0.5">{label}</p>
+   100→        </div>
+   101→      </CardContent>
+   102→    </Card>
+   103→  );
+   104→}
+   105→
+   106→// ==================== MAIN COMPONENT ====================
+   107→
+   108→export function MovementsPage() {
+   109→  const { t } = useTranslation();
+   110→
+   111→  // State
+   112→  const [movements, setMovements] = useState<Movement[]>([]);
+   113→  const [loading, setLoading] = useState(true);
+   114→  const [search, setSearch] = useState('');
+   115→  const [typeFilter, setTypeFilter] = useState('');
+   116→  const [dateFrom, setDateFrom] = useState('');
+   117→  const [dateTo, setDateTo] = useState('');
+   118→  const [showAdd, setShowAdd] = useState(false);
+   119→  const [form, setForm] = useState(emptyForm);
+   120→  const [submitting, setSubmitting] = useState(false);
+   121→  const [cargoItems, setCargoItems] = useState<CargoItem[]>([]);
+   122→  const [locations, setLocations] = useState<Location[]>([]);
+   123→  const [equipment, setEquipment] = useState<Equipment[]>([]);
+   124→
+   125→  // Detail sheet state
+   126→  const [selectedMovement, setSelectedMovement] = useState<Movement | null>(null);
+   127→  const [detailCargo, setDetailCargo] = useState<CargoItem | null>(null);
+   128→  const [cargoTimeline, setCargoTimeline] = useState<Movement[]>([]);
+   129→  const [detailLoading, setDetailLoading] = useState(false);
+   130→
+   131→  // Stats
+   132→  const [stats, setStats] = useState({ today: 0, week: 0, receive: 0, dispatch: 0 });
+   133→
+   134→  // Auto-refresh
+   135→  const [autoRefresh, setAutoRefresh] = useState(false);
+   136→  const refreshRef = useRef<ReturnType<typeof setInterval> | null>(null);
+   137→
+   138→  // Style constants
+   139→  const ic = 'dark:border-slate-700 border-slate-300 dark:bg-slate-800 bg-slate-50 dark:text-slate-200 text-slate-900 mt-1';
+   140→  const sc = 'dark:border-slate-700 border-slate-200 dark:bg-slate-800 bg-white';
+   141→  const si = 'dark:text-slate-200 text-slate-700 dark:focus:bg-slate-700 focus:bg-slate-100';
+   142→  const rb = 'dark:border-slate-800 border-slate-200';
+   143→  const rh = 'dark:hover:bg-slate-800/50 hover:bg-slate-50';
+   144→  const th = 'text-xs dark:text-slate-500 text-slate-400';
+   145→  const tc = 'py-3 text-xs';
+   146→
+   147→  // ==================== DATA FETCHING ====================
+   148→
+   149→  const fetchMovements = useCallback(async () => {
+   150→    setLoading(true);
+   151→    const params = new URLSearchParams({
+   152→      limit: '100',
+   153→      ...(search && { search }),
+   154→      ...(typeFilter && { type: typeFilter }),
+   155→      ...(dateFrom && { dateFrom }),
+   156→      ...(dateTo && { dateTo }),
+   157→    });
+   158→    try {
+   159→      const res = await fetch(`/api/movements?${params}`);
+   160→      const data = await res.json();
+   161→      if (!res.ok) { setMovements([]); return; }
+   162→      const items: Movement[] = Array.isArray(data.items) ? data.items : [];
+   163→      setMovements(items);
+   164→      // Compute stats from items
+   165→      const now = new Date();
+   166→      const startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate()).toISOString();
+   167→      const startOfWeek = new Date(now); startOfWeek.setDate(now.getDate() - now.getDay());
+   168→      startOfWeek.setHours(0, 0, 0, 0);
+   169→      const startOfWeekISO = startOfWeek.toISOString();
+   170→      setStats({
+   171→        today: items.filter(m => m.createdAt >= startOfDay).length,
+   172→        week: items.filter(m => m.createdAt >= startOfWeekISO).length,
+   173→        receive: items.filter(m => m.type === 'RECEIVE').length,
+   174→        dispatch: items.filter(m => m.type === 'DISPATCH').length,
+   175→      });
+   176→    } catch {
+   177→      toast.error(t('movements.toast.fetchFailed'));
+   178→    } finally {
+   179→      setLoading(false);
+   180→    }
+   181→  }, [search, typeFilter, dateFrom, dateTo, t]);
+   182→
+   183→  const fetchLookups = useCallback(async () => {
+   184→    try {
+   185→      const [cr, lr, er] = await Promise.all([
+   186→        fetch('/api/cargo?limit=200'),
+   187→        fetch('/api/locations?limit=100'),
+   188→        fetch('/api/equipment?limit=100&status=AVAILABLE'),
+   189→      ]);
+   190→      setCargoItems((await cr.json()).items || []);
+   191→      setLocations((await lr.json()).items || []);
+   192→      setEquipment((await er.json()).items || []);
+   193→    } catch { /* silent */ }
+   194→  }, []);
+   195→
+   196→  const fetchDetailData = useCallback(async (movement: Movement) => {
+   197→    setDetailLoading(true);
+   198→    try {
+   199→      const cargoRes = await fetch(`/api/cargo/${movement.cargoItemId}`);
+   200→      if (cargoRes.ok) {
+   201→        const cargoData = await cargoRes.json();
+   202→        setDetailCargo(cargoData);
+   203→      }
+   204→      // Fetch all movements for this cargo item to build timeline
+   205→      const movRes = await fetch(`/api/movements?limit=100&search=${encodeURIComponent(movement.cargoCode)}`);
+   206→      if (movRes.ok) {
+   207→        const movData = await movRes.json();
+   208→        const cargoMovements = (movData.items || []).filter((m: Movement) => m.cargoItemId === movement.cargoItemId);
+   209→        cargoMovements.sort((a: Movement, b: Movement) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+   210→        setCargoTimeline(cargoMovements);
+   211→      }
+   212→    } catch { /* silent */ }
+   213→    finally { setDetailLoading(false); }
+   214→  }, []);
+   215→
+   216→  // ==================== EFFECTS ====================
+   217→
+   218→  useEffect(() => { fetchMovements(); }, [fetchMovements]);
+   219→  useEffect(() => { fetchLookups(); }, [fetchLookups]);
+   220→
+   221→  // Auto-refresh
+   222→  useEffect(() => {
+   223→    if (autoRefresh) {
+   224→      refreshRef.current = setInterval(fetchMovements, 10000);
+   225→    } else {
+   226→      if (refreshRef.current) clearInterval(refreshRef.current);
+   227→    }
+   228→    return () => { if (refreshRef.current) clearInterval(refreshRef.current); };
+   229→  }, [autoRefresh, fetchMovements]);
+   230→
+   231→  // ==================== HANDLERS ====================
+   232→
+   233→  const handleRowClick = (movement: Movement) => {
+   234→    setSelectedMovement(movement);
+   235→    fetchDetailData(movement);
+   236→  };
+   237→
+   238→  const handleSubmit = async () => {
+   239→    setSubmitting(true);
+   240→    try {
+   241→      const res = await fetch('/api/movements', {
+   242→        method: 'POST',
+   243→        headers: { 'Content-Type': 'application/json' },
+   244→        body: JSON.stringify({
+   245→          cargoItemId: form.cargoItemId, type: form.type,
+   246→          fromLocationId: form.fromLocationId !== 'NONE' ? form.fromLocationId : null,
+   247→          toLocationId: form.toLocationId !== 'NONE' ? form.toLocationId : null,
+   248→          equipmentUsed: form.equipmentUsed !== 'NONE' ? form.equipmentUsed : null,
+   249→          liftMethod: form.liftMethod || null,
+   250→          operatorName: form.operatorName || null,
+   251→          actualWeight: form.actualWeight ? parseFloat(form.actualWeight) : null,
+   252→          remarks: form.remarks || null,
+   253→        }),
+   254→      });
+   255→      if (!res.ok) {
+   256→        const err = await res.json();
+   257→        throw new Error(err.error || 'Failed');
+   258→      }
+   259→      toast.success(t('movements.toast.recorded'));
+   260→      setShowAdd(false);
+   261→      setForm(emptyForm);
+   262→      fetchMovements();
+   263→    } catch (e: unknown) {
+   264→      toast.error(e instanceof Error ? e.message : t('movements.toast.recordFailed'));
+   265→    } finally {
+   266→      setSubmitting(false);
+   267→    }
+   268→  };
+   269→
+   270→  // ==================== RENDER: STATS BAR ====================
+   271→
+   272→  const renderStatsBar = () => (
+   273→    <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+   274→      <StatCard icon={Activity} label={`${t('movements.stats.today')} — ${t('movements.stats.movements')}`} value={stats.today} accent="bg-amber-500/10 text-amber-500" />
+   275→      <StatCard icon={Clock} label={`${t('movements.stats.thisWeek')} — ${t('movements.stats.movements')}`} value={stats.week} accent="bg-cyan-500/10 text-cyan-500" />
+   276→      <StatCard icon={Download} label={t('movements.stats.received')} value={stats.receive} accent="bg-emerald-500/10 text-emerald-500" />
+   277→      <StatCard icon={Truck} label={t('movements.stats.dispatched')} value={stats.dispatch} accent="bg-orange-500/10 text-orange-500" />
+   278→    </div>
+   279→  );
+   280→
+   281→  // ==================== RENDER: PATH VISUALIZATION ====================
+   282→
+   283→  const renderPathVisualization = (m: Movement) => {
+   284→    const from = m.fromLocation;
+   285→    const to = m.toLocation;
+   286→    return (
+   287→      <div className="rounded-xl border dark:border-slate-800 border-slate-200 dark:bg-slate-900/30 bg-slate-50/50 p-5">
+   288→        <h3 className="text-xs font-semibold uppercase tracking-wider dark:text-slate-400 text-slate-500 mb-4">{t('detail.movement.path')}</h3>
+   289→        <div className="flex items-center gap-3 justify-center">
+   290→          {/* From card (right side in RTL, displayed first in code) */}
+   291→          <div className="flex-1 max-w-[180px]">
+   292→            <div className={`rounded-lg border p-3 transition-all duration-200 ${from
+   293→              ? 'dark:border-emerald-500/30 border-emerald-200 dark:bg-emerald-500/5 bg-emerald-50/50'
+   294→              : 'dark:border-slate-700 border-slate-200 dark:bg-slate-800/50 bg-white'
+   295→            }`}>
+   296→              <p className="text-[10px] uppercase tracking-wider dark:text-slate-500 text-slate-400 mb-1.5">{t('detail.movement.fromLocation')}</p>
+   297→              {from ? (
+   298→                <div className="flex items-center gap-2">
+   299→                  <div className="flex items-center justify-center h-8 w-8 rounded-md bg-emerald-500/10">
+   300→                    <LocationTypeIcon type={from.type} className="h-4 w-4 text-emerald-500" />
+   301→                  </div>
+   302→                  <div className="min-w-0">
+   303→                    <p className="text-sm font-semibold dark:text-slate-100 text-slate-900 truncate font-mono">{from.code}</p>
+   304→                    <p className="text-[10px] dark:text-slate-500 text-slate-400 truncate">{from.name}</p>
+   305→                  </div>
+   306→                </div>
+   307→              ) : (
+   308→                <p className="text-xs dark:text-slate-600 text-slate-400 italic">{t('detail.movement.noLocation')}</p>
+   309→              )}
+   310→            </div>
+   311→          </div>
+   312→
+   313→          {/* Arrow */}
+   314→          <div className="flex flex-col items-center gap-1 flex-shrink-0 px-2">
+   315→            <div className="flex items-center">
+   316→              <div className="h-px w-6 bg-gradient-to-r from-emerald-500/50 to-orange-500/50" />
+   317→              <div className="h-8 w-8 rounded-full bg-amber-500/10 flex items-center justify-center animate-pulse">
+   318→                <ArrowRight className="h-4 w-4 text-amber-500" />
+   319→              </div>
+   320→              <div className="h-px w-6 bg-gradient-to-r from-orange-500/50 to-emerald-500/50" />
+   321→            </div>
+   322→            <TypeIcon type={m.type} className="h-3.5 w-3.5 text-amber-500" />
+   323→          </div>
+   324→
+   325→          {/* To card */}
+   326→          <div className="flex-1 max-w-[180px]">
+   327→            <div className={`rounded-lg border p-3 transition-all duration-200 ${to
+   328→              ? 'dark:border-orange-500/30 border-orange-200 dark:bg-orange-500/5 bg-orange-50/50'
+   329→              : 'dark:border-slate-700 border-slate-200 dark:bg-slate-800/50 bg-white'
+   330→            }`}>
+   331→              <p className="text-[10px] uppercase tracking-wider dark:text-slate-500 text-slate-400 mb-1.5">{t('detail.movement.toLocation')}</p>
+   332→              {to ? (
+   333→                <div className="flex items-center gap-2">
+   334→                  <div className="flex items-center justify-center h-8 w-8 rounded-md bg-orange-500/10">
+   335→                    <LocationTypeIcon type={to.type} className="h-4 w-4 text-orange-500" />
+   336→                  </div>
+   337→                  <div className="min-w-0">
+   338→                    <p className="text-sm font-semibold dark:text-slate-100 text-slate-900 truncate font-mono">{to.code}</p>
+   339→                    <p className="text-[10px] dark:text-slate-500 text-slate-400 truncate">{to.name}</p>
+   340→                  </div>
+   341→                </div>
+   342→              ) : (
+   343→                <p className="text-xs dark:text-slate-600 text-slate-400 italic">{t('detail.movement.noLocation')}</p>
+   344→              )}
+   345→            </div>
+   346→          </div>
+   347→        </div>
+   348→      </div>
+   349→    );
+   350→  };
+   351→
+   352→  // ==================== RENDER: CARGO INFO CARD ====================
+   353→
+   354→  const renderCargoInfoCard = (m: Movement) => {
+   355→    const c = detailCargo;
+   356→    if (!c) return (
+   357→      <div className="rounded-xl border dark:border-slate-800 border-slate-200 dark:bg-slate-900/30 bg-slate-50/50 p-5">
+   358→        <h3 className="text-xs font-semibold uppercase tracking-wider dark:text-slate-400 text-slate-500 mb-3">{t('detail.movement.cargoInfo')}</h3>
+   359→        <div className="space-y-2.5">
+   360→          <div className="flex items-center gap-2">
+   361→            <Package className="h-4 w-4 text-amber-500" />
+   362→            <span className="font-mono text-sm font-medium text-amber-500">{m.cargoCode}</span>
+   363→          </div>
+   364→          <Skeleton className="h-4 w-full dark:bg-slate-800 bg-slate-100" />
+   365→          <Skeleton className="h-4 w-3/4 dark:bg-slate-800 bg-slate-100" />
+   366→        </div>
+   367→      </div>
+   368→    );
+   369→    return (
+   370→      <div className="rounded-xl border dark:border-slate-800 border-slate-200 dark:bg-slate-900/30 bg-slate-50/50 p-5">
+   371→        <h3 className="text-xs font-semibold uppercase tracking-wider dark:text-slate-400 text-slate-500 mb-3">{t('detail.movement.cargoInfo')}</h3>
+   372→        <div className="space-y-3">
+   373→          <div className="flex items-center justify-between">
+   374→            <div className="flex items-center gap-2">
+   375→              <div className="flex items-center justify-center h-8 w-8 rounded-lg bg-amber-500/10">
+   376→                <Package className="h-4 w-4 text-amber-500" />
+   377→              </div>
+   378→              <span className="font-mono text-sm font-semibold text-amber-500 dark:text-amber-400">{c.cargoCode}</span>
+   379→            </div>
+   380→            <Badge variant="outline" className="text-[10px] bg-emerald-500/10 text-emerald-500 dark:text-emerald-400 border-emerald-500/20">{translateStatus(c.status)}</Badge>
+   381→          </div>
+   382→          <p className="text-sm dark:text-slate-300 text-slate-700 leading-relaxed">{c.description}</p>
+   383→          <div className="grid grid-cols-2 gap-3">
+   384→            <div className="flex items-center gap-2">
+   385→              <div className="flex items-center justify-center h-6 w-6 rounded bg-cyan-500/10">
+   386→                <Weight className="h-3.5 w-3.5 text-cyan-500" />
+   387→              </div>
+   388→              <div>
+   389→                <p className="text-[10px] dark:text-slate-500 text-slate-400">{t('detail.movement.cargoWeight')}</p>
+   390→                <p className="text-xs font-semibold dark:text-slate-200 text-slate-800">{c.weight.toLocaleString()} {t('detail.cargo.weightUnit')}</p>
+   391→              </div>
+   392→            </div>
+   393→            <div className="flex items-center gap-2">
+   394→              <div className="flex items-center justify-center h-6 w-6 rounded bg-purple-500/10">
+   395→                <Tag className="h-3.5 w-3.5 text-purple-500" />
+   396→              </div>
+   397→              <div>
+   398→                <p className="text-[10px] dark:text-slate-500 text-slate-400">{t('detail.movement.cargoCategory')}</p>
+   399→                <p className="text-xs font-semibold dark:text-slate-200 text-slate-800">{translateCategory(c.liftCategory as LiftCategory)}</p>
+   400→              </div>
+   401→            </div>
+   402→          </div>
+   403→        </div>
+   404→      </div>
+   405→    );
+   406→  };
+   407→
+   408→  // ==================== RENDER: MOVEMENT DETAILS CARD ====================
+   409→
+   410→  const renderMovementDetailsCard = (m: Movement) => (
+   411→    <div className="rounded-xl border dark:border-slate-800 border-slate-200 dark:bg-slate-900/30 bg-slate-50/50 p-5">
+   412→      <h3 className="text-xs font-semibold uppercase tracking-wider dark:text-slate-400 text-slate-500 mb-3">{t('detail.movement.movementDetails')}</h3>
+   413→      <div className="space-y-3">
+   414→        <div className="flex items-center gap-3">
+   415→          <div className="flex items-center justify-center h-8 w-8 rounded-lg bg-blue-500/10">
+   416→            <User className="h-4 w-4 text-blue-500" />
+   417→          </div>
+   418→          <div>
+   419→            <p className="text-[10px] dark:text-slate-500 text-slate-400">{t('detail.movement.operator')}</p>
+   420→            <p className="text-sm font-medium dark:text-slate-200 text-slate-800">{m.operatorName || '—'}</p>
+   421→          </div>
+   422→        </div>
+   423→        <div className="flex items-center gap-3">
+   424→          <div className="flex items-center justify-center h-8 w-8 rounded-lg bg-amber-500/10">
+   425→            <Wrench className="h-4 w-4 text-amber-500" />
+   426→          </div>
+   427→          <div>
+   428→            <p className="text-[10px] dark:text-slate-500 text-slate-400">{t('detail.movement.equipment')}</p>
+   429→            <p className="text-sm font-medium dark:text-slate-200 text-slate-800">{m.equipmentUsed || '—'}</p>
+   430→          </div>
+   431→        </div>
+   432→        {m.actualWeight && (
+   433→          <div className="flex items-center gap-3">
+   434→            <div className="flex items-center justify-center h-8 w-8 rounded-lg bg-cyan-500/10">
+   435→              <Weight className="h-4 w-4 text-cyan-500" />
+   436→            </div>
+   437→            <div>
+   438→              <p className="text-[10px] dark:text-slate-500 text-slate-400">{t('detail.movement.actualWeight')}</p>
+   439→              <p className="text-sm font-medium dark:text-slate-200 text-slate-800">{m.actualWeight.toLocaleString()} {t('detail.cargo.weightUnit')}</p>
+   440→            </div>
+   441→          </div>
+   442→        )}
+   443→        {m.liftMethod && (
+   444→          <div className="flex items-center gap-3">
+   445→            <div className="flex items-center justify-center h-8 w-8 rounded-lg bg-purple-500/10">
+   446→              <ArrowLeftRight className="h-4 w-4 text-purple-500" />
+   447→            </div>
+   448→            <div>
+   449→              <p className="text-[10px] dark:text-slate-500 text-slate-400">{t('detail.movement.liftMethod')}</p>
+   450→              <p className="text-sm font-medium dark:text-slate-200 text-slate-800">{m.liftMethod}</p>
+   451→            </div>
+   452→          </div>
+   453→        )}
+   454→        {m.remarks && (
+   455→          <div className="mt-2 pt-3 border-t dark:border-slate-800 border-slate-200">
+   456→            <div className="flex items-center gap-2 mb-1.5">
+   457→              <FileText className="h-3.5 w-3.5 dark:text-slate-500 text-slate-400" />
+   458→              <p className="text-[10px] dark:text-slate-500 text-slate-400">{t('detail.movement.remarks')}</p>
+   459→            </div>
+   460→            <p className="text-sm dark:text-slate-300 text-slate-700 leading-relaxed bg-slate-100/50 dark:bg-slate-800/50 rounded-lg p-2.5">{m.remarks}</p>
+   461→          </div>
+   462→        )}
+   463→      </div>
+   464→    </div>
+   465→  );
+   466→
+   467→  // ==================== RENDER: FULL TIMELINE ====================
+   468→
+   469→  const renderFullTimeline = () => {
+   470→    if (!Array.isArray(cargoTimeline) || cargoTimeline.length === 0) return (
+   471→      <div className="rounded-xl border dark:border-slate-800 border-slate-200 dark:bg-slate-900/30 bg-slate-50/50 p-5">
+   472→        <h3 className="text-xs font-semibold uppercase tracking-wider dark:text-slate-400 text-slate-500 mb-3">{t('detail.movement.fullTimeline')}</h3>
+   473→        <p className="text-sm dark:text-slate-500 text-slate-400 text-center py-6">{t('detail.movement.noTimeline')}</p>
+   474→      </div>
+   475→    );
+   476→    return (
+   477→      <div className="rounded-xl border dark:border-slate-800 border-slate-200 dark:bg-slate-900/30 bg-slate-50/50 p-5">
+   478→        <h3 className="text-xs font-semibold uppercase tracking-wider dark:text-slate-400 text-slate-500 mb-4">{t('detail.movement.fullTimeline')}</h3>
+   479→        <div className="relative space-y-0 max-h-72 overflow-y-auto">
+   480→          {cargoTimeline.map((tm, idx) => {
+   481→            const isCurrent = selectedMovement && tm.id === selectedMovement.id;
+   482→            return (
+   483→              <div key={tm.id} className="flex gap-3 relative">
+   484→                {/* Line + dot */}
+   485→                <div className="flex flex-col items-center flex-shrink-0">
+   486→                  <div className={`h-3 w-3 rounded-full border-2 transition-all duration-200 ${
+   487→                    isCurrent
+   488→                      ? 'bg-amber-500 border-amber-500 ring-4 ring-amber-500/20'
+   489→                      : typeDotColors[tm.type] + ' border-transparent'
+   490→                  }`} />
+   491→                  {Array.isArray(cargoTimeline) && idx < cargoTimeline.length - 1 && (
+   492→                    <div className={`w-0.5 h-full min-h-[24px] ${
+   493→                      isCurrent ? 'bg-amber-500/30' : 'dark:bg-slate-800 bg-slate-200'
+   494→                    }`} />
+   495→                  )}
+   496→                </div>
+   497→                {/* Content */}
+   498→                <div className={`pb-4 flex-1 min-w-0 ${isCurrent ? '' : 'opacity-60'}`}>
+   499→                  <div className="flex items-center gap-2 flex-wrap">
+   500→                    <Badge variant="outline" className={`text-[10px] ${typeStyles[tm.type]}`}>
+   501→                      <TypeIcon type={tm.type} className="h-3 w-3 mr-1" />
+   502→                      {translateMovementType(tm.type)}
+   503→                    </Badge>
+   504→                    <span className="text-[10px] dark:text-slate-500 text-slate-400">{relativeTime(tm.createdAt)}</span>
+   505→                  </div>
+   506→                  <div className="flex items-center gap-1.5 mt-1 text-xs dark:text-slate-400 text-slate-500">
+   507→                    {tm.fromLocation && <span className="font-mono">{tm.fromLocation.code}</span>}
+   508→                    {tm.fromLocation && tm.toLocation && <ChevronLeft className="h-3 w-3" />}
+   509→                    {tm.toLocation && <span className="font-mono">{tm.toLocation.code}</span>}
+   510→                  </div>
+   511→                  {tm.operatorName && (
+   512→                    <p className="text-[10px] dark:text-slate-600 text-slate-400 mt-0.5">{tm.operatorName}</p>
+   513→                  )}
+   514→                </div>
+   515→              </div>
+   516→            );
+   517→          })}
+   518→        </div>
+   519→      </div>
+   520→    );
+   521→  };
+   522→
+   523→  // ==================== RENDER: DETAIL SHEET ====================
+   524→
+   525→  const renderDetailSheet = () => {
+   526→    if (!selectedMovement) return null;
+   527→    const m = selectedMovement;
+   528→    return (
+   529→      <Sheet open={!!selectedMovement} onOpenChange={(open) => { if (!open) { setSelectedMovement(null); setDetailCargo(null); setCargoTimeline([]); } }}>
+   530→        <SheetContent side="left" className="dark:border-slate-800 bg-slate-950 w-full sm:max-w-lg overflow-y-auto">
+   531→          <SheetHeader className="space-y-4 pb-4">
+   532→            {/* Movement ref + type badge + live indicator */}
+   533→            <div className="flex items-start justify-between gap-3">
+   534→              <div>
+   535→                <SheetTitle className="text-2xl font-bold font-mono text-amber-500 dark:text-amber-400">{m.movementRef}</SheetTitle>
+   536→                <div className="flex items-center gap-2 mt-2">
+   537→                  <Badge variant="outline" className={`text-xs ${typeStyles[m.type]}`}>
+   538→                    <TypeIcon type={m.type} className="h-3.5 w-3.5 mr-1.5" />
+   539→                    {translateMovementType(m.type)}
+   540→                  </Badge>
+   541→                  <span className="text-xs dark:text-slate-500 text-slate-400 flex items-center gap-1">
+   542→                    <Clock className="h-3 w-3" />{relativeTime(m.createdAt)}
+   543→                  </span>
+   544→                </div>
+   545→              </div>
+   546→              <div className="flex items-center gap-1.5 px-2 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/20">
+   547→                <div className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
+   548→                <span className="text-[10px] font-medium text-emerald-500">{t('movements.live')}</span>
+   549→              </div>
+   550→            </div>
+   551→          </SheetHeader>
+   552→
+   553→          <Separator className="dark:bg-slate-800 bg-slate-200" />
+   554→
+   555→          <div className="mt-5 space-y-4">
+   556→            {detailLoading ? (
+   557→              <div className="space-y-4">
+   558→                <Skeleton className="h-28 w-full dark:bg-slate-800 bg-slate-100 rounded-xl" />
+   559→                <Skeleton className="h-32 w-full dark:bg-slate-800 bg-slate-100 rounded-xl" />
+   560→                <Skeleton className="h-24 w-full dark:bg-slate-800 bg-slate-100 rounded-xl" />
+   561→              </div>
+   562→            ) : (
+   563→              <>
+   564→                {renderPathVisualization(m)}
+   565→                {renderCargoInfoCard(m)}
+   566→                {renderMovementDetailsCard(m)}
+   567→                {renderFullTimeline()}
+   568→              </>
+   569→            )}
+   570→          </div>
+   571→        </SheetContent>
+   572→      </Sheet>
+   573→    );
+   574→  };
+   575→
+   576→  // ==================== RENDER: TABLE ROW ====================
+   577→
+   578→  const renderTableRow = (m: Movement) => {
+   579→    const isActive = selectedMovement?.id === m.id;
+   580→    return (
+   581→      <TableRow
+   582→        key={m.id}
+   583→        className={`${rb} ${rh} cursor-pointer transition-all duration-200 ${isActive ? 'bg-amber-500/5 dark:bg-amber-500/10' : ''}`}
+   584→        onClick={() => handleRowClick(m)}
+   585→      >
+   586→        <TableCell className={`${tc} font-mono text-amber-500/80 dark:text-amber-400 group-hover:text-amber-500 transition-colors`}>{m.movementRef}</TableCell>
+   587→        <TableCell className={`${tc} dark:text-slate-400 text-slate-500 hidden sm:table-cell whitespace-nowrap`}>
+   588→          <span title={new Date(m.createdAt).toLocaleString()}>{relativeTime(m.createdAt)}</span>
+   589→        </TableCell>
+   590→        <TableCell className={`${tc} font-mono dark:text-slate-300 text-slate-700 group-hover:text-amber-500 transition-colors`}>{m.cargoCode}</TableCell>
+   591→        <TableCell className={tc}>
+   592→          <Badge variant="outline" className={`text-[10px] ${typeStyles[m.type]}`}>
+   593→            <TypeIcon type={m.type} className="h-3 w-3 mr-1" />
+   594→            {translateMovementType(m.type)}
+   595→          </Badge>
+   596→        </TableCell>
+   597→        <TableCell className={`${tc} hidden md:table-cell`}>
+   598→          <div className="flex items-center gap-1.5">
+   599→            <span className={`h-2 w-2 rounded-full ${m.fromLocation ? 'bg-emerald-500' : 'dark:bg-slate-700 bg-slate-300'}`} />
+   600→            <span className="font-mono dark:text-slate-400 text-slate-500 text-[11px]">{m.fromLocation?.code || '—'}</span>
+   601→          </div>
+   602→        </TableCell>
+   603→        <TableCell className={`${tc} hidden md:table-cell`}>
+   604→          <div className="flex items-center gap-1">
+   605→            <span className="text-[10px] dark:text-slate-600 text-slate-400">→</span>
+   606→            <span className={`h-2 w-2 rounded-full ${m.toLocation ? 'bg-orange-500' : 'dark:bg-slate-700 bg-slate-300'}`} />
+   607→            <span className="font-mono dark:text-slate-400 text-slate-500 text-[11px]">{m.toLocation?.code || '—'}</span>
+   608→          </div>
+   609→        </TableCell>
+   610→        <TableCell className={`${tc} dark:text-slate-400 text-slate-500 hidden lg:table-cell`}>{m.equipmentUsed || '—'}</TableCell>
+   611→        <TableCell className={`${tc} dark:text-slate-400 text-slate-500 hidden xl:table-cell`}>{m.operatorName || '—'}</TableCell>
+   612→        <TableCell className={`${tc} dark:text-slate-400 text-slate-500 hidden lg:table-cell`}>{m.actualWeight ? `${m.actualWeight.toLocaleString()} kg` : '—'}</TableCell>
+   613→        <TableCell className={`${tc} dark:text-slate-500 text-slate-400 hidden xl:table-cell max-w-[120px] truncate`}>{m.remarks || '—'}</TableCell>
+   614→        <TableCell className={`${tc} w-10`}>
+   615→          <Button
+   616→            variant="ghost"
+   617→            size="icon"
+   618→            className="h-7 w-7 dark:text-slate-500 text-slate-400 dark:hover:text-amber-400 hover:text-amber-500 transition-colors"
+   619→            onClick={(e) => { e.stopPropagation(); handleRowClick(m); }}
+   620→          >
+   621→            <Eye className="h-4 w-4" />
+   622→          </Button>
+   623→        </TableCell>
+   624→      </TableRow>
+   625→    );
+   626→  };
+   627→
+   628→  // ==================== MAIN RENDER ====================
+   629→
+   630→  return (
+   631→    <div className="space-y-5">
+   632→      {/* Header */}
+   633→      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+   634→        <div className="flex items-center gap-3">
+   635→          <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/20">
+   636→            <div className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
+   637→            <span className="text-[11px] font-medium text-emerald-500">{t('movements.live')}</span>
+   638→          </div>
+   639→          <div>
+   640→            <h1 className="text-2xl font-bold dark:text-slate-100 text-slate-900">{t('movements.title')}</h1>
+   641→            <p className="text-sm dark:text-slate-500 text-slate-400 mt-0.5">{t('movements.subtitle')}</p>
+   642→          </div>
+   643→        </div>
+   644→        <div className="flex items-center gap-2">
+   645→          <div className="flex items-center gap-2 mr-2">
+   646→            <Switch
+   647→              checked={autoRefresh}
+   648→              onCheckedChange={setAutoRefresh}
+   649→              className="data-[state=checked]:bg-amber-500"
+   650→            />
+   651→            <span className="text-xs dark:text-slate-400 text-slate-500">{t('movements.autoRefresh')}</span>
+   652→          </div>
+   653→          <Button
+   654→            variant="outline"
+   655→            size="icon"
+   656→            onClick={fetchMovements}
+   657→            className="dark:border-slate-700 border-slate-300 dark:text-slate-400 text-slate-500 dark:hover:bg-slate-800 hover:bg-slate-100 transition-all duration-200"
+   658→          >
+   659→            <RotateCcw className="h-4 w-4" />
+   660→          </Button>
+   661→          <Button
+   662→            onClick={() => { setForm(emptyForm); setShowAdd(true); }}
+   663→            className="bg-amber-500 hover:bg-amber-600 text-slate-900 font-medium transition-all duration-200 hover:shadow-md"
+   664→          >
+   665→            <Plus className="h-4 w-4 ml-2" />
+   666→            {t('movements.recordMovement')}
+   667→          </Button>
+   668→        </div>
+   669→      </div>
+   670→
+   671→      {/* Stats Bar */}
+   672→      {renderStatsBar()}
+   673→
+   674→      {/* Filters */}
+   675→      <Card className="dark:border-slate-800 border-slate-200 dark:bg-slate-900/50 bg-white">
+   676→        <CardContent className="p-4">
+   677→          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
+   678→            <div className="relative">
+   679→              <Search className="absolute right-2.5 top-2.5 h-4 w-4 dark:text-slate-500 text-slate-400" />
+   680→              <Input
+   681→                placeholder={t('movements.searchPlaceholder')}
+   682→                value={search}
+   683→                onChange={(e) => setSearch(e.target.value)}
+   684→                className="dark:border-slate-700 border-slate-300 dark:bg-slate-800 bg-slate-50 pr-9 dark:text-slate-200 text-slate-900 dark:placeholder:text-slate-600 placeholder:text-slate-400"
+   685→              />
+   686→            </div>
+   687→            <Select value={typeFilter || 'ALL'} onValueChange={(v) => setTypeFilter(v === 'ALL' ? '' : v)}>
+   688→              <SelectTrigger className="dark:border-slate-700 border-slate-300 dark:bg-slate-800 bg-slate-50 dark:text-slate-300 text-slate-600">
+   689→                <SelectValue placeholder={t('common.allTypes')} />
+   690→              </SelectTrigger>
+   691→              <SelectContent className={sc}>
+   692→                <SelectItem value="ALL" className={si}>{t('common.allTypes')}</SelectItem>
+   693→                {movementTypes.map((mt) => (
+   694→                  <SelectItem key={mt} value={mt} className={si}>
+   695→                    <span className="flex items-center gap-1.5"><TypeIcon type={mt} />{translateMovementType(mt)}</span>
+   696→                  </SelectItem>
+   697→                ))}
+   698→              </SelectContent>
+   699→            </Select>
+   700→            <div className="relative">
+   701→              <Label className="text-[10px] dark:text-slate-500 text-slate-400 absolute -top-2 right-2 bg-slate-950 dark:bg-slate-900 px-1">{t('movements.dateFrom')}</Label>
+   702→              <Input
+   703→                type="date"
+   704→                value={dateFrom}
+   705→                onChange={(e) => setDateFrom(e.target.value)}
+   706→                className="dark:border-slate-700 border-slate-300 dark:bg-slate-800 bg-slate-50 dark:text-slate-200 text-slate-900"
+   707→              />
+   708→            </div>
+   709→            <div className="relative">
+   710→              <Label className="text-[10px] dark:text-slate-500 text-slate-400 absolute -top-2 right-2 bg-slate-950 dark:bg-slate-900 px-1">{t('movements.dateTo')}</Label>
+   711→              <Input
+   712→                type="date"
+   713→                value={dateTo}
+   714→                onChange={(e) => setDateTo(e.target.value)}
+   715→                className="dark:border-slate-700 border-slate-300 dark:bg-slate-800 bg-slate-50 dark:text-slate-200 text-slate-900"
+   716→              />
+   717→            </div>
+   718→            <Button
+   719→              variant="outline"
+   720→              onClick={() => { setSearch(''); setTypeFilter(''); setDateFrom(''); setDateTo(''); }}
+   721→              className="dark:border-slate-700 border-slate-300 dark:text-slate-400 text-slate-500 dark:hover:bg-slate-800 hover:bg-slate-100 dark:hover:text-slate-300 hover:text-slate-700 transition-all duration-200"
+   722→            >
+   723→              <Filter className="h-4 w-4 ml-2" />{t('common.clear')}
+   724→            </Button>
+   725→          </div>
+   726→        </CardContent>
+   727→      </Card>
+   728→
+   729→      {/* Table */}
+   730→      <Card className="dark:border-slate-800 border-slate-200 dark:bg-slate-900/50 bg-white">
+   731→        <CardContent className="p-0">
+   732→          <div className="max-h-[500px] overflow-y-auto">
+   733→            <Table>
+   734→              <TableHeader>
+   735→                <TableRow className={`${rb} hover:bg-transparent`}>
+   736→                  <TableHead className={th}>{t('movements.table.ref')}</TableHead>
+   737→                  <TableHead className={`${th} hidden sm:table-cell`}>{t('movements.table.dateTime')}</TableHead>
+   738→                  <TableHead className={th}>{t('movements.table.cargo')}</TableHead>
+   739→                  <TableHead className={th}>{t('movements.table.type')}</TableHead>
+   740→                  <TableHead className={`${th} hidden md:table-cell`}>{t('movements.table.from')} → {t('movements.table.to')}</TableHead>
+   741→                  <TableHead className={`${th} hidden lg:table-cell`}>{t('movements.table.equipment')}</TableHead>
+   742→                  <TableHead className={`${th} hidden xl:table-cell`}>{t('movements.table.operator')}</TableHead>
+   743→                  <TableHead className={`${th} hidden lg:table-cell`}>{t('movements.table.weight')}</TableHead>
+   744→                  <TableHead className={`${th} w-10`}></TableHead>
+   745→                </TableRow>
+   746→              </TableHeader>
+   747→              <TableBody>
+   748→                {loading
+   749→                  ? Array.from({ length: 8 }).map((_, i) => (
+   750→                      <TableRow key={i} className={`${rb} hover:bg-transparent`}>
+   751→                        {Array.from({ length: 9 }).map((_, j) => (
+   752→                          <TableCell key={j} className="py-3">
+   753→                            <Skeleton className="h-4 w-16 dark:bg-slate-800 bg-slate-100" />
+   754→                          </TableCell>
+   755→                        ))}
+   756→                      </TableRow>
+   757→                    ))
+   758→                  : !Array.isArray(movements) || movements.length === 0
+   759→                    ? (
+   760→                      <TableRow className={`${rb} hover:bg-transparent`}>
+   761→                        <TableCell colSpan={9} className="text-center py-12">
+   762→                          <div className="flex flex-col items-center gap-2">
+   763→                            <ArrowLeftRight className="h-8 w-8 dark:text-slate-700 text-slate-300" />
+   764→                            <p className="dark:text-slate-500 text-slate-400">{t('movements.noMovementsFound')}</p>
+   765→                          </div>
+   766→                        </TableCell>
+   767→                      </TableRow>
+   768→                    )
+   769→                    : movements.map(renderTableRow)
+   770→                }
+   771→              </TableBody>
+   772→            </Table>
+   773→          </div>
+   774→        </CardContent>
+   775→      </Card>
+   776→
+   777→      {/* Detail Sheet */}
+   778→      {renderDetailSheet()}
+   779→
+   780→      {/* Add Movement Dialog */}
+   781→      <Dialog open={showAdd} onOpenChange={(open) => { if (!open) { setShowAdd(false); setForm(emptyForm); } }}>
+   782→        <DialogContent className="dark:border-slate-700 border-slate-200 dark:bg-slate-900 bg-white max-h-[90vh] overflow-y-auto max-w-lg">
+   783→          <DialogHeader>
+   784→            <DialogTitle className="dark:text-slate-100 text-slate-900">{t('movements.recordNewMovement')}</DialogTitle>
+   785→          </DialogHeader>
+   786→          <div className="grid gap-4 py-4">
+   787→            <div>
+   788→              <Label className="dark:text-slate-400 text-slate-500">{t('movements.form.cargoItem')}</Label>
+   789→              <Select value={form.cargoItemId} onValueChange={(v) => setForm({ ...form, cargoItemId: v })}>
+   790→                <SelectTrigger className={ic}>
+   791→                  <SelectValue placeholder={t('movements.form.cargoPlaceholder')} />
+   792→                </SelectTrigger>
+   793→                <SelectContent className={`${sc} max-h-60`}>
+   794→                  {cargoItems.map((c) => (
+   795→                    <SelectItem key={c.id} value={c.id} className={si}>
+   796→                      <span className="font-mono text-amber-400">{c.cargoCode}</span> — {c.description}
+   797→                    </SelectItem>
+   798→                  ))}
+   799→                </SelectContent>
+   800→              </Select>
+   801→            </div>
+   802→            <div className="grid grid-cols-2 gap-4">
+   803→              <div>
+   804→                <Label className="dark:text-slate-400 text-slate-500">{t('movements.form.movementType')}</Label>
+   805→                <Select value={form.type} onValueChange={(v) => setForm({ ...form, type: v })}>
+   806→                  <SelectTrigger className={ic}>
+   807→                    <SelectValue placeholder={t('common.select')} />
+   808→                  </SelectTrigger>
+   809→                  <SelectContent className={sc}>
+   810→                    {movementTypes.map((mt) => (
+   811→                      <SelectItem key={mt} value={mt} className={si}>
+   812→                        <span className="flex items-center gap-1.5"><TypeIcon type={mt} />{translateMovementType(mt)}</span>
+   813→                      </SelectItem>
+   814→                    ))}
+   815→                  </SelectContent>
+   816→                </Select>
+   817→              </div>
+   818→              <div>
+   819→                <Label className="dark:text-slate-400 text-slate-500">{t('movements.form.liftMethod')}</Label>
+   820→                <Input
+   821→                  value={form.liftMethod}
+   822→                  onChange={(e) => setForm({ ...form, liftMethod: e.target.value })}
+   823→                  className={ic}
+   824→                  placeholder={t('movements.form.liftMethodPlaceholder')}
+   825→                />
+   826→              </div>
+   827→            </div>
+   828→            <div className="grid grid-cols-2 gap-4">
+   829→              <div>
+   830→                <Label className="dark:text-slate-400 text-slate-500">{t('movements.form.fromLocation')}</Label>
+   831→                <Select value={form.fromLocationId} onValueChange={(v) => setForm({ ...form, fromLocationId: v })}>
+   832→                  <SelectTrigger className={ic}>
+   833→                    <SelectValue placeholder={t('common.select')} />
+   834→                  </SelectTrigger>
+   835→                  <SelectContent className={sc}>
+   836→                    <SelectItem value="NONE" className="dark:text-slate-500 text-slate-400 dark:focus:bg-slate-700 focus:bg-slate-100">{t('common.none')}</SelectItem>
+   837→                    {locations.map((l) => (
+   838→                      <SelectItem key={l.id} value={l.id} className={si}>{l.code} — {l.name}</SelectItem>
+   839→                    ))}
+   840→                  </SelectContent>
+   841→                </Select>
+   842→              </div>
+   843→              <div>
+   844→                <Label className="dark:text-slate-400 text-slate-500">{t('movements.form.toLocation')}</Label>
+   845→                <Select value={form.toLocationId} onValueChange={(v) => setForm({ ...form, toLocationId: v })}>
+   846→                  <SelectTrigger className={ic}>
+   847→                    <SelectValue placeholder={t('common.select')} />
+   848→                  </SelectTrigger>
+   849→                  <SelectContent className={sc}>
+   850→                    <SelectItem value="NONE" className="dark:text-slate-500 text-slate-400 dark:focus:bg-slate-700 focus:bg-slate-100">{t('common.none')}</SelectItem>
+   851→                    {locations.map((l) => (
+   852→                      <SelectItem key={l.id} value={l.id} className={si}>{l.code} — {l.name}</SelectItem>
+   853→                    ))}
+   854→                  </SelectContent>
+   855→                </Select>
+   856→              </div>
+   857→            </div>
+   858→            <div className="grid grid-cols-2 gap-4">
+   859→              <div>
+   860→                <Label className="dark:text-slate-400 text-slate-500">{t('movements.form.equipmentUsed')}</Label>
+   861→                <Select value={form.equipmentUsed} onValueChange={(v) => setForm({ ...form, equipmentUsed: v })}>
+   862→                  <SelectTrigger className={ic}>
+   863→                    <SelectValue placeholder={t('common.select')} />
+   864→                  </SelectTrigger>
+   865→                  <SelectContent className={sc}>
+   866→                    <SelectItem value="NONE" className="dark:text-slate-500 text-slate-400 dark:focus:bg-slate-700 focus:bg-slate-100">{t('common.none')}</SelectItem>
+   867→                    {equipment.map((eq) => (
+   868→                      <SelectItem key={eq.id} value={eq.equipmentCode} className={si}>{eq.equipmentCode} — {eq.name}</SelectItem>
+   869→                    ))}
+   870→                  </SelectContent>
+   871→                </Select>
+   872→              </div>
+   873→              <div>
+   874→                <Label className="dark:text-slate-400 text-slate-500">{t('movements.form.operatorName')}</Label>
+   875→                <Input
+   876→                  value={form.operatorName}
+   877→                  onChange={(e) => setForm({ ...form, operatorName: e.target.value })}
+   878→                  className={ic}
+   879→                />
+   880→              </div>
+   881→            </div>
+   882→            <div>
+   883→              <Label className="dark:text-slate-400 text-slate-500">{t('movements.form.actualWeight')}</Label>
+   884→              <Input
+   885→                type="number"
+   886→                value={form.actualWeight}
+   887→                onChange={(e) => setForm({ ...form, actualWeight: e.target.value })}
+   888→                className={ic}
+   889→              />
+   890→            </div>
+   891→            <div>
+   892→              <Label className="dark:text-slate-400 text-slate-500">{t('movements.form.remarks')}</Label>
+   893→              <Textarea
+   894→                value={form.remarks}
+   895→                onChange={(e) => setForm({ ...form, remarks: e.target.value })}
+   896→                className={ic + ' min-h-[60px]'}
+   897→                placeholder={t('movements.form.remarksPlaceholder')}
+   898→              />
+   899→            </div>
+   900→          </div>
+   901→          <DialogFooter>
+   902→            <Button
+   903→              variant="outline"
+   904→              onClick={() => { setShowAdd(false); setForm(emptyForm); }}
+   905→              className="dark:border-slate-700 border-slate-300 dark:text-slate-300 text-slate-600 dark:hover:bg-slate-800 hover:bg-slate-100 transition-all duration-200"
+   906→            >
+   907→              {t('common.cancel')}
+   908→            </Button>
+   909→            <Button
+   910→              onClick={handleSubmit}
+   911→              disabled={submitting || !form.cargoItemId || !form.type}
+   912→              className="bg-amber-500 hover:bg-amber-600 text-slate-900 transition-all duration-200 hover:shadow-md"
+   913→            >
+   914→              {submitting ? t('common.recording') : t('movements.recordMovement')}
+   915→            </Button>
+   916→          </DialogFooter>
+   917→        </DialogContent>
+   918→      </Dialog>
+   919→    </div>
+   920→  );
+   921→}
+   922→

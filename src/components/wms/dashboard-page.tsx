@@ -214,7 +214,6 @@ function MovementsTrendChart({ data, loading, t, locale }: {
             <ChartTooltip
               content={(
                 <ChartTooltipContent
-                  // eslint-disable-next-line @typescript-eslint/no-explicit-any
                   formatter={(value: any) => [Number(value).toLocaleString(), undefined]}
                 />
               )}
@@ -269,7 +268,6 @@ function CargoStatusDonutChart({ data, loading, t, locale }: {
                 <ChartTooltipContent
                   nameKey="status"
                   hideLabel
-                  // eslint-disable-next-line @typescript-eslint/no-explicit-any
                   formatter={(value: any, _name: any, item: any) => [
                     Number(value).toLocaleString(),
                     translateStatus(String(item?.payload?.status || ''), locale as 'ar' | 'en'),
@@ -347,7 +345,6 @@ function WeightByCategoryChart({ data, loading, t, locale }: {
             <ChartTooltip
               content={(
                 <ChartTooltipContent
-                  // eslint-disable-next-line @typescript-eslint/no-explicit-any
                   formatter={(value: any) => [`${Number(value).toLocaleString()} t`, undefined]}
                 />
               )}

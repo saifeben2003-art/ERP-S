@@ -1,0 +1,756 @@
+     1→'use client';
+     2→
+     3→import { useEffect, useState, useCallback } from 'react';
+     4→import {
+     5→  Plus, Pencil, Trash2, MapPin, Layers, Maximize, Weight, Package,
+     6→  LayoutGrid, LayoutList, Search, ArrowRightLeft, PackagePlus, Printer,
+     7→  Eye, X, MapPinned, Gauge,
+     8→} from 'lucide-react';
+     9→import { Card, CardContent } from '@/components/ui/card';
+    10→import { Button } from '@/components/ui/button';
+    11→import { Input } from '@/components/ui/input';
+    12→import { Label } from '@/components/ui/label';
+    13→import { Badge } from '@/components/ui/badge';
+    14→import { Skeleton } from '@/components/ui/skeleton';
+    15→import { Switch } from '@/components/ui/switch';
+    16→import { ScrollArea } from '@/components/ui/scroll-area';
+    17→import { Separator } from '@/components/ui/separator';
+    18→import {
+    19→  Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter,
+    20→} from '@/components/ui/dialog';
+    21→import {
+    22→  Sheet, SheetContent, SheetHeader, SheetTitle,
+    23→} from '@/components/ui/sheet';
+    24→import {
+    25→  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
+    26→} from '@/components/ui/select';
+    27→import {
+    28→  Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
+    29→} from '@/components/ui/table';
+    30→import { Checkbox } from '@/components/ui/checkbox';
+    31→import { toast } from 'sonner';
+    32→import { useTranslation, translateLocationType, translateStatus } from '@/lib/translations';
+    33→import { cn } from '@/lib/utils';
+    34→import type { Location, LocationType, CargoItem } from '@/types/wms';
+    35→
+    36→// ==================== CONSTANTS ====================
+    37→
+    38→const typeStyles: Record<LocationType, string> = {
+    39→  YARD: 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20',
+    40→  WAREHOUSE: 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20',
+    41→  OPEN_AREA: 'bg-teal-500/10 text-teal-600 dark:text-teal-400 border-teal-500/20',
+    42→  STAGING: 'bg-orange-500/10 text-orange-600 dark:text-orange-400 border-orange-500/20',
+    43→  BERTH: 'bg-cyan-500/10 text-cyan-600 dark:text-cyan-400 border-cyan-500/20',
+    44→};
+    45→
+    46→const cargoStatusStyles: Record<string, string> = {
+    47→  IN_YARD: 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20',
+    48→  IN_TRANSIT: 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20',
+    49→  DISPATCHED: 'bg-slate-500/10 text-slate-600 dark:text-slate-400 border-slate-500/20',
+    50→  RECEIVED: 'bg-cyan-500/10 text-cyan-600 dark:text-cyan-400 border-cyan-500/20',
+    51→  IN_WAREHOUSE: 'bg-teal-500/10 text-teal-600 dark:text-teal-400 border-teal-500/20',
+    52→  DELIVERED: 'bg-slate-400/10 text-slate-500 dark:text-slate-500 border-slate-400/20',
+    53→};
+    54→
+    55→const locationTypes: LocationType[] = ['YARD', 'WAREHOUSE', 'OPEN_AREA', 'STAGING', 'BERTH'];
+    56→
+    57→const emptyForm = {
+    58→  code: '', name: '', type: '' as string, zone: '',
+    59→  maxWeight: '', maxDimension: '', area: '', isActive: true,
+    60→};
+    61→
+    62→interface LocationListResponse { items: Location[]; total: number; }
+    63→
+    64→type ViewMode = 'grid' | 'table';
+    65→
+    66→// ==================== HELPERS ====================
+    67→
+    68→function loadPct(loc: Location) {
+    69→  if (!loc.maxWeight || loc.maxWeight === 0) return 0;
+    70→  return Math.min(100, Math.round((loc.currentLoad / loc.maxWeight) * 100));
+    71→}
+    72→
+    73→function gaugeColor(pct: number) {
+    74→  if (pct >= 80) return { bar: 'bg-red-500', text: 'text-red-600 dark:text-red-400', ring: 'stroke-red-500' };
+    75→  if (pct >= 50) return { bar: 'bg-amber-500', text: 'text-amber-600 dark:text-amber-400', ring: 'stroke-amber-500' };
+    76→  return { bar: 'bg-emerald-500', text: 'text-emerald-600 dark:text-emerald-400', ring: 'stroke-emerald-500' };
+    77→}
+    78→
+    79→function capacityBarColor(pct: number) {
+    80→  if (pct >= 80) return 'bg-red-500';
+    81→  if (pct >= 50) return 'bg-amber-500';
+    82→  return 'bg-emerald-500';
+    83→}
+    84→
+    85→// ==================== SUB-COMPONENTS ====================
+    86→
+    87→function ProfileField({ icon: Icon, label, value }: { icon: React.ElementType; label: string; value: string | number | null | undefined }) {
+    88→  return (
+    89→    <div className="flex items-start gap-2.5">
+    90→      <div className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-amber-500/10 dark:bg-amber-500/10">
+    91→        <Icon className="h-3.5 w-3.5 text-amber-600 dark:text-amber-400" />
+    92→      </div>
+    93→      <div className="min-w-0">
+    94→        <p className="text-[11px] text-slate-500 dark:text-slate-400">{label}</p>
+    95→        <p className="text-sm font-medium text-slate-900 dark:text-slate-100 truncate">{value || '—'}</p>
+    96→      </div>
+    97→    </div>
+    98→  );
+    99→}
+   100→
+   101→function OccupancyGauge({ percentage }: { percentage: number }) {
+   102→  const colors = gaugeColor(percentage);
+   103→  const circumference = 2 * Math.PI * 40;
+   104→  const strokeDashoffset = circumference - (percentage / 100) * circumference;
+   105→  return (
+   106→    <div className="relative flex items-center justify-center">
+   107→      <svg width="100" height="100" viewBox="0 0 100 100" className="-rotate-90">
+   108→        <circle cx="50" cy="50" r="40" fill="none" strokeWidth="8" className="stroke-slate-200 dark:stroke-slate-700" />
+   109→        <circle cx="50" cy="50" r="40" fill="none" strokeWidth="8" strokeLinecap="round"
+   110→          className={cn('transition-all duration-700', colors.ring)}
+   111→          strokeDasharray={circumference} strokeDashoffset={strokeDashoffset} />
+   112→      </svg>
+   113→      <div className="absolute flex flex-col items-center">
+   114→        <span className={cn('text-2xl font-bold', colors.text)}>{percentage}%</span>
+   115→        <span className="text-[10px] text-slate-500 dark:text-slate-400">{percentage >= 80 ? 'Critical' : percentage >= 50 ? 'Warning' : 'Normal'}</span>
+   116→      </div>
+   117→    </div>
+   118→  );
+   119→}
+   120→
+   121→function QuickActionButton({ icon: Icon, label, color }: { icon: React.ElementType; label: string; color: string }) {
+   122→  const colorMap: Record<string, string> = {
+   123→    green: 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500/20 hover:border-emerald-500/30 border-emerald-500/20',
+   124→    amber: 'bg-amber-500/10 text-amber-600 dark:text-amber-400 hover:bg-amber-500/20 hover:border-amber-500/30 border-amber-500/20',
+   125→    cyan: 'bg-cyan-500/10 text-cyan-600 dark:text-cyan-400 hover:bg-cyan-500/20 hover:border-cyan-500/30 border-cyan-500/20',
+   126→  };
+   127→  return (
+   128→    <button
+   129→      onClick={() => toast.info(label + ' — ' + (typeof window !== 'undefined' ? 'Coming soon' : ''))}
+   130→      className={cn(
+   131→        'flex flex-col items-center gap-2 rounded-xl border p-4 transition-all duration-200',
+   132→        colorMap[color] || colorMap.amber
+   133→      )}
+   134→    >
+   135→      <Icon className="h-5 w-5" />
+   136→      <span className="text-[11px] font-medium">{label}</span>
+   137→    </button>
+   138→  );
+   139→}
+   140→
+   141→function CargoCard({ cargo }: { cargo: CargoItem }) {
+   142→  const { t } = useTranslation();
+   143→  return (
+   144→    <div className="rounded-lg border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900/50 p-3.5 transition-all duration-200 hover:shadow-md hover:border-slate-300 dark:hover:border-slate-700">
+   145→      <div className="flex items-start justify-between gap-2">
+   146→        <div className="min-w-0 flex-1">
+   147→          <p className="text-xs font-mono font-semibold text-amber-600 dark:text-amber-400 truncate">{cargo.cargoCode}</p>
+   148→          <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5 truncate">{cargo.description}</p>
+   149→        </div>
+   150→        <Badge variant="outline" className={cn('shrink-0 text-[10px]', cargoStatusStyles[cargo.status] || 'bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 border-slate-200 dark:border-slate-700')}>
+   151→          {translateStatus(cargo.status)}
+   152→        </Badge>
+   153→      </div>
+   154→      <div className="flex items-center gap-1.5 mt-2.5">
+   155→        <Weight className="h-3 w-3 text-slate-400 dark:text-slate-500" />
+   156→        <span className="text-[11px] text-slate-500 dark:text-slate-400">
+   157→          {cargo.weight.toLocaleString()} kg
+   158→        </span>
+   159→      </div>
+   160→    </div>
+   161→  );
+   162→}
+   163→
+   164→// ==================== MAIN COMPONENT ====================
+   165→
+   166→export function LocationsPage() {
+   167→  const [locations, setLocations] = useState<Location[]>([]);
+   168→  const [loading, setLoading] = useState(true);
+   169→  const [typeFilter, setTypeFilter] = useState('');
+   170→  const [searchQuery, setSearchQuery] = useState('');
+   171→  const [viewMode, setViewMode] = useState<ViewMode>('table');
+   172→  const [showAdd, setShowAdd] = useState(false);
+   173→  const [editing, setEditing] = useState<Location | null>(null);
+   174→  const [deleting, setDeleting] = useState<Location | null>(null);
+   175→  const [form, setForm] = useState(emptyForm);
+   176→  const [submitting, setSubmitting] = useState(false);
+   177→  const [detailOpen, setDetailOpen] = useState(false);
+   178→  const [detailLocation, setDetailLocation] = useState<Location | null>(null);
+   179→  const [detailCargo, setDetailCargo] = useState<CargoItem[]>([]);
+   180→  const [detailLoading, setDetailLoading] = useState(false);
+   181→  const [selectedRows, setSelectedRows] = useState<Set<string>>(new Set());
+   182→  const { t } = useTranslation();
+   183→
+   184→  const fetchLocations = useCallback(async () => {
+   185→    setLoading(true);
+   186→    const params = new URLSearchParams({ limit: '100', ...(typeFilter && { type: typeFilter }) });
+   187→    try {
+   188→      const res = await fetch('/api/locations?' + params);
+   189→      const data: LocationListResponse = await res.json();
+   190→      if (!res.ok) { setLocations([]); return; }
+   191→      setLocations(data.items || []);
+   192→    } catch { toast.error(t('locations.toast.fetchFailed')); } finally { setLoading(false); }
+   193→  }, [typeFilter, t]);
+   194→
+   195→  useEffect(() => { fetchLocations(); }, [fetchLocations]);
+   196→
+   197→  const filteredLocations = locations.filter((loc) => {
+   198→    if (!searchQuery) return true;
+   199→    const q = searchQuery.toLowerCase();
+   200→    return loc.code.toLowerCase().includes(q) || loc.name.toLowerCase().includes(q) || (loc.zone && loc.zone.toLowerCase().includes(q));
+   201→  });
+   202→
+   203→  const handleSubmit = async () => {
+   204→    setSubmitting(true);
+   205→    const payload: Record<string, unknown> = {
+   206→      code: form.code, name: form.name, type: form.type, zone: form.zone || null,
+   207→      maxWeight: form.maxWeight ? parseFloat(form.maxWeight) : null,
+   208→      maxDimension: form.maxDimension || null, area: form.area ? parseFloat(form.area) : null, isActive: form.isActive,
+   209→    };
+   210→    try {
+   211→      const url = editing ? '/api/locations/' + editing.id : '/api/locations';
+   212→      const res = await fetch(url, { method: editing ? 'PUT' : 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+   213→      if (!res.ok) { const err = await res.json(); throw new Error(err.error || 'Failed'); }
+   214→      toast.success(editing ? t('locations.toast.updated') : t('locations.toast.created'));
+   215→      setShowAdd(false); setEditing(null); setForm(emptyForm); fetchLocations();
+   216→    } catch (e: unknown) { toast.error(e instanceof Error ? e.message : 'Failed'); } finally { setSubmitting(false); }
+   217→  };
+   218→
+   219→  const handleDelete = async () => {
+   220→    if (!deleting) return;
+   221→    try {
+   222→      const res = await fetch('/api/locations/' + deleting.id, { method: 'DELETE' });
+   223→      if (!res.ok) { const err = await res.json(); throw new Error(err.error || 'Failed'); }
+   224→      toast.success(t('locations.toast.deleted')); setDeleting(null); fetchLocations();
+   225→    } catch (e: unknown) { toast.error(e instanceof Error ? e.message : t('locations.toast.deleteFailed')); }
+   226→  };
+   227→
+   228→  const handleToggleActive = async (loc: Location) => {
+   229→    try {
+   230→      const res = await fetch('/api/locations/' + loc.id, {
+   231→        method: 'PUT', headers: { 'Content-Type': 'application/json' },
+   232→        body: JSON.stringify({ isActive: !loc.isActive }),
+   233→      });
+   234→      if (!res.ok) throw new Error('Failed');
+   235→      toast.success(loc.isActive ? t('common.disabled') : t('common.enabled'));
+   236→      fetchLocations();
+   237→      if (detailLocation?.id === loc.id) {
+   238→        setDetailLocation({ ...loc, isActive: !loc.isActive });
+   239→      }
+   240→    } catch { toast.error('Failed to update status'); }
+   241→  };
+   242→
+   243→  const openEdit = (loc: Location) => {
+   244→    setEditing(loc);
+   245→    setForm({ code: loc.code, name: loc.name, type: loc.type, zone: loc.zone || '', maxWeight: loc.maxWeight ? String(loc.maxWeight) : '', maxDimension: loc.maxDimension || '', area: loc.area ? String(loc.area) : '', isActive: loc.isActive });
+   246→  };
+   247→
+   248→  const openDetail = async (loc: Location) => {
+   249→    setDetailLocation(loc); setDetailOpen(true); setDetailLoading(true);
+   250→    try {
+   251→      const res = await fetch('/api/cargo?locationId=' + loc.id + '&limit=200');
+   252→      const data = await res.json();
+   253→      setDetailCargo(data.items || []);
+   254→    } catch { setDetailCargo([]); } finally { setDetailLoading(false); }
+   255→  };
+   256→
+   257→  const toggleSelectRow = (id: string) => {
+   258→    setSelectedRows((prev) => {
+   259→      const next = new Set(prev);
+   260→      if (next.has(id)) next.delete(id); else next.add(id);
+   261→      return next;
+   262→    });
+   263→  };
+   264→
+   265→  const toggleSelectAll = () => {
+   266→    const fLocs = Array.isArray(filteredLocations) ? filteredLocations : [];
+   267→    if (selectedRows.size === fLocs.length) {
+   268→      setSelectedRows(new Set());
+   269→    } else {
+   270→      setSelectedRows(new Set(fLocs.map((l) => l.id)));
+   271→    }
+   272→  };
+   273→
+   274→  const handleBulkDelete = async () => {
+   275→    try {
+   276→      await Promise.all(Array.from(selectedRows).map((id) => fetch('/api/locations/' + id, { method: 'DELETE' })));
+   277→      toast.success(t('locations.toast.deleted'));
+   278→      setSelectedRows(new Set());
+   279→      fetchLocations();
+   280→    } catch { toast.error(t('locations.toast.deleteFailed')); }
+   281→  };
+   282→
+   283→  // ==================== RENDER ====================
+   284→
+   285→  return (
+   286→    <div className="space-y-6">
+   287→      {/* ===== Header ===== */}
+   288→      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+   289→        <div>
+   290→          <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100">{t('locations.title')}</h1>
+   291→          <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">{t('locations.subtitle')}</p>
+   292→        </div>
+   293→        <Button onClick={() => { setForm(emptyForm); setShowAdd(true); }} className="bg-amber-500 hover:bg-amber-600 text-slate-900 font-medium transition-all duration-200 hover:shadow-md">
+   294→          <Plus className="h-4 w-4 ml-2" /> {t('locations.addLocation')}
+   295→        </Button>
+   296→      </div>
+   297→
+   298→      {/* ===== Filters & Controls ===== */}
+   299→      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+   300→        <div className="flex flex-wrap gap-2">
+   301→          {locationTypes.map((lt) => (
+   302→            <Button key={lt} variant={typeFilter === lt ? 'default' : 'outline'} size="sm" onClick={() => setTypeFilter(typeFilter === lt ? '' : lt)}
+   303→              className={cn(
+   304→                'transition-all duration-200',
+   305→                typeFilter === lt
+   306→                  ? 'bg-amber-500/15 text-amber-600 dark:text-amber-400 border-amber-500/30 hover:bg-amber-500/20'
+   307→                  : 'border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900/50 text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 hover:text-slate-700 dark:hover:text-slate-300'
+   308→              )}>
+   309→              {translateLocationType(lt)}
+   310→            </Button>
+   311→          ))}
+   312→          <Button variant={typeFilter === '' ? 'default' : 'outline'} size="sm" onClick={() => setTypeFilter('')}
+   313→            className={cn(
+   314→              'transition-all duration-200',
+   315→              typeFilter === ''
+   316→                ? 'bg-amber-500/15 text-amber-600 dark:text-amber-400 border-amber-500/30 hover:bg-amber-500/20'
+   317→                : 'border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900/50 text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 hover:text-slate-700 dark:hover:text-slate-300'
+   318→            )}>
+   319→            {t('locations.allTypes')}
+   320→          </Button>
+   321→        </div>
+   322→        <div className="flex items-center gap-2">
+   323→          {/* Search */}
+   324→          <div className="relative">
+   325→            <Search className="absolute start-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-slate-400 dark:text-slate-500" />
+   326→            <Input
+   327→              placeholder={t('locations.searchPlaceholder')}
+   328→              value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)}
+   329→              className="h-9 w-48 bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-700 text-slate-900 dark:text-slate-200 ps-8 text-sm"
+   330→            />
+   331→          </div>
+   332→          {/* View Toggle */}
+   333→          <div className="flex rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900/50 p-0.5">
+   334→            <button
+   335→              onClick={() => setViewMode('table')}
+   336→              className={cn(
+   337→                'flex items-center gap-1.5 rounded-md px-2.5 py-1.5 text-xs font-medium transition-all duration-200',
+   338→                viewMode === 'table'
+   339→                  ? 'bg-amber-500/15 text-amber-600 dark:text-amber-400'
+   340→                  : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-300'
+   341→              )}
+   342→            >
+   343→              <LayoutList className="h-3.5 w-3.5" /> {t('locations.tableView')}
+   344→            </button>
+   345→            <button
+   346→              onClick={() => setViewMode('grid')}
+   347→              className={cn(
+   348→                'flex items-center gap-1.5 rounded-md px-2.5 py-1.5 text-xs font-medium transition-all duration-200',
+   349→                viewMode === 'grid'
+   350→                  ? 'bg-amber-500/15 text-amber-600 dark:text-amber-400'
+   351→                  : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-300'
+   352→              )}
+   353→            >
+   354→              <LayoutGrid className="h-3.5 w-3.5" /> {t('locations.gridView')}
+   355→            </button>
+   356→          </div>
+   357→        </div>
+   358→      </div>
+   359→
+   360→      {/* ===== Bulk Actions Bar ===== */}
+   361→      {selectedRows.size > 0 && (
+   362→        <div className="flex items-center gap-3 rounded-lg border border-amber-500/20 bg-amber-500/5 dark:bg-amber-500/5 px-4 py-2.5">
+   363→          <span className="text-sm text-amber-600 dark:text-amber-400 font-medium">
+   364→            {selectedRows.size} {t('common.selected')}
+   365→          </span>
+   366→          <Button variant="outline" size="sm" onClick={handleBulkDelete}
+   367→            className="border-red-200 dark:border-red-500/20 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-500/10 transition-all duration-200">
+   368→            <Trash2 className="h-3.5 w-3.5 ml-1.5" /> {t('common.delete')}
+   369→          </Button>
+   370→          <Button variant="ghost" size="sm" onClick={() => setSelectedRows(new Set())}
+   371→            className="text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200">
+   372→            {t('common.clear')}
+   373→          </Button>
+   374→        </div>
+   375→      )}
+   376→
+   377→      {/* ===== Table View ===== */}
+   378→      {viewMode === 'table' && (
+   379→        <div className="rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900/30 overflow-hidden">
+   380→          {loading ? (
+   381→            <div className="p-6 space-y-3">
+   382→              {Array.from({ length: 6 }).map((_, i) => (
+   383→                <Skeleton key={i} className="h-12 w-full bg-slate-100 dark:bg-slate-800 rounded-lg" />
+   384→              ))}
+   385→            </div>
+   386→          ) : !Array.isArray(filteredLocations) || filteredLocations.length === 0 ? (
+   387→            <div className="flex flex-col items-center justify-center py-16 text-slate-400 dark:text-slate-500">
+   388→              <MapPin className="h-10 w-10 mb-3 text-slate-300 dark:text-slate-600" />
+   389→              <p className="text-sm font-medium">{t('detail.location.emptyState')}</p>
+   390→            </div>
+   391→          ) : (
+   392→            <div className="max-h-[520px] overflow-y-auto">
+   393→              <Table>
+   394→                <TableHeader>
+   395→                  <TableRow className="border-slate-200 dark:border-slate-800 hover:bg-transparent">
+   396→                    <TableHead className="w-10 ps-4">
+   397→                      <Checkbox checked={Array.isArray(filteredLocations) && selectedRows.size === filteredLocations.length && filteredLocations.length > 0} onCheckedChange={toggleSelectAll} />
+   398→                    </TableHead>
+   399→                    <TableHead className="text-[11px] font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">{t('locations.table.code')}</TableHead>
+   400→                    <TableHead className="text-[11px] font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">{t('locations.table.name')}</TableHead>
+   401→                    <TableHead className="text-[11px] font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">{t('locations.table.type')}</TableHead>
+   402→                    <TableHead className="text-[11px] font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider hidden md:table-cell">{t('locations.table.zone')}</TableHead>
+   403→                    <TableHead className="text-[11px] font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider hidden lg:table-cell">{t('locations.table.capacity')}</TableHead>
+   404→                    <TableHead className="text-[11px] font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider hidden lg:table-cell">{t('locations.table.area')}</TableHead>
+   405→                    <TableHead className="text-[11px] font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">{t('locations.table.cargoCount')}</TableHead>
+   406→                    <TableHead className="text-[11px] font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">{t('locations.table.status')}</TableHead>
+   407→                    <TableHead className="text-[11px] font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider text-end pe-4">{t('locations.table.actions')}</TableHead>
+   408→                  </TableRow>
+   409→                </TableHeader>
+   410→                <TableBody>
+   411→                  {filteredLocations.map((loc) => {
+   412→                    const pct = loadPct(loc);
+   413→                    const isSelected = selectedRows.has(loc.id);
+   414→                    const isActiveDetail = detailLocation?.id === loc.id;
+   415→                    return (
+   416→                      <TableRow
+   417→                        key={loc.id}
+   418→                        className={cn(
+   419→                          'border-slate-200 dark:border-slate-800 cursor-pointer transition-all duration-200',
+   420→                          isSelected && 'bg-amber-500/5 dark:bg-amber-500/5',
+   421→                          isActiveDetail && 'bg-amber-500/10 dark:bg-amber-500/10',
+   422→                          !isSelected && !isActiveDetail && 'hover:bg-slate-50 dark:hover:bg-slate-800/50',
+   423→                          !loc.isActive && 'opacity-50'
+   424→                        )}
+   425→                        onClick={() => openDetail(loc)}
+   426→                      >
+   427→                        <TableCell className="ps-4" onClick={(e) => e.stopPropagation()}>
+   428→                          <Checkbox checked={isSelected} onCheckedChange={() => toggleSelectRow(loc.id)} />
+   429→                        </TableCell>
+   430→                        <TableCell>
+   431→                          <span className="text-xs font-mono font-semibold text-amber-600 dark:text-amber-400 group-hover:text-amber-500 transition-colors duration-200">{loc.code}</span>
+   432→                        </TableCell>
+   433→                        <TableCell>
+   434→                          <span className="text-sm font-medium text-slate-900 dark:text-slate-100">{loc.name}</span>
+   435→                        </TableCell>
+   436→                        <TableCell>
+   437→                          <Badge variant="outline" className={cn('text-[10px]', typeStyles[loc.type])}>{translateLocationType(loc.type)}</Badge>
+   438→                        </TableCell>
+   439→                        <TableCell className="hidden md:table-cell">
+   440→                          <span className="text-xs text-slate-500 dark:text-slate-400">{loc.zone || '—'}</span>
+   441→                        </TableCell>
+   442→                        <TableCell className="hidden lg:table-cell">
+   443→                          {loc.maxWeight ? (
+   444→                            <div className="flex items-center gap-2">
+   445→                              <div className="h-1.5 w-16 overflow-hidden rounded-full bg-slate-100 dark:bg-slate-800">
+   446→                                <div className={cn('h-full rounded-full transition-all duration-500', capacityBarColor(pct))} style={{ width: pct + '%' }} />
+   447→                              </div>
+   448→                              <span className={cn('text-[11px] font-medium', pct >= 80 ? 'text-red-600 dark:text-red-400' : pct >= 50 ? 'text-amber-600 dark:text-amber-400' : 'text-slate-500 dark:text-slate-400')}>{pct}%</span>
+   449→                            </div>
+   450→                          ) : <span className="text-xs text-slate-400 dark:text-slate-500">—</span>}
+   451→                        </TableCell>
+   452→                        <TableCell className="hidden lg:table-cell">
+   453→                          <span className="text-xs text-slate-500 dark:text-slate-400">{loc.area ? loc.area + ' m²' : '—'}</span>
+   454→                        </TableCell>
+   455→                        <TableCell>
+   456→                          <Badge variant="secondary" className={cn('text-[10px] font-medium',
+   457→                            loc.currentLoad > 0 ? 'bg-amber-500/10 text-amber-600 dark:text-amber-400' : 'bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400')}>
+   458→                            {loc.currentLoad}
+   459→                          </Badge>
+   460→                        </TableCell>
+   461→                        <TableCell>
+   462→                          <Switch checked={loc.isActive} onCheckedChange={() => handleToggleActive(loc)} className="scale-75" onClick={(e) => e.stopPropagation()} />
+   463→                        </TableCell>
+   464→                        <TableCell className="text-end pe-4" onClick={(e) => e.stopPropagation()}>
+   465→                          <div className="flex items-center justify-end gap-1">
+   466→                            <Button variant="ghost" size="icon" className="h-7 w-7 text-slate-400 dark:text-slate-500 hover:text-amber-500 transition-colors duration-200" onClick={() => openDetail(loc)}><Eye className="h-3.5 w-3.5" /></Button>
+   467→                            <Button variant="ghost" size="icon" className="h-7 w-7 text-slate-400 dark:text-slate-500 hover:text-amber-500 transition-colors duration-200" onClick={() => openEdit(loc)}><Pencil className="h-3.5 w-3.5" /></Button>
+   468→                            <Button variant="ghost" size="icon" className="h-7 w-7 text-slate-400 dark:text-slate-500 hover:text-red-500 transition-colors duration-200" onClick={() => setDeleting(loc)}><Trash2 className="h-3.5 w-3.5" /></Button>
+   469→                          </div>
+   470→                        </TableCell>
+   471→                      </TableRow>
+   472→                    );
+   473→                  })}
+   474→                </TableBody>
+   475→              </Table>
+   476→            </div>
+   477→          )}
+   478→        </div>
+   479→      )}
+   480→
+   481→      {/* ===== Grid View ===== */}
+   482→      {viewMode === 'grid' && (
+   483→        <>
+   484→          {loading ? (
+   485→            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+   486→              {Array.from({ length: 8 }).map((_, i) => (
+   487→                <Card key={i} className="border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900/50">
+   488→                  <CardContent className="p-5 space-y-3">
+   489→                    <Skeleton className="h-5 w-2/3 bg-slate-100 dark:bg-slate-800 rounded" />
+   490→                    <Skeleton className="h-4 w-1/2 bg-slate-100 dark:bg-slate-800 rounded" />
+   491→                    <Skeleton className="h-2 w-full bg-slate-100 dark:bg-slate-800 rounded" />
+   492→                  </CardContent>
+   493→                </Card>
+   494→              ))}
+   495→            </div>
+   496→          ) : !Array.isArray(filteredLocations) || filteredLocations.length === 0 ? (
+   497→            <div className="flex flex-col items-center justify-center py-16 text-slate-400 dark:text-slate-500">
+   498→              <MapPin className="h-10 w-10 mb-3 text-slate-300 dark:text-slate-600" />
+   499→              <p className="text-sm font-medium">{t('detail.location.emptyState')}</p>
+   500→            </div>
+   501→          ) : (
+   502→            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+   503→              {filteredLocations.map((loc) => {
+   504→                const pct = loadPct(loc);
+   505→                return (
+   506→                  <Card
+   507→                    key={loc.id}
+   508→                    className={cn(
+   509→                      'border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900/50 transition-all duration-200 cursor-pointer hover:shadow-md hover:border-slate-300 dark:hover:border-slate-700',
+   510→                      !loc.isActive && 'opacity-50'
+   511→                    )}
+   512→                    onClick={() => openDetail(loc)}
+   513→                  >
+   514→                    <CardContent className="p-5 space-y-3" onClick={(e) => { if ((e.target as HTMLElement).closest('button')) return; }}>
+   515→                      <div className="flex items-start justify-between">
+   516→                        <div className="min-w-0 flex-1">
+   517→                          <h3 className="text-sm font-semibold text-slate-900 dark:text-slate-100 truncate">{loc.name}</h3>
+   518→                          <p className="text-[11px] font-mono text-slate-500 dark:text-slate-400 mt-0.5">{loc.code}</p>
+   519→                        </div>
+   520→                        <Badge variant="outline" className={cn('shrink-0 text-[10px]', typeStyles[loc.type])}>{translateLocationType(loc.type)}</Badge>
+   521→                      </div>
+   522→
+   523→                      <div className="grid grid-cols-2 gap-2 text-xs text-slate-500 dark:text-slate-400">
+   524→                        {loc.zone && <div className="flex items-center gap-1.5"><Layers className="h-3 w-3 text-slate-400 dark:text-slate-500" />{loc.zone}</div>}
+   525→                        {loc.maxWeight && <div className="flex items-center gap-1.5"><Weight className="h-3 w-3 text-slate-400 dark:text-slate-500" />{loc.maxWeight}{t('common.tonnes')}</div>}
+   526→                        {loc.area && <div className="flex items-center gap-1.5"><Maximize className="h-3 w-3 text-slate-400 dark:text-slate-500" />{loc.area}m²</div>}
+   527→                        <div className="flex items-center gap-1.5">
+   528→                          <Package className="h-3 w-3 text-slate-400 dark:text-slate-500" />
+   529→                          <span className={cn(loc.currentLoad > 0 && 'font-medium text-amber-600 dark:text-amber-400')}>{loc.currentLoad}</span> {t('common.items')}
+   530→                        </div>
+   531→                      </div>
+   532→
+   533→                      {loc.maxWeight && loc.maxWeight > 0 && (
+   534→                        <div className="space-y-1">
+   535→                          <div className="flex justify-between text-[11px]">
+   536→                            <span className="text-slate-500 dark:text-slate-400">{t('common.load')}</span>
+   537→                            <span className={cn('font-medium', pct >= 80 ? 'text-red-600 dark:text-red-400' : pct >= 50 ? 'text-amber-600 dark:text-amber-400' : 'text-slate-500 dark:text-slate-400')}>{pct}%</span>
+   538→                          </div>
+   539→                          <div className="h-1.5 w-full overflow-hidden rounded-full bg-slate-100 dark:bg-slate-800">
+   540→                            <div className={cn('h-full rounded-full transition-all duration-500', capacityBarColor(pct))} style={{ width: pct + '%' }} />
+   541→                          </div>
+   542→                        </div>
+   543→                      )}
+   544→
+   545→                      <div className="flex items-center justify-between pt-1">
+   546→                        <div className="flex items-center gap-1.5">
+   547→                          <div className={cn('h-1.5 w-1.5 rounded-full transition-colors duration-200', loc.isActive ? 'bg-emerald-500' : 'bg-slate-300 dark:bg-slate-600')} />
+   548→                          <span className="text-[11px] text-slate-500 dark:text-slate-400">{loc.isActive ? t('common.active') : t('common.inactive')}</span>
+   549→                        </div>
+   550→                        <div className="flex items-center gap-0.5" onClick={(e) => e.stopPropagation()}>
+   551→                          <Button variant="ghost" size="icon" className="h-6 w-6 text-slate-400 dark:text-slate-500 hover:text-amber-500 transition-colors duration-200" onClick={() => openEdit(loc)}><Pencil className="h-3 w-3" /></Button>
+   552→                          <Button variant="ghost" size="icon" className="h-6 w-6 text-slate-400 dark:text-slate-500 hover:text-red-500 transition-colors duration-200" onClick={() => setDeleting(loc)}><Trash2 className="h-3 w-3" /></Button>
+   553→                        </div>
+   554→                      </div>
+   555→                    </CardContent>
+   556→                  </Card>
+   557→                );
+   558→              })}
+   559→            </div>
+   560→          )}
+   561→        </>
+   562→      )}
+   563→
+   564→      {/* ===== Location Detail Sheet ===== */}
+   565→      <Sheet open={detailOpen} onOpenChange={setDetailOpen}>
+   566→        <SheetContent side="left" className="w-full sm:max-w-lg border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950 p-0 overflow-hidden flex flex-col">
+   567→          {detailLocation && (() => {
+   568→            const pct = loadPct(detailLocation);
+   569→            const colors = gaugeColor(pct);
+   570→            return (
+   571→              <>
+   572→                {/* Sheet Header */}
+   573→                <SheetHeader className="p-4 border-b border-slate-200 dark:border-slate-800 shrink-0">
+   574→                  <div className="flex items-center justify-between">
+   575→                    <div className="min-w-0 flex-1">
+   576→                      <SheetTitle className="text-base font-bold text-slate-900 dark:text-slate-100">{detailLocation.name}</SheetTitle>
+   577→                      <p className="text-sm font-mono text-amber-600 dark:text-amber-400 mt-0.5">{detailLocation.code}</p>
+   578→                    </div>
+   579→                    <div className="flex items-center gap-2 shrink-0">
+   580→                      <Badge variant="outline" className={cn('text-[10px]', typeStyles[detailLocation.type])}>{translateLocationType(detailLocation.type)}</Badge>
+   581→                      <Switch checked={detailLocation.isActive} onCheckedChange={() => handleToggleActive(detailLocation)} />
+   582→                    </div>
+   583→                  </div>
+   584→                </SheetHeader>
+   585→
+   586→                <ScrollArea className="flex-1">
+   587→                  <div className="p-4 space-y-5">
+   588→
+   589→                    {/* ===== Capacity Overview Card ===== */}
+   590→                    <div className="rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/50 p-5">
+   591→                      <h3 className="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-4">{t('detail.location.capacity')}</h3>
+   592→                      <div className="flex items-center gap-6">
+   593→                        <OccupancyGauge percentage={pct} />
+   594→                        <div className="flex-1 space-y-3">
+   595→                          <ProfileField icon={Weight} label={t('detail.location.maxWeight')} value={detailLocation.maxWeight ? `${detailLocation.maxWeight} ${t('common.tonnes')}` : null} />
+   596→                          <ProfileField icon={Maximize} label={t('detail.location.area')} value={detailLocation.area ? `${detailLocation.area} m²` : null} />
+   597→                          <ProfileField icon={Layers} label={t('detail.location.zone')} value={detailLocation.zone} />
+   598→                          <ProfileField icon={Package} label={t('detail.location.currentLoad')} value={detailLocation.maxWeight ? `${detailLocation.currentLoad.toLocaleString()} ${t('detail.location.usedOf')} ${detailLocation.maxWeight.toLocaleString()} ${t('common.tonnes')}` : `${detailLocation.currentLoad} ${t('common.items')}`} />
+   599→                        </div>
+   600→                      </div>
+   601→                      {/* Capacity bar */}
+   602→                      {detailLocation.maxWeight && detailLocation.maxWeight > 0 && (
+   603→                        <div className="mt-4 space-y-1.5">
+   604→                          <div className="flex justify-between text-[11px]">
+   605→                            <span className="text-slate-500 dark:text-slate-400">{t('detail.location.occupancyRate')}</span>
+   606→                            <span className={cn('font-semibold', colors.text)}>{pct}%</span>
+   607→                          </div>
+   608→                          <div className="h-2.5 w-full overflow-hidden rounded-full bg-slate-200 dark:bg-slate-800">
+   609→                            <div className={cn('h-full rounded-full transition-all duration-700', colors.bar)} style={{ width: pct + '%' }} />
+   610→                          </div>
+   611→                        </div>
+   612→                      )}
+   613→                    </div>
+   614→
+   615→                    {/* ===== Cargo Inventory Grid ===== */}
+   616→                    <div className="rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/50 p-5">
+   617→                      <div className="flex items-center justify-between mb-4">
+   618→                        <h3 className="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">{t('detail.location.cargoInventory')}</h3>
+   619→                        <Badge variant="secondary" className={cn('text-[10px] font-medium',
+   620→                          Array.isArray(detailCargo) && detailCargo.length > 0 ? 'bg-amber-500/10 text-amber-600 dark:text-amber-400' : 'bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400')}>
+   621→                          {Array.isArray(detailCargo) ? detailCargo.length : 0} {t('common.items')}
+   622→                        </Badge>
+   623→                      </div>
+   624→                      {detailLoading ? (
+   625→                        <div className="grid grid-cols-2 gap-3">
+   626→                          {Array.from({ length: 4 }).map((_, i) => (
+   627→                            <Skeleton key={i} className="h-20 w-full bg-slate-100 dark:bg-slate-800 rounded-lg" />
+   628→                          ))}
+   629→                        </div>
+   630→                      ) : !Array.isArray(detailCargo) || detailCargo.length === 0 ? (
+   631→                        <div className="flex flex-col items-center justify-center py-8 text-slate-400 dark:text-slate-500">
+   632→                          <Package className="h-8 w-8 mb-2 text-slate-300 dark:text-slate-600" />
+   633→                          <p className="text-xs">{t('detail.location.noCargo')}</p>
+   634→                        </div>
+   635→                      ) : (
+   636→                        <div className="grid grid-cols-2 gap-3 max-h-[320px] overflow-y-auto">
+   637→                          {detailCargo.map((c) => (
+   638→                            <CargoCard key={c.id} cargo={c} />
+   639→                          ))}
+   640→                        </div>
+   641→                      )}
+   642→                    </div>
+   643→
+   644→                    {/* ===== Map View Placeholder ===== */}
+   645→                    <div className="rounded-xl border border-dashed border-slate-300 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-900/50 p-8">
+   646→                      <div className="flex flex-col items-center justify-center text-slate-400 dark:text-slate-500">
+   647→                        <div className="flex h-12 w-12 items-center justify-center rounded-full bg-slate-100 dark:bg-slate-800 mb-3">
+   648→                          <MapPinned className="h-6 w-6 text-slate-400 dark:text-slate-500" />
+   649→                        </div>
+   650→                        <p className="text-sm font-medium text-slate-500 dark:text-slate-400">{t('detail.location.mapViewComingSoon')}</p>
+   651→                        <p className="text-[11px] text-slate-400 dark:text-slate-500 mt-1">{t('detail.location.mapView')}</p>
+   652→                      </div>
+   653→                    </div>
+   654→
+   655→                    {/* ===== Quick Actions ===== */}
+   656→                    <div className="rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/50 p-5">
+   657→                      <h3 className="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-4">{t('detail.location.quickActions')}</h3>
+   658→                      <div className="grid grid-cols-3 gap-3">
+   659→                        <QuickActionButton icon={PackagePlus} label={t('detail.location.assignCargo')} color="green" />
+   660→                        <QuickActionButton icon={ArrowRightLeft} label={t('detail.location.transferAll')} color="amber" />
+   661→                        <QuickActionButton icon={Printer} label={t('detail.location.printLabel')} color="cyan" />
+   662→                      </div>
+   663→                    </div>
+   664→
+   665→                    {/* ===== Edit / Delete Actions ===== */}
+   666→                    <Separator className="bg-slate-200 dark:bg-slate-800" />
+   667→                    <div className="flex items-center gap-3">
+   668→                      <Button variant="outline" className="flex-1 border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 transition-all duration-200" onClick={() => { openEdit(detailLocation); setDetailOpen(false); }}>
+   669→                        <Pencil className="h-4 w-4 ml-2" /> {t('detail.location.editLocation')}
+   670→                      </Button>
+   671→                      <Button variant="outline" className="flex-1 border-red-200 dark:border-red-500/20 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-500/10 transition-all duration-200" onClick={() => { setDeleting(detailLocation); setDetailOpen(false); }}>
+   672→                        <Trash2 className="h-4 w-4 ml-2" /> {t('detail.location.deleteLocation')}
+   673→                      </Button>
+   674→                    </div>
+   675→
+   676→                  </div>
+   677→                </ScrollArea>
+   678→              </>
+   679→            );
+   680→          })()}
+   681→        </SheetContent>
+   682→      </Sheet>
+   683→
+   684→      {/* ===== Add/Edit Dialog ===== */}
+   685→      <Dialog open={showAdd || !!editing} onOpenChange={(open) => { if (!open) { setShowAdd(false); setEditing(null); setForm(emptyForm); } }}>
+   686→        <DialogContent className="border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 max-w-lg">
+   687→          <DialogHeader><DialogTitle className="text-slate-900 dark:text-slate-100">{editing ? t('locations.editLocation') : t('locations.addNewLocation')}</DialogTitle></DialogHeader>
+   688→          <div className="grid gap-4 py-4">
+   689→            <div className="grid grid-cols-2 gap-4">
+   690→              <div>
+   691→                <Label className="text-slate-500 dark:text-slate-400">{t('locations.form.code')}</Label>
+   692→                <Input value={form.code} onChange={(e) => setForm({ ...form, code: e.target.value })} className="border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-200 mt-1" />
+   693→              </div>
+   694→              <div>
+   695→                <Label className="text-slate-500 dark:text-slate-400">{t('locations.form.name')}</Label>
+   696→                <Input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} className="border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-200 mt-1" />
+   697→              </div>
+   698→            </div>
+   699→            <div className="grid grid-cols-2 gap-4">
+   700→              <div>
+   701→                <Label className="text-slate-500 dark:text-slate-400">{t('locations.form.type')}</Label>
+   702→                <Select value={form.type} onValueChange={(v) => setForm({ ...form, type: v })}>
+   703→                  <SelectTrigger className="border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-200 mt-1"><SelectValue placeholder={t('common.select')} /></SelectTrigger>
+   704→                  <SelectContent className="border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800">
+   705→                    {locationTypes.map((lt) => (<SelectItem key={lt} value={lt} className="text-slate-900 dark:text-slate-200 focus:bg-slate-100 dark:focus:bg-slate-700">{translateLocationType(lt)}</SelectItem>))}
+   706→                  </SelectContent>
+   707→                </Select>
+   708→              </div>
+   709→              <div>
+   710→                <Label className="text-slate-500 dark:text-slate-400">{t('locations.form.zone')}</Label>
+   711→                <Input value={form.zone} onChange={(e) => setForm({ ...form, zone: e.target.value })} className="border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-200 mt-1" />
+   712→              </div>
+   713→            </div>
+   714→            <div className="grid grid-cols-3 gap-4">
+   715→              <div>
+   716→                <Label className="text-slate-500 dark:text-slate-400">{t('locations.form.maxWeight')}</Label>
+   717→                <Input type="number" value={form.maxWeight} onChange={(e) => setForm({ ...form, maxWeight: e.target.value })} className="border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-200 mt-1" />
+   718→              </div>
+   719→              <div>
+   720→                <Label className="text-slate-500 dark:text-slate-400">{t('locations.form.maxDimension')}</Label>
+   721→                <Input value={form.maxDimension} onChange={(e) => setForm({ ...form, maxDimension: e.target.value })} className="border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-200 mt-1" placeholder={t('locations.form.maxDimensionPlaceholder')} />
+   722→              </div>
+   723→              <div>
+   724→                <Label className="text-slate-500 dark:text-slate-400">{t('locations.form.area')}</Label>
+   725→                <Input type="number" value={form.area} onChange={(e) => setForm({ ...form, area: e.target.value })} className="border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-200 mt-1" />
+   726→              </div>
+   727→            </div>
+   728→            <div className="flex items-center gap-3">
+   729→              <Switch checked={form.isActive} onCheckedChange={(v) => setForm({ ...form, isActive: v })} />
+   730→              <Label className="text-slate-500 dark:text-slate-400">{t('locations.form.active')}</Label>
+   731→            </div>
+   732→          </div>
+   733→          <DialogFooter>
+   734→            <Button variant="outline" onClick={() => { setShowAdd(false); setEditing(null); setForm(emptyForm); }} className="border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 transition-all duration-200">{t('common.cancel')}</Button>
+   735→            <Button onClick={handleSubmit} disabled={submitting || !form.code || !form.name || !form.type} className="bg-amber-500 hover:bg-amber-600 text-slate-900 transition-all duration-200 hover:shadow-md">{submitting ? t('common.saving') : editing ? t('common.update') : t('common.create')}</Button>
+   736→          </DialogFooter>
+   737→        </DialogContent>
+   738→      </Dialog>
+   739→
+   740→      {/* ===== Delete Dialog ===== */}
+   741→      <Dialog open={!!deleting} onOpenChange={(open) => { if (!open) setDeleting(null); }}>
+   742→        <DialogContent className="border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 max-w-md">
+   743→          <DialogHeader><DialogTitle className="text-slate-900 dark:text-slate-100">{t('common.confirmDelete')}</DialogTitle></DialogHeader>
+   744→          <p className="text-sm text-slate-500 dark:text-slate-400">
+   745→            {t('locations.delete.message')} <span className="text-amber-600 dark:text-amber-400 font-medium">{deleting?.code}</span>{t('locations.delete.warning')}
+   746→          </p>
+   747→          <DialogFooter>
+   748→            <Button variant="outline" onClick={() => setDeleting(null)} className="border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 transition-all duration-200">{t('common.cancel')}</Button>
+   749→            <Button variant="destructive" onClick={handleDelete} className="bg-red-600 hover:bg-red-700 transition-all duration-200">{t('common.delete')}</Button>
+   750→          </DialogFooter>
+   751→        </DialogContent>
+   752→      </Dialog>
+   753→    </div>
+   754→  );
+   755→}
+   756→

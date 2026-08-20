@@ -1,0 +1,502 @@
+   501→            <div className="flex items-center gap-3 px-4 py-2.5 border-b dark:border-slate-800 border-slate-200 dark:bg-slate-800/50 bg-slate-50 dark:text-slate-300 text-slate-600 text-sm">
+   502→              <span className="font-medium">{selectedRows.size} {t('common.selected')}</span>
+   503→              <Button variant="ghost" size="sm" className="h-7 text-xs dark:text-slate-400 text-slate-500 dark:hover:text-slate-200 hover:text-slate-800 dark:hover:bg-slate-700 hover:bg-slate-100 transition-all duration-200">
+   504→                <CheckCircle2 className="h-3.5 w-3.5 ml-1" />
+   505→                {t('common.changeStatus')}
+   506→              </Button>
+   507→              <Button variant="ghost" size="sm" className="h-7 text-xs dark:text-slate-400 text-slate-500 dark:hover:text-red-400 hover:text-red-600 dark:hover:bg-slate-700 hover:bg-slate-100 transition-all duration-200">
+   508→                <Trash2 className="h-3.5 w-3.5 ml-1" />
+   509→                {t('common.delete')}
+   510→              </Button>
+   511→            </div>
+   512→          )}
+   513→
+   514→          <div className="overflow-x-auto">
+   515→            <Table>
+   516→              <TableHeader>
+   517→                <TableRow className="dark:border-slate-800 border-slate-200 hover:bg-transparent">
+   518→                  <TableHead className="w-10">
+   519→                    <Checkbox
+   520→                      checked={isAllSelected}
+   521→                      onCheckedChange={toggleAll}
+   522→                      className="dark:border-slate-600 border-slate-300"
+   523→                    />
+   524→                  </TableHead>
+   525→                  <TableHead className="text-xs dark:text-slate-500 text-slate-500">{t('cargo.table.code')}</TableHead>
+   526→                  <TableHead className="text-xs dark:text-slate-500 text-slate-500">{t('cargo.table.description')}</TableHead>
+   527→                  <TableHead className="text-xs dark:text-slate-500 text-slate-500 hidden md:table-cell">{t('cargo.table.weight')}</TableHead>
+   528→                  <TableHead className="text-xs dark:text-slate-500 text-slate-500 hidden lg:table-cell">{t('cargo.table.category')}</TableHead>
+   529→                  <TableHead className="text-xs dark:text-slate-500 text-slate-500">{t('cargo.table.status')}</TableHead>
+   530→                  <TableHead className="text-xs dark:text-slate-500 text-slate-500 hidden lg:table-cell">{t('cargo.table.location')}</TableHead>
+   531→                  <TableHead className="text-xs dark:text-slate-500 text-slate-500 text-left">{t('common.actions')}</TableHead>
+   532→                </TableRow>
+   533→              </TableHeader>
+   534→              <TableBody>
+   535→                {loading ? (
+   536→                  Array.from({ length: 5 }).map((_, i) => (
+   537→                    <TableRow key={i} className="dark:border-slate-800 border-slate-200 hover:bg-transparent">
+   538→                      <TableCell><Skeleton className="h-4 w-4 dark:bg-slate-800 bg-slate-200" /></TableCell>
+   539→                      {Array.from({ length: 6 }).map((_, j) => (
+   540→                        <TableCell key={j} className="py-3"><Skeleton className="h-4 w-16 dark:bg-slate-800 bg-slate-200" /></TableCell>
+   541→                      ))}
+   542→                    </TableRow>
+   543→                  ))
+   544→                ) : cargo.length === 0 ? (
+   545→                  <TableRow className="dark:border-slate-800 border-slate-200 hover:bg-transparent">
+   546→                    <TableCell colSpan={8} className="text-center py-16">
+   547→                      <div className="flex flex-col items-center gap-3">
+   548→                        <div className="h-14 w-14 rounded-full dark:bg-slate-800 bg-slate-100 flex items-center justify-center">
+   549→                          <PackageSearch className="h-7 w-7 dark:text-slate-600 text-slate-400" />
+   550→                        </div>
+   551→                        <p className="text-sm dark:text-slate-400 text-slate-500 font-medium">{t('cargo.noCargoFound')}</p>
+   552→                        <p className="text-xs dark:text-slate-600 text-slate-400 max-w-xs">
+   553→                          {t('cargo.searchPlaceholder')}
+   554→                        </p>
+   555→                      </div>
+   556→                    </TableCell>
+   557→                  </TableRow>
+   558→                ) : (
+   559→                  cargo.map((item) => (
+   560→                    <TableRow
+   561→                      key={item.id}
+   562→                      className={`dark:border-slate-800 border-slate-200 cursor-pointer transition-all duration-200 group ${
+   563→                        selectedRows.has(item.id)
+   564→                          ? 'dark:bg-amber-500/5 bg-amber-50'
+   565→                          : 'dark:hover:bg-slate-800/50 hover:bg-slate-50'
+   566→                      }`}
+   567→                      onClick={() => openDetail(item)}
+   568→                    >
+   569→                      <TableCell onClick={(e) => e.stopPropagation()}>
+   570→                        <Checkbox
+   571→                          checked={selectedRows.has(item.id)}
+   572→                          onCheckedChange={() => toggleRow(item.id)}
+   573→                          className="dark:border-slate-600 border-slate-300"
+   574→                        />
+   575→                      </TableCell>
+   576→                      <TableCell className="py-3 text-xs font-mono font-semibold dark:text-amber-400/80 text-amber-600">{item.cargoCode}</TableCell>
+   577→                      <TableCell className="py-3 text-xs dark:text-slate-300 text-slate-700 max-w-[200px] truncate group-hover:dark:text-slate-100 group-hover:text-slate-900 transition-colors">{item.description}</TableCell>
+   578→                      <TableCell className="py-3 text-xs dark:text-slate-400 text-slate-500 hidden md:table-cell font-mono">{item.weight.toLocaleString()} kg</TableCell>
+   579→                      <TableCell className="py-3 hidden lg:table-cell">
+   580→                        <Badge variant="outline" className={`text-[10px] ${safeCategoryStyle(item.liftCategory)}`}>{translateCategory(item.liftCategory)}</Badge>
+   581→                      </TableCell>
+   582→                      <TableCell className="py-3">
+   583→                        <Badge variant="outline" className={`text-[10px] ${safeStatusStyle(item.status)}`}>{translateStatus(item.status)}</Badge>
+   584→                      </TableCell>
+   585→                      <TableCell className="py-3 text-xs dark:text-slate-400 text-slate-500 hidden lg:table-cell">{item.location?.code || '—'}</TableCell>
+   586→                      <TableCell className="py-3 text-left" onClick={(e) => e.stopPropagation()}>
+   587→                        <div className="flex items-center justify-start gap-1">
+   588→                          <Button variant="ghost" size="icon" className="h-7 w-7 dark:text-slate-500 text-slate-400 dark:hover:text-cyan-400 hover:text-cyan-600 dark:hover:bg-slate-800 hover:bg-slate-100 transition-all duration-200" onClick={() => openDetail(item)}>
+   589→                            <Eye className="h-3.5 w-3.5" />
+   590→                          </Button>
+   591→                          <Button variant="ghost" size="icon" className="h-7 w-7 dark:text-slate-500 text-slate-400 dark:hover:text-amber-400 hover:text-amber-600 dark:hover:bg-slate-800 hover:bg-slate-100 transition-all duration-200" onClick={() => openEdit(item)}>
+   592→                            <Pencil className="h-3.5 w-3.5" />
+   593→                          </Button>
+   594→                          <Button variant="ghost" size="icon" className="h-7 w-7 dark:text-slate-500 text-slate-400 dark:hover:text-red-400 hover:text-red-600 dark:hover:bg-slate-800 hover:bg-slate-100 transition-all duration-200" onClick={() => setDeleting(item)}>
+   595→                            <Trash2 className="h-3.5 w-3.5" />
+   596→                          </Button>
+   597→                        </div>
+   598→                      </TableCell>
+   599→                    </TableRow>
+   600→                  ))
+   601→                )}
+   602→              </TableBody>
+   603→            </Table>
+   604→          </div>
+   605→        </CardContent>
+   606→      </Card>
+   607→
+   608→      {/* ===== PAGINATION ===== */}
+   609→      {totalPages > 1 && (
+   610→        <div className="flex items-center justify-center gap-2">
+   611→          <Button variant="outline" size="sm" disabled={page <= 1} onClick={() => setPage(page - 1)}
+   612→            className="dark:border-slate-700 border-slate-300 dark:bg-slate-800 bg-white dark:text-slate-300 text-slate-700 dark:hover:bg-slate-700 hover:bg-slate-100 transition-all duration-200">
+   613→            {t('common.previous')}
+   614→          </Button>
+   615→          <span className="text-xs dark:text-slate-500 text-slate-400 px-2">
+   616→            {t('common.page')} {page} {t('common.of')} {totalPages}
+   617→          </span>
+   618→          <Button variant="outline" size="sm" disabled={page >= totalPages} onClick={() => setPage(page + 1)}
+   619→            className="dark:border-slate-700 border-slate-300 dark:bg-slate-800 bg-white dark:text-slate-300 text-slate-700 dark:hover:bg-slate-700 hover:bg-slate-100 transition-all duration-200">
+   620→            {t('common.next')}
+   621→          </Button>
+   622→        </div>
+   623→      )}
+   624→
+   625→      {/* ============================================ */}
+   626→      {/* ===== ENHANCED CARGO DETAIL SHEET =========== */}
+   627→      {/* ============================================ */}
+   628→      <Sheet open={detailOpen} onOpenChange={setDetailOpen}>
+   629→        <SheetContent
+   630→          side="left"
+   631→          className="w-full sm:max-w-[560px] dark:border-slate-700 border-slate-200 dark:bg-slate-950 bg-slate-50 p-0 overflow-hidden flex flex-col z-[100]"
+   632→        >
+   633→          {detailLoading ? (
+   634→            <div className="flex-1 flex items-center justify-center">
+   635→              <div className="flex flex-col items-center gap-3">
+   636→                <Loader2 className="h-8 w-8 animate-spin text-amber-500" />
+   637→                <p className="text-xs dark:text-slate-500 text-slate-400">{t('common.loading')}</p>
+   638→              </div>
+   639→            </div>
+   640→          ) : detailCargo ? (
+   641→            <>
+   642→              {/* ===== DETAIL HEADER ===== */}
+   643→              <SheetHeader className="p-5 border-b dark:border-slate-800 border-slate-200 dark:bg-slate-900/80 bg-white shrink-0">
+   644→                <div className="flex items-start justify-between">
+   645→                  <div className="flex-1 min-w-0">
+   646→                    <div className="flex items-center gap-3 flex-wrap">
+   647→                      <SheetTitle className="text-base font-mono font-bold dark:text-amber-400 text-amber-600">
+   648→                        {detailCargo.cargoCode}
+   649→                      </SheetTitle>
+   650→                      <Badge variant="outline" className={`text-[10px] ${safeStatusStyle(detailCargo.status)}`}>
+   651→                        {translateStatus(detailCargo.status)}
+   652→                      </Badge>
+   653→                    </div>
+   654→                    <p className="text-sm dark:text-slate-200 text-slate-800 mt-1.5 font-medium leading-relaxed line-clamp-2">
+   655→                      {detailCargo.description}
+   656→                    </p>
+   657→                    <p className="text-xs dark:text-slate-500 text-slate-400 mt-1">
+   658→                      {new Date(detailCargo.createdAt).toLocaleDateString()} {new Date(detailCargo.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+   659→                    </p>
+   660→                  </div>
+   661→                  <div className="flex items-center gap-1.5 shrink-0 ml-3">
+   662→                    <Button
+   663→                      variant="ghost"
+   664→                      size="icon"
+   665→                      className="h-8 w-8 dark:text-slate-400 text-slate-500 dark:hover:text-amber-400 hover:text-amber-600 dark:hover:bg-slate-800 hover:bg-amber-50 transition-all duration-200"
+   666→                      onClick={() => { openEdit(detailCargo); }}
+   667→                      title={t('common.edit')}
+   668→                    >
+   669→                      <Pencil className="h-4 w-4" />
+   670→                    </Button>
+   671→                    <Button
+   672→                      variant="ghost"
+   673→                      size="icon"
+   674→                      className="h-8 w-8 dark:text-slate-400 text-slate-500 dark:hover:text-cyan-400 hover:text-cyan-600 dark:hover:bg-slate-800 hover:bg-cyan-50 transition-all duration-200"
+   675→                      onClick={() => { /* print - UI only */ }}
+   676→                      title={t('common.print')}
+   677→                    >
+   678→                      <Printer className="h-4 w-4" />
+   679→                    </Button>
+   680→                    <Button
+   681→                      variant="ghost"
+   682→                      size="icon"
+   683→                      className="h-8 w-8 dark:text-slate-400 text-slate-500 dark:hover:bg-slate-800 hover:bg-slate-100 transition-all duration-200"
+   684→                      onClick={() => setDetailOpen(false)}
+   685→                      title={t('common.close')}
+   686→                    >
+   687→                      <X className="h-4 w-4" />
+   688→                    </Button>
+   689→                  </div>
+   690→                </div>
+   691→              </SheetHeader>
+   692→
+   693→              {/* ===== DETAIL SCROLL CONTENT ===== */}
+   694→              <ScrollArea className="flex-1">
+   695→                <div className="p-5 space-y-5">
+   696→
+   697→                  {/* ===== PHOTOS / ATTACHMENTS SECTION ===== */}
+   698→                  <div className="rounded-xl border dark:border-slate-800 border-slate-200 dark:bg-slate-900/50 bg-white p-4 shadow-sm">
+   699→                    <div className="flex items-center justify-between mb-3">
+   700→                      <h3 className="text-xs font-semibold dark:text-slate-300 text-slate-600 flex items-center gap-1.5">
+   701→                        <Camera className="h-3.5 w-3.5 dark:text-amber-400 text-amber-500" />
+   702→                        {t('detail.photos.title') || 'Photos & Attachments'}
+   703→                      </h3>
+   704→                      <span className="text-[10px] dark:text-slate-500 text-slate-400">4 files</span>
+   705→                    </div>
+   706→                    <div className="grid grid-cols-2 gap-2.5">
+   707→                      {[1, 2, 3].map((idx) => (
+   708→                        <div
+   709→                          key={idx}
+   710→                          className="relative aspect-[4/3] rounded-lg dark:bg-slate-800 bg-slate-100 border dark:border-slate-700 border-slate-200 flex flex-col items-center justify-center gap-2 group cursor-pointer transition-all duration-200 hover:dark:border-amber-500/30 hover:border-amber-400/30 hover:shadow-sm"
+   711→                        >
+   712→                          <ImageIcon className="h-6 w-6 dark:text-slate-600 text-slate-400 group-hover:dark:text-amber-400/60 group-hover:text-amber-400/60 transition-colors" />
+   713→                          <span className="text-[10px] dark:text-slate-500 text-slate-400 group-hover:dark:text-slate-400 group-hover:text-slate-500 transition-colors">
+   714→                            Photo {idx}
+   715→                          </span>
+   716→                          <div className="absolute inset-0 rounded-lg dark:bg-slate-900/60 bg-black/30 opacity-0 group-hover:opacity-100 transition-all duration-200 flex items-center justify-center">
+   717→                            <Eye className="h-5 w-5 text-white" />
+   718→                          </div>
+   719→                        </div>
+   720→                      ))}
+   721→                      <button
+   722→                        className="relative aspect-[4/3] rounded-lg border-2 border-dashed dark:border-slate-700 border-slate-300 dark:bg-slate-800/50 bg-slate-50 flex flex-col items-center justify-center gap-2 cursor-pointer transition-all duration-200 hover:dark:border-amber-500/40 hover:border-amber-400/40 hover:dark:bg-amber-500/5 hover:bg-amber-50 group"
+   723→                      >
+   724→                        <Upload className="h-5 w-5 dark:text-slate-500 text-slate-400 group-hover:dark:text-amber-400 group-hover:text-amber-500 transition-colors" />
+   725→                        <span className="text-[10px] dark:text-slate-500 text-slate-400 group-hover:dark:text-amber-400/80 group-hover:text-amber-500/80 transition-colors font-medium">
+   726→                          {t('detail.photos.upload') || 'Upload'}
+   727→                        </span>
+   728→                      </button>
+   729→                    </div>
+   730→                  </div>
+   731→
+   732→                  {/* ===== DOCUMENTS SECTION ===== */}
+   733→                  <div className="rounded-xl border dark:border-slate-800 border-slate-200 dark:bg-slate-900/50 bg-white p-4 shadow-sm">
+   734→                    <h3 className="text-xs font-semibold dark:text-slate-300 text-slate-600 flex items-center gap-1.5 mb-3">
+   735→                      <FileText className="h-3.5 w-3.5 dark:text-cyan-400 text-cyan-500" />
+   736→                      {t('detail.documents.title') || 'Documents'}
+   737→                    </h3>
+   738→                    <div className="space-y-2">
+   739→                      {[
+   740→                        { name: t('detail.documents.bl') || 'Bill of Lading', icon: FileBadge, color: 'dark:text-blue-400 text-blue-500' },
+   741→                        { name: t('detail.documents.po') || 'Purchase Order', icon: FileSpreadsheet, color: 'dark:text-emerald-400 text-emerald-500' },
+   742→                        { name: t('detail.documents.inspection') || 'Inspection Report', icon: FileCheck, color: 'dark:text-purple-400 text-purple-500' },
+   743→                        { name: t('detail.documents.certificate') || 'Certificate', icon: Award, color: 'dark:text-amber-400 text-amber-500' },
+   744→                      ].map((doc) => {
+   745→                        const DocIcon = doc.icon;
+   746→                        return (
+   747→                          <div
+   748→                            key={doc.name}
+   749→                            className="flex items-center justify-between p-2.5 rounded-lg dark:bg-slate-800/60 bg-slate-50 dark:hover:bg-slate-800 hover:bg-slate-100 transition-all duration-200 cursor-pointer group"
+   750→                          >
+   751→                            <div className="flex items-center gap-2.5">
+   752→                              <div className="h-8 w-8 rounded-lg dark:bg-slate-700 bg-white flex items-center justify-center shadow-sm">
+   753→                                <DocIcon className={`h-4 w-4 ${doc.color}`} />
+   754→                              </div>
+   755→                              <div>
+   756→                                <p className="text-xs font-medium dark:text-slate-200 text-slate-700 group-hover:dark:text-slate-100 group-hover:text-slate-900 transition-colors">{doc.name}</p>
+   757→                                <p className="text-[10px] dark:text-slate-500 text-slate-400">PDF • 2.4 MB</p>
+   758→                              </div>
+   759→                            </div>
+   760→                            <Button
+   761→                              variant="ghost"
+   762→                              size="icon"
+   763→                              className="h-7 w-7 dark:text-slate-500 text-slate-400 dark:hover:text-cyan-400 hover:text-cyan-600 dark:hover:bg-slate-700 hover:bg-cyan-50 transition-all duration-200"
+   764→                            >
+   765→                              <Download className="h-3.5 w-3.5" />
+   766→                            </Button>
+   767→                          </div>
+   768→                        );
+   769→                      })}
+   770→                    </div>
+   771→                  </div>
+   772→
+   773→                  {/* ===== QUICK ACTIONS PANEL ===== */}
+   774→                  <div className="rounded-xl border dark:border-slate-800 border-slate-200 dark:bg-slate-900/50 bg-white p-4 shadow-sm">
+   775→                    <h3 className="text-xs font-semibold dark:text-slate-300 text-slate-600 flex items-center gap-1.5 mb-3">
+   776→                      <Sparkles className="h-3.5 w-3.5 dark:text-amber-400 text-amber-500" />
+   777→                      {t('detail.quickActions') || 'Quick Actions'}
+   778→                    </h3>
+   779→                    <div className="grid grid-cols-3 gap-2">
+   780→                      <button
+   781→                        onClick={() => setShowTransfer(true)}
+   782→                        className="flex flex-col items-center gap-2 p-3 rounded-xl dark:bg-slate-800/60 bg-slate-50 dark:hover:bg-slate-800 hover:bg-slate-100 transition-all duration-200 group cursor-pointer border dark:border-transparent border-slate-200 dark:hover:border-amber-500/20 hover:border-amber-400/30"
+   783→                      >
+   784→                        <div className="h-9 w-9 rounded-lg dark:bg-emerald-500/10 bg-emerald-50 flex items-center justify-center group-hover:dark:bg-emerald-500/20 group-hover:bg-emerald-100 transition-colors">
+   785→                          <ArrowRightLeft className="h-4 w-4 dark:text-emerald-400 text-emerald-600" />
+   786→                        </div>
+   787→                        <span className="text-[10px] font-medium dark:text-slate-300 text-slate-600 text-center leading-tight">نقل الموقع</span>
+   788→                      </button>
+   789→                      <button
+   790→                        className="flex flex-col items-center gap-2 p-3 rounded-xl dark:bg-slate-800/60 bg-slate-50 dark:hover:bg-slate-800 hover:bg-slate-100 transition-all duration-200 group cursor-pointer border dark:border-transparent border-slate-200 dark:hover:border-amber-500/20 hover:border-amber-400/30"
+   791→                      >
+   792→                        <div className="h-9 w-9 rounded-lg dark:bg-cyan-500/10 bg-cyan-50 flex items-center justify-center group-hover:dark:bg-cyan-500/20 group-hover:bg-cyan-100 transition-colors">
+   793→                          <Printer className="h-4 w-4 dark:text-cyan-400 text-cyan-600" />
+   794→                        </div>
+   795→                        <span className="text-[10px] font-medium dark:text-slate-300 text-slate-600 text-center leading-tight">
+   796→                          {t('detail.quickActions.printLabel') || 'Print Label'}
+   797→                        </span>
+   798→                      </button>
+   799→                      <button
+   800→                        className="flex flex-col items-center gap-2 p-3 rounded-xl dark:bg-slate-800/60 bg-slate-50 dark:hover:bg-slate-800 hover:bg-slate-100 transition-all duration-200 group cursor-pointer border dark:border-transparent border-slate-200 dark:hover:border-amber-500/20 hover:border-amber-400/30"
+   801→                      >
+   802→                        <div className="h-9 w-9 rounded-lg dark:bg-purple-500/10 bg-purple-50 flex items-center justify-center group-hover:dark:bg-purple-500/20 group-hover:bg-purple-100 transition-colors">
+   803→                          <QrCode className="h-4 w-4 dark:text-purple-400 text-purple-600" />
+   804→                        </div>
+   805→                        <span className="text-[10px] font-medium dark:text-slate-300 text-slate-600 text-center leading-tight">
+   806→                          {t('detail.quickActions.generateQR') || 'Generate QR'}
+   807→                        </span>
+   808→                      </button>
+   809→                    </div>
+   810→                  </div>
+   811→
+   812→                  {/* ===== STATUS WORKFLOW STEPPER ===== */}
+   813→                  <div className="rounded-xl border dark:border-slate-800 border-slate-200 dark:bg-slate-900/50 bg-white p-4 shadow-sm">
+   814→                    <h3 className="text-xs font-semibold dark:text-slate-300 text-slate-600 mb-4 flex items-center gap-1.5">
+   815→                      <Play className="h-3.5 w-3.5 dark:text-amber-400 text-amber-500" />
+   816→                      {t('detail.workflow.title')}
+   817→                    </h3>
+   818→                    <div className="flex items-center gap-0 overflow-x-auto pb-1">
+   819→                      {ALL_STATUSES.map((s, idx) => {
+   820→                        const Icon = statusIcons[s];
+   821→                        const isCompleted = idx <= currentStep;
+   822→                        const isCurrent = idx === currentStep;
+   823→                        const isNext = STATUS_WORKFLOW[detailCargo.status]?.includes(s);
+   824→                        return (
+   825→                          <div key={s} className="flex items-center shrink-0">
+   826→                            <button
+   827→                              disabled={!isNext || statusChanging}
+   828→                              onClick={() => isNext && handleStatusChange(s)}
+   829→                              className={`flex flex-col items-center gap-2 px-3 py-2.5 rounded-xl transition-all duration-300 min-w-[64px] relative ${
+   830→                                isCurrent
+   831→                                  ? 'dark:bg-amber-500/15 bg-amber-50 ring-2 ring-amber-500/40 shadow-sm shadow-amber-500/10'
+   832→                                  : isCompleted
+   833→                                    ? 'dark:bg-emerald-500/10 bg-emerald-50 opacity-70'
+   834→                                    : isNext
+   835→                                      ? 'dark:bg-slate-800/80 bg-slate-50 dark:hover:bg-slate-700 hover:bg-slate-100 cursor-pointer hover:shadow-sm transition-all duration-200'
+   836→                                      : 'opacity-25'
+   837→                              }`}
+   838→                            >
+   839→                              <div className={`h-8 w-8 rounded-full flex items-center justify-center transition-all duration-300 ${
+   840→                                isCurrent
+   841→                                  ? 'dark:bg-amber-500/20 bg-amber-100'
+   842→                                  : isCompleted
+   843→                                    ? 'dark:bg-emerald-500/20 bg-emerald-100'
+   844→                                    : 'dark:bg-slate-700/50 bg-slate-100'
+   845→                              }`}>
+   846→                                {isCompleted && !isCurrent ? (
+   847→                                  <Check className="h-4 w-4 dark:text-emerald-400 text-emerald-600" />
+   848→                                ) : (
+   849→                                  <Icon className={`h-4 w-4 ${
+   850→                                    isCurrent ? 'dark:text-amber-400 text-amber-600' :
+   851→                                    isNext ? 'dark:text-slate-400 text-slate-500' :
+   852→                                    'dark:text-slate-600 text-slate-400'
+   853→                                  }`} />
+   854→                                )}
+   855→                              </div>
+   856→                              <span className={`text-[9px] leading-tight text-center font-medium ${
+   857→                                isCurrent
+   858→                                  ? 'dark:text-amber-400 text-amber-600'
+   859→                                  : isCompleted
+   860→                                    ? 'dark:text-emerald-400 text-emerald-600'
+   861→                                    : isNext
+   862→                                      ? 'dark:text-slate-400 text-slate-500'
+   863→                                      : 'dark:text-slate-600 text-slate-400'
+   864→                              }`}>
+   865→                                {translateStatus(s)}
+   866→                              </span>
+   867→                              {isNext && (
+   868→                                <span className="absolute -top-1 -right-1 h-3.5 w-3.5 rounded-full dark:bg-amber-500 bg-amber-400 flex items-center justify-center">
+   869→                                  <ArrowDown className="h-2 w-2 dark:text-slate-900 text-white" />
+   870→                                </span>
+   871→                              )}
+   872→                            </button>
+   873→                            {idx < ALL_STATUSES.length - 1 && (
+   874→                              <div className="flex items-center mx-1">
+   875→                                <div className={`h-0.5 w-4 rounded-full transition-all duration-500 ${
+   876→                                  idx < currentStep
+   877→                                    ? 'dark:bg-emerald-500/60 bg-emerald-400'
+   878→                                    : idx === currentStep
+   879→                                      ? 'dark:bg-amber-500/40 bg-amber-300'
+   880→                                      : 'dark:bg-slate-700 bg-slate-200'
+   881→                                }`} />
+   882→                              </div>
+   883→                            )}
+   884→                          </div>
+   885→                        );
+   886→                      })}
+   887→                    </div>
+   888→                  </div>
+   889→
+   890→                  {/* ===== SPECIFICATIONS ===== */}
+   891→                  <div className="rounded-xl border dark:border-slate-800 border-slate-200 dark:bg-slate-900/50 bg-white p-4 shadow-sm">
+   892→                    <h3 className="text-xs font-semibold dark:text-slate-300 text-slate-600 flex items-center gap-1.5 mb-3">
+   893→                      <Tag className="h-3.5 w-3.5 dark:text-cyan-400 text-cyan-500" />
+   894→                      {t('detail.info.specifications')}
+   895→                    </h3>
+   896→                    <div className="grid grid-cols-2 gap-3 text-sm">
+   897→                      <div>
+   898→                        <span className="dark:text-slate-500 text-slate-400 text-xs">{t('cargo.details.weight')}</span>
+   899→                        <p className="dark:text-slate-100 text-slate-900 font-semibold mt-0.5">{detailCargo.weight.toLocaleString()} kg</p>
+   900→                      </div>
+   901→                      <div>
+   902→                        <span className="dark:text-slate-500 text-slate-400 text-xs">{t('cargo.details.category')}</span>
+   903→                        <div className="mt-1">
+   904→                          <Badge variant="outline" className={`text-[10px] ${safeCategoryStyle(detailCargo.liftCategory)}`}>
+   905→                            {translateCategory(detailCargo.liftCategory)}
+   906→                          </Badge>
+   907→                        </div>
+   908→                      </div>
+   909→                      <div>
+   910→                        <span className="dark:text-slate-500 text-slate-400 text-xs">{t('cargo.details.commodity')}</span>
+   911→                        <p className="dark:text-slate-100 text-slate-900 mt-0.5">{translateCommodity(detailCargo.commodityType)}</p>
+   912→                      </div>
+   913→                      <div>
+   914→                        <span className="dark:text-slate-500 text-slate-400 text-xs">{t('cargo.details.liftingPoints')}</span>
+   915→                        <p className="dark:text-slate-100 text-slate-900 mt-0.5">{detailCargo.liftingPoints ?? '—'}</p>
+   916→                      </div>
+   917→                      <div>
+   918→                        <span className="dark:text-slate-500 text-slate-400 text-xs">{t('cargo.details.cog')}</span>
+   919→                        <p className="dark:text-slate-200 text-slate-800 mt-0.5 text-xs">{detailCargo.centerOfGravity || '—'}</p>
+   920→                      </div>
+   921→                      {detailCargo.volume && (
+   922→                        <div>
+   923→                          <span className="dark:text-slate-500 text-slate-400 text-xs">{t('detail.info.volume')}</span>
+   924→                          <p className="dark:text-slate-100 text-slate-900 mt-0.5">{detailCargo.volume.toFixed(1)} m³</p>
+   925→                        </div>
+   926→                      )}
+   927→                    </div>
+   928→                  </div>
+   929→
+   930→                  {/* ===== WEIGHT VISUALIZATION ===== */}
+   931→                  <div className="rounded-xl border dark:border-slate-800 border-slate-200 dark:bg-slate-900/50 bg-white p-4 shadow-sm">
+   932→                    <h3 className="text-xs font-semibold dark:text-slate-300 text-slate-600 flex items-center gap-1.5 mb-3">
+   933→                      <Weight className="h-3.5 w-3.5 dark:text-red-400 text-red-500" />
+   934→                      {t('common.weight')} Visualization
+   935→                    </h3>
+   936→                    {weightCat && (
+   937→                      <div className="space-y-3">
+   938→                        {/* Weight category badge */}
+   939→                        <div className="flex items-center gap-2">
+   940→                          <Badge variant="outline" className={`text-[10px] font-semibold ${
+   941→                            weightCat.colorDark === 'bg-emerald-500' ? 'dark:text-emerald-400 text-emerald-600 border-emerald-500/20 bg-emerald-500/10' :
+   942→                            weightCat.colorDark === 'bg-amber-500' ? 'dark:text-amber-400 text-amber-600 border-amber-500/20 bg-amber-500/10' :
+   943→                            weightCat.colorDark === 'bg-orange-500' ? 'dark:text-orange-400 text-orange-600 border-orange-500/20 bg-orange-500/10' :
+   944→                            'dark:text-red-400 text-red-600 border-red-500/20 bg-red-500/10'
+   945→                          }`}>
+   946→                            {weightCat.label}
+   947→                          </Badge>
+   948→                          <span className="text-xs dark:text-slate-400 text-slate-500">
+   949→                            {(detailCargo.weight / 1000).toFixed(1)} tonnes
+   950→                          </span>
+   951→                        </div>
+   952→
+   953→                        {/* Visual bar */}
+   954→                        <div className="relative">
+   955→                          <div className="flex gap-0.5 h-3 rounded-full overflow-hidden dark:bg-slate-800 bg-slate-100">
+   956→                            {WEIGHT_CATEGORIES.map((cat, idx) => {
+   957→                              const catStart = idx === 0 ? 0 : WEIGHT_CATEGORIES.slice(0, idx).reduce((acc, c) => acc + c.maxTonnes, 0);
+   958→                              const catEnd = catStart + cat.maxTonnes;
+   959→                              const catPct = (cat.maxTonnes / 500) * 100;
+   960→                              const fillStart = Math.max(0, (weightPct - (catStart / 500) * 100));
+   961→                              const fillPct = Math.min(catPct, Math.max(0, fillStart));
+   962→
+   963→                              return (
+   964→                                <div
+   965→                                  key={cat.label}
+   966→                                  className={`h-full relative ${idx === 0 ? 'rounded-l-full' : ''} ${idx === WEIGHT_CATEGORIES.length - 1 ? 'rounded-r-full' : ''}`}
+   967→                                  style={{ width: `${catPct}%` }}
+   968→                                >
+   969→                                  <div className="absolute inset-0 dark:bg-slate-700 bg-slate-200" />
+   970→                                  {weightPct > (catStart / 500) * 100 && (
+   971→                                    <div
+   972→                                      className={`absolute top-0 left-0 h-full ${cat.colorDark} dark:opacity-80 opacity-60 transition-all duration-700`}
+   973→                                      style={{ width: `${Math.min(100, fillPct / catPct * 100)}%` }}
+   974→                                    />
+   975→                                  )}
+   976→                                </div>
+   977→                              );
+   978→                            })}
+   979→                          </div>
+   980→                          {/* Category labels */}
+   981→                          <div className="flex justify-between mt-1.5">
+   982→                            <span className="text-[9px] dark:text-slate-600 text-slate-400">0t</span>
+   983→                            <span className="text-[9px] dark:text-slate-600 text-slate-400">5t</span>
+   984→                            <span className="text-[9px] dark:text-slate-600 text-slate-400">50t</span>
+   985→                            <span className="text-[9px] dark:text-slate-600 text-slate-400">200t</span>
+   986→                            <span className="text-[9px] dark:text-slate-600 text-slate-400">500t+</span>
+   987→                          </div>
+   988→                        </div>
+   989→                      </div>
+   990→                    )}
+   991→                  </div>
+   992→
+   993→                  {/* ===== DIMENSIONS VISUALIZATION ===== */}
+   994→                  <div className="rounded-xl border dark:border-slate-800 border-slate-200 dark:bg-slate-900/50 bg-white p-4 shadow-sm">
+   995→                    <h3 className="text-xs font-semibold dark:text-slate-300 text-slate-600 flex items-center gap-1.5 mb-3">
+   996→                      <Ruler className="h-3.5 w-3.5 dark:text-purple-400 text-purple-500" />
+   997→                      {t('common.dimensions')}
+   998→                    </h3>
+   999→                    <div className="flex items-center gap-5">
+  1000→                      {/* 3D Box visual */}
+
+[showing lines 501-1000 of 1464; use offset=1001 with limit to continue reading]

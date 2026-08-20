@@ -83,6 +83,21 @@ const translations: Record<string, string> = {
   'common.dateSlashTime': 'التاريخ/الوقت',
   'common.remarks': 'ملاحظات',
   'common.operator': 'المشغّل',
+  'common.export': 'تصدير',
+  'common.exportCsv': 'تصدير CSV',
+  'common.print': 'طباعة',
+  'common.bulkActions': 'إجراءات جماعية',
+  'common.selected': 'محدد',
+  'common.changeStatus': 'تغيير الحالة',
+  'common.selectAll': 'تحديد الكل',
+  'common.close': 'إغلاق',
+  'common.viewDetails': 'عرض التفاصيل',
+  'common.total': 'الإجمالي',
+  'common.language': 'اللغة',
+  'common.theme': 'المظهر',
+  'common.dark': 'داكن',
+  'common.light': 'فاتح',
+  'common.system': 'النظام',
 
   // ===== Footer =====
   'footer.left': 'نظام إدارة المستودعات v1.0 — عمليات الرفع الثقيل وبضائع المشاريع',
@@ -181,6 +196,15 @@ const translations: Record<string, string> = {
   'dashboard.type': 'النوع',
   'dashboard.from': 'من',
   'dashboard.to': 'إلى',
+  'dashboard.movementsTrend': 'اتجاه الحركات (آخر 7 أيام)',
+  'dashboard.weightByCategory': 'الوزن حسب الفئة (طن)',
+  'dashboard.locationUtilization': 'استخدام المواقع',
+  'dashboard.movements': 'الحركات',
+  'dashboard.receive': 'استلام',
+  'dashboard.move': 'نقل',
+  'dashboard.dispatch': 'إرسال',
+  'dashboard.day': 'يوم',
+  'dashboard.count': 'العدد',
 
   // ===== Dashboard Welcome Guide =====
   'welcome.title': 'مرحباً بك في نظام إدارة المستودعات',
@@ -252,6 +276,7 @@ const translations: Record<string, string> = {
   'cargo.toast.deleted': 'تم حذف البضاعة',
   'cargo.toast.deleteFailed': 'فشل في حذف البضاعة',
   'cargo.toast.saveFailed': 'فشل في الحفظ',
+  'cargo.toast.exported': 'تم تصدير البضائع بنجاح',
 
   // ===== Projects Page =====
   'projects.title': 'المشاريع',
@@ -288,6 +313,7 @@ const translations: Record<string, string> = {
   'projects.toast.created': 'تم إنشاء المشروع',
   'projects.toast.createFailed': 'فشل في إنشاء المشروع',
   'projects.toast.cargoFetchFailed': 'فشل في جلب بضائع المشروع',
+  'projects.toast.exported': 'تم تصدير المشاريع بنجاح',
 
   // ===== Enhanced Detail Views =====
   'detail.overview': 'نظرة عامة',
@@ -459,6 +485,7 @@ const translations: Record<string, string> = {
   'equipment.toast.updated': 'تم تحديث المعدات',
   'equipment.toast.deleted': 'تم حذف المعدات',
   'equipment.toast.deleteFailed': 'فشل في حذف المعدات',
+  'equipment.toast.exported': 'تم تصدير المعدات بنجاح',
 
   // ===== Movements Page =====
   'movements.title': 'الحركات',

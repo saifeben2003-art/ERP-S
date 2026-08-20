@@ -1,0 +1,1464 @@
+     1→'use client';
+     2→
+     3→import { useEffect, useState, useCallback, useMemo } from 'react';
+     4→import {
+     5→  Plus, Search, Pencil, Eye, Trash2, ArrowRight, MapPin, Package, Weight, Move,
+     6→  CheckCircle2, Clock, Truck, Warehouse, CircleDot, ChevronLeft, ChevronRight,
+     7→  Loader2, X, Camera, Image as ImageIcon, FileText, Download, Upload, Box,
+     8→  Printer, QrCode, ClipboardList, Ruler, AlertTriangle, PackageSearch,
+     9→  ArrowDown, Play, Check, MoreHorizontal, Tags, Tag, FileCheck, FileSpreadsheet,
+    10→  FileBadge, Sparkles, Award, Ship, Plane, ArrowRightLeft, RefreshCw,
+    11→} from 'lucide-react';
+    12→import { Card, CardContent } from '@/components/ui/card';
+    13→import { Button } from '@/components/ui/button';
+    14→import { Input } from '@/components/ui/input';
+    15→import { Label } from '@/components/ui/label';
+    16→import { Textarea } from '@/components/ui/textarea';
+    17→import { Badge } from '@/components/ui/badge';
+    18→import { Skeleton } from '@/components/ui/skeleton';
+    19→import { Separator } from '@/components/ui/separator';
+    20→import { ScrollArea } from '@/components/ui/scroll-area';
+    21→import { Checkbox } from '@/components/ui/checkbox';
+    22→import { Progress } from '@/components/ui/progress';
+    23→import {
+    24→  Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
+    25→} from '@/components/ui/table';
+    26→import {
+    27→  Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter,
+    28→} from '@/components/ui/dialog';
+    29→import {
+    30→  Sheet, SheetContent, SheetHeader, SheetTitle,
+    31→} from '@/components/ui/sheet';
+    32→import {
+    33→  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
+    34→} from '@/components/ui/select';
+    35→import { toast } from 'sonner';
+    36→import {
+    37→  useTranslation, translateStatus, translateCategory, translateCommodity, translateMovementType,
+    38→} from '@/lib/translations';
+    39→import type {
+    40→  CargoItem, LiftCategory, CommodityType, CargoStatus, Location, Project, Movement,
+    41→} from '@/types/wms';
+    42→
+    43→// ==================== STYLE MAPS ====================
+    44→
+    45→const safeStatusStyle = (s: string) => (statusStyles as Record<string, string>)[s] || 'bg-slate-500/10 text-slate-500 border-slate-500/20';
+    46→const safeCategoryStyle = (c: string) => (categoryStyles as Record<string, string>)[c] || 'bg-slate-500/10 text-slate-500 border-slate-500/20';
+    47→
+    48→const statusStyles: Record<CargoStatus, string> = {
+    49→  IN_YARD: 'bg-emerald-500/10 text-emerald-500 dark:text-emerald-400 border-emerald-500/20',
+    50→  IN_TRANSIT: 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20',
+    51→  DISPATCHED: 'bg-slate-500/10 text-slate-600 dark:text-slate-400 border-slate-500/20',
+    52→  RECEIVED: 'bg-cyan-500/10 text-cyan-600 dark:text-cyan-400 border-cyan-500/20',
+    53→  IN_WAREHOUSE: 'bg-teal-500/10 text-teal-600 dark:text-teal-400 border-teal-500/20',
+    54→  DELIVERED: 'bg-slate-400/10 text-slate-500 dark:text-slate-500 border-slate-400/20',
+    55→};
+    56→
+    57→const statusIcons: Record<CargoStatus, React.ElementType> = {
+    58→  IN_TRANSIT: Truck,
+    59→  RECEIVED: CheckCircle2,
+    60→  IN_YARD: MapPin,
+    61→  IN_WAREHOUSE: Warehouse,
+    62→  DISPATCHED: CircleDot,
+    63→  DELIVERED: CheckCircle2,
+    64→};
+    65→
+    66→const STATUS_WORKFLOW: Record<CargoStatus, CargoStatus[]> = {
+    67→  IN_TRANSIT: ['RECEIVED'],
+    68→  RECEIVED: ['IN_YARD', 'IN_WAREHOUSE'],
+    69→  IN_YARD: ['IN_WAREHOUSE', 'DISPATCHED'],
+    70→  IN_WAREHOUSE: ['IN_YARD', 'DISPATCHED'],
+    71→  DISPATCHED: ['DELIVERED'],
+    72→  DELIVERED: [],
+    73→};
+    74→
+    75→const ALL_STATUSES: CargoStatus[] = ['IN_TRANSIT', 'RECEIVED', 'IN_YARD', 'IN_WAREHOUSE', 'DISPATCHED', 'DELIVERED'];
+    76→
+    77→const categoryStyles: Record<LiftCategory, string> = {
+    78→  HEAVY_LIFT: 'bg-red-500/10 text-red-600 dark:text-red-400 border-red-500/20',
+    79→  OVERSIZE: 'bg-orange-500/10 text-orange-600 dark:text-orange-400 border-orange-500/20',
+    80→  STANDARD: 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20',
+    81→  PROJECT_CARGO: 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20',
+    82→};
+    83→
+    84→const movementTypeStyles: Record<string, string> = {
+    85→  RECEIVE: 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20',
+    86→  MOVE: 'bg-cyan-500/10 text-cyan-600 dark:text-cyan-400 border-cyan-500/20',
+    87→  DISPATCH: 'bg-orange-500/10 text-orange-600 dark:text-orange-400 border-orange-500/20',
+    88→  INSPECT: 'bg-purple-500/10 text-purple-600 dark:text-purple-400 border-purple-500/20',
+    89→};
+    90→
+    91→// ==================== INTERFACES ====================
+    92→
+    93→interface CargoListResponse {
+    94→  items: CargoItem[];
+    95→  total: number;
+    96→  page: number;
+    97→  totalPages: number;
+    98→}
+    99→
+   100→interface CargoDetail extends CargoItem {
+   101→  movements?: Movement[];
+   102→}
+   103→
+   104→// ==================== WEIGHT CATEGORIES ====================
+   105→
+   106→interface WeightCategory {
+   107→  label: string;
+   108→  maxTonnes: number;
+   109→  color: string;
+   110→  colorDark: string;
+   111→}
+   112→
+   113→const WEIGHT_CATEGORIES: WeightCategory[] = [
+   114→  { label: 'Light', maxTonnes: 5, color: 'bg-emerald-400', colorDark: 'bg-emerald-500' },
+   115→  { label: 'Medium', maxTonnes: 50, color: 'bg-amber-400', colorDark: 'bg-amber-500' },
+   116→  { label: 'Heavy', maxTonnes: 200, color: 'bg-orange-500', colorDark: 'bg-orange-500' },
+   117→  { label: 'Super Heavy', maxTonnes: 500, color: 'bg-red-500', colorDark: 'bg-red-500' },
+   118→];
+   119→
+   120→function getWeightCategory(weightKg: number): WeightCategory {
+   121→  const tonnes = weightKg / 1000;
+   122→  for (let i = WEIGHT_CATEGORIES.length - 1; i >= 0; i--) {
+   123→    if (tonnes > WEIGHT_CATEGORIES[i].maxTonnes) {
+   124→      return { ...WEIGHT_CATEGORIES[i] };
+   125→    }
+   126→  }
+   127→  return WEIGHT_CATEGORIES[0];
+   128→}
+   129→
+   130→function getWeightPercentage(weightKg: number): number {
+   131→  const tonnes = weightKg / 1000;
+   132→  return Math.min(100, (tonnes / 500) * 100);
+   133→}
+   134→
+   135→// ==================== FORM DEFAULT ====================
+   136→
+   137→const emptyForm = {
+   138→  description: '', weight: '', length: '', width: '', height: '',
+   139→  liftCategory: '' as string, commodityType: '' as string,
+   140→  specialHandling: '', clientName: '', poReference: '', blReference: '',
+   141→  centerOfGravity: '', liftingPoints: '', projectId: '',
+   142→};
+   143→
+   144→// ==================== MAIN COMPONENT ====================
+   145→
+   146→export function CargoPage() {
+   147→  const [error, setError] = useState<string | null>(null);
+   148→  const [cargo, setCargo] = useState<CargoItem[]>([]);
+   149→  const [totalPages, setTotalPages] = useState(1);
+   150→  const [page, setPage] = useState(1);
+   151→  const [loading, setLoading] = useState(true);
+   152→  const [search, setSearch] = useState('');
+   153→  const [statusFilter, setStatusFilter] = useState('');
+   154→  const [categoryFilter, setCategoryFilter] = useState('');
+   155→  const [commodityFilter, setCommodityFilter] = useState('');
+   156→  const [showAdd, setShowAdd] = useState(false);
+   157→  const [editing, setEditing] = useState<CargoItem | null>(null);
+   158→  const [deleting, setDeleting] = useState<CargoItem | null>(null);
+   159→  const [form, setForm] = useState(emptyForm);
+   160→  const [submitting, setSubmitting] = useState(false);
+   161→  const [locations, setLocations] = useState<Location[]>([]);
+   162→  const [projects, setProjects] = useState<Project[]>([]);
+   163→  const [selectedRows, setSelectedRows] = useState<Set<string>>(new Set());
+   164→
+   165→  // Detail sheet state
+   166→  const [detailOpen, setDetailOpen] = useState(false);
+   167→  const [detailCargo, setDetailCargo] = useState<CargoDetail | null>(null);
+   168→  const [detailLoading, setDetailLoading] = useState(false);
+   169→  const [statusChanging, setStatusChanging] = useState(false);
+   170→  const [assigningLocation, setAssigningLocation] = useState(false);
+   171→  const [selectedLocationId, setSelectedLocationId] = useState('');
+   172→  const [showTransfer, setShowTransfer] = useState(false);
+   173→  const [transferTo, setTransferTo] = useState('');
+   174→  const [transferRemarks, setTransferRemarks] = useState('');
+   175→  const [transferring, setTransferring] = useState(false);
+   176→
+   177→  const portLabels: Record<string, string> = {
+   178→    container: 'الحاوية',
+   179→    seal: 'الختم',
+   180→    customs: 'الجمارك',
+   181→    vessel: 'السفينة',
+   182→    voyage: 'الرحلة',
+   183→    flight: 'الرحلة الجوية',
+   184→    transportMode: 'طريقة النقل',
+   185→    arrival: 'تاريخ الوصول',
+   186→    storageDays: 'أيام التخزين',
+   187→    barcode: 'الباركود',
+   188→    type: 'النوع',
+   189→    'customs.NOT_SUBMITTED': 'لم يقدم',
+   190→    'customs.PENDING': 'قيد المراجعة',
+   191→    'customs.CLEARED': 'مخلص',
+   192→    'customs.REJECTED': 'مرفوض',
+   193→    'customs.ON_HOLD': 'معلق',
+   194→  };
+   195→
+   196→  const { t } = useTranslation();
+   197→
+   198→  // ==================== API CALLS ====================
+   199→
+   200→  const fetchCargo = useCallback(async () => {
+   201→    setLoading(true);
+   202→    const params = new URLSearchParams({
+   203→      page: String(page), limit: '20',
+   204→      ...(search && { search }),
+   205→      ...(statusFilter && { status: statusFilter }),
+   206→      ...(categoryFilter && { liftCategory: categoryFilter }),
+   207→      ...(commodityFilter && { commodityType: commodityFilter }),
+   208→    });
+   209→    try {
+   210→      const res = await fetch(`/api/cargo?${params}`);
+   211→      if (!res.ok) { setCargo([]); return; }
+   212→      const json = await res.json().catch(() => null);
+   213→      if (!json || typeof json !== 'object') { setCargo([]); return; }
+   214→      const items = Array.isArray(json.items) ? json.items : [];
+   215→      setCargo(items);
+   216→      setTotalPages(typeof json.totalPages === 'number' ? json.totalPages : 1);
+   217→    } catch (e) { console.error('fetchCargo error:', e); toast.error(t('cargo.toast.fetchFailed')); } finally { setLoading(false); }
+   218→  }, [page, search, statusFilter, categoryFilter, commodityFilter, t]);
+   219→
+   220→  const fetchLookups = useCallback(async () => {
+   221→    try {
+   222→      const [locRes, projRes] = await Promise.all([
+   223→        fetch('/api/locations?limit=100'),
+   224→        fetch('/api/projects?limit=100'),
+   225→      ]);
+   226→      const locJson = await locRes.json().catch(() => ({ items: [] }));
+   227→      const projJson = await projRes.json().catch(() => ({ items: [] }));
+   228→      setLocations(Array.isArray(locJson?.items) ? locJson.items : []);
+   229→      setProjects(Array.isArray(projJson?.items) ? projJson.items : []);
+   230→    } catch { /* silent */ }
+   231→  }, []);
+   232→
+   233→  useEffect(() => { fetchCargo(); }, [fetchCargo]);
+   234→  useEffect(() => { fetchLookups(); }, [fetchLookups]);
+   235→  useEffect(() => { setPage(1); setSelectedRows(new Set()); }, [search, statusFilter, categoryFilter, commodityFilter]);
+   236→
+   237→  // ==================== CRUD HANDLERS ====================
+   238→
+   239→  const handleSubmit = async () => {
+   240→    setSubmitting(true);
+   241→    const payload: Record<string, unknown> = {
+   242→      description: form.description,
+   243→      weight: parseFloat(form.weight) || 0,
+   244→      length: parseFloat(form.length) || 0,
+   245→      width: parseFloat(form.width) || 0,
+   246→      height: parseFloat(form.height) || 0,
+   247→      liftCategory: form.liftCategory,
+   248→      commodityType: form.commodityType,
+   249→      specialHandling: form.specialHandling || null,
+   250→      clientName: form.clientName || null,
+   251→      poReference: form.poReference || null,
+   252→      blReference: form.blReference || null,
+   253→      centerOfGravity: form.centerOfGravity || null,
+   254→      liftingPoints: form.liftingPoints ? parseInt(form.liftingPoints) : null,
+   255→      projectId: form.projectId && form.projectId !== '_none' ? form.projectId : null,
+   256→    };
+   257→    try {
+   258→      const url = editing ? `/api/cargo/${editing.id}` : '/api/cargo';
+   259→      const res = await fetch(url, {
+   260→        method: editing ? 'PUT' : 'POST',
+   261→        headers: { 'Content-Type': 'application/json' },
+   262→        body: JSON.stringify(payload),
+   263→      });
+   264→      if (!res.ok) { const err = await res.json(); throw new Error(err.error || 'Failed'); }
+   265→      toast.success(editing ? t('cargo.toast.updated') : t('cargo.toast.created'));
+   266→      setShowAdd(false); setEditing(null); setForm(emptyForm); fetchCargo();
+   267→    } catch (e: unknown) {
+   268→      toast.error(e instanceof Error ? e.message : t('cargo.toast.saveFailed'));
+   269→    } finally { setSubmitting(false); }
+   270→  };
+   271→
+   272→  const handleDelete = async () => {
+   273→    if (!deleting) return;
+   274→    try {
+   275→      const res = await fetch(`/api/cargo/${deleting.id}`, { method: 'DELETE' });
+   276→      if (!res.ok) throw new Error('Failed');
+   277→      toast.success(t('cargo.toast.deleted'));
+   278→      setDeleting(null);
+   279→      fetchCargo();
+   280→    } catch { toast.error(t('cargo.toast.deleteFailed')); }
+   281→  };
+   282→
+   283→  const openEdit = (item: CargoItem) => {
+   284→    setEditing(item);
+   285→    setForm({
+   286→      description: item.description, weight: String(item.weight),
+   287→      length: String(item.length), width: String(item.width),
+   288→      height: String(item.height), liftCategory: item.liftCategory,
+   289→      commodityType: item.commodityType,
+   290→      specialHandling: item.specialHandling || '',
+   291→      clientName: item.clientName || '',
+   292→      poReference: item.poReference || '',
+   293→      blReference: item.blReference || '',
+   294→      centerOfGravity: item.centerOfGravity || '',
+   295→      liftingPoints: item.liftingPoints ? String(item.liftingPoints) : '',
+   296→      projectId: item.projectId || '',
+   297→    });
+   298→  };
+   299→
+   300→  const openDetail = async (item: CargoItem) => {
+   301→    setDetailOpen(true);
+   302→    setDetailLoading(true);
+   303→    setDetailCargo(null);
+   304→    setSelectedLocationId(item.locationId || '');
+   305→    try {
+   306→      const res = await fetch(`/api/cargo/${item.id}`);
+   307→      const data = await res.json();
+   308→      if (data.data) {
+   309→        setDetailCargo(data.data);
+   310→        setSelectedLocationId(data.data.locationId || '');
+   311→      } else {
+   312→        setDetailCargo(item);
+   313→      }
+   314→    } catch { setDetailCargo(item); } finally { setDetailLoading(false); }
+   315→  };
+   316→
+   317→  const handleStatusChange = async (newStatus: CargoStatus) => {
+   318→    if (!detailCargo) return;
+   319→    setStatusChanging(true);
+   320→    try {
+   321→      const res = await fetch(`/api/cargo/${detailCargo.id}/status`, {
+   322→        method: 'PATCH',
+   323→        headers: { 'Content-Type': 'application/json' },
+   324→        body: JSON.stringify({ status: newStatus }),
+   325→      });
+   326→      if (!res.ok) { const err = await res.json(); throw new Error(err.error || 'Failed'); }
+   327→      toast.success(t('detail.statusChanged'));
+   328→      openDetail(detailCargo);
+   329→      fetchCargo();
+   330→    } catch (e: unknown) {
+   331→      toast.error(e instanceof Error ? e.message : t('detail.statusChangeFailed'));
+   332→    } finally { setStatusChanging(false); }
+   333→  };
+   334→
+   335→  const handleAssignLocation = async () => {
+   336→    if (!detailCargo || !selectedLocationId) return;
+   337→    setAssigningLocation(true);
+   338→    try {
+   339→      const res = await fetch(`/api/cargo/${detailCargo.id}`, {
+   340→        method: 'PUT',
+   341→        headers: { 'Content-Type': 'application/json' },
+   342→        body: JSON.stringify({ locationId: selectedLocationId }),
+   343→      });
+   344→      if (!res.ok) throw new Error('Failed');
+   345→      toast.success(t('detail.locationAssigned'));
+   346→      openDetail(detailCargo);
+   347→      fetchCargo();
+   348→    } catch { toast.error(t('detail.statusChangeFailed')); } finally { setAssigningLocation(false); }
+   349→  };
+   350→
+   351→  const handleTransfer = async () => {
+   352→    if (!detailCargo || !transferTo) return;
+   353→    setTransferring(true);
+   354→    try {
+   355→      const res = await fetch(`/api/cargo/${detailCargo.id}/transfer`, {
+   356→        method: 'PATCH',
+   357→        headers: { 'Content-Type': 'application/json' },
+   358→        body: JSON.stringify({ toLocationId: transferTo, remarks: transferRemarks || undefined }),
+   359→      });
+   360→      if (!res.ok) {
+   361→        const err = await res.json();
+   362→        throw new Error(err.error || 'Transfer failed');
+   363→      }
+   364→      toast.success('تم نقل البضاعة بنجاح');
+   365→      setShowTransfer(false);
+   366→      setTransferTo('');
+   367→      setTransferRemarks('');
+   368→      openDetail(detailCargo);
+   369→      fetchCargo();
+   370→    } catch (e: unknown) {
+   371→      toast.error(e instanceof Error ? e.message : 'فشل النقل');
+   372→    } finally { setTransferring(false); }
+   373→  };
+   374→
+   375→  // ==================== SELECTION LOGIC ====================
+   376→
+   377→  const toggleRow = (id: string) => {
+   378→    setSelectedRows(prev => {
+   379→      const next = new Set(prev);
+   380→      if (next.has(id)) next.delete(id); else next.add(id);
+   381→      return next;
+   382→    });
+   383→  };
+   384→
+   385→  const toggleAll = () => {
+   386→    if (selectedRows.size === cargo.length && cargo.length > 0) {
+   387→      setSelectedRows(new Set());
+   388→    } else {
+   389→      setSelectedRows(new Set(cargo.map(c => c.id)));
+   390→    }
+   391→  };
+   392→
+   393→  const isAllSelected = Array.isArray(cargo) && cargo.length > 0 && selectedRows.size === cargo.length;
+   394→
+   395→  // ==================== COMPUTED ====================
+   396→
+   397→  const currentStep = detailCargo ? ALL_STATUSES.indexOf(detailCargo.status as CargoStatus) : -1;
+   398→
+   399→  const weightCat = useMemo(() => {
+   400→    if (!detailCargo) return null;
+   401→    return getWeightCategory(detailCargo.weight);
+   402→  }, [detailCargo]);
+   403→
+   404→  const weightPct = useMemo(() => {
+   405→    if (!detailCargo) return 0;
+   406→    return getWeightPercentage(detailCargo.weight);
+   407→  }, [detailCargo]);
+   408→
+   409→  // ==================== RENDER ====================
+   410→
+   411→  if (error) {
+   412→    return (
+   413→      <div className="flex items-center justify-center min-h-[60vh]">
+   414→        <div className="text-center space-y-4">
+   415→          <AlertTriangle className="h-10 w-10 text-red-500 mx-auto" />
+   416→          <p className="text-sm dark:text-slate-300 text-slate-700">{error}</p>
+   417→          <Button variant="outline" onClick={() => { setError(null); fetchCargo(); }}>
+   418→            <RefreshCw className="h-4 w-4 ml-2" />
+   419→            {t('common.refresh')}
+   420→          </Button>
+   421→        </div>
+   422→      </div>
+   423→    );
+   424→  }
+   425→
+   426→  return (
+   427→    <div className="space-y-6">
+   428→      {/* ===== HEADER ===== */}
+   429→      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+   430→        <div>
+   431→          <h1 className="text-2xl font-bold dark:text-slate-100 text-slate-900">{t('cargo.title')}</h1>
+   432→          <p className="text-sm dark:text-slate-400 text-slate-500 mt-1">{t('cargo.subtitle')}</p>
+   433→        </div>
+   434→        <Button
+   435→          onClick={() => { setForm(emptyForm); setShowAdd(true); }}
+   436→          className="bg-amber-500 hover:bg-amber-600 text-slate-900 font-medium transition-all duration-200 shadow-sm hover:shadow-md"
+   437→        >
+   438→          <Plus className="h-4 w-4 ml-2" />
+   439→          {t('cargo.addCargo')}
+   440→        </Button>
+   441→      </div>
+   442→
+   443→      {/* ===== FILTERS ===== */}
+   444→      <Card className="dark:border-slate-800 border-slate-200 dark:bg-slate-900/50 bg-white shadow-sm">
+   445→        <CardContent className="p-4">
+   446→          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+   447→            <div className="relative">
+   448→              <Search className="absolute right-2.5 top-2.5 h-4 w-4 dark:text-slate-500 text-slate-400" />
+   449→              <Input
+   450→                placeholder={t('cargo.searchPlaceholder')}
+   451→                value={search}
+   452→                onChange={(e) => setSearch(e.target.value)}
+   453→                className="dark:border-slate-700 border-slate-300 dark:bg-slate-800 bg-white dark:text-slate-200 text-slate-900 pr-9 placeholder:dark:text-slate-600 placeholder:text-slate-400"
+   454→              />
+   455→            </div>
+   456→            <Select value={statusFilter} onValueChange={setStatusFilter}>
+   457→              <SelectTrigger className="dark:border-slate-700 border-slate-300 dark:bg-slate-800 bg-white dark:text-slate-300 text-slate-700">
+   458→                <SelectValue placeholder={t('common.allStatuses')} />
+   459→              </SelectTrigger>
+   460→              <SelectContent className="dark:border-slate-700 border-slate-200 dark:bg-slate-800 bg-white">
+   461→                {ALL_STATUSES.map((s) => (
+   462→                  <SelectItem key={s} value={s} className="dark:text-slate-300 text-slate-700 dark:focus:bg-slate-700 focus:bg-slate-100">
+   463→                    {translateStatus(s)}
+   464→                  </SelectItem>
+   465→                ))}
+   466→              </SelectContent>
+   467→            </Select>
+   468→            <Select value={categoryFilter} onValueChange={setCategoryFilter}>
+   469→              <SelectTrigger className="dark:border-slate-700 border-slate-300 dark:bg-slate-800 bg-white dark:text-slate-300 text-slate-700">
+   470→                <SelectValue placeholder={t('common.allCategories')} />
+   471→              </SelectTrigger>
+   472→              <SelectContent className="dark:border-slate-700 border-slate-200 dark:bg-slate-800 bg-white">
+   473→                {['HEAVY_LIFT', 'OVERSIZE', 'STANDARD', 'PROJECT_CARGO'].map((c) => (
+   474→                  <SelectItem key={c} value={c} className="dark:text-slate-300 text-slate-700 dark:focus:bg-slate-700 focus:bg-slate-100">
+   475→                    {translateCategory(c)}
+   476→                  </SelectItem>
+   477→                ))}
+   478→              </SelectContent>
+   479→            </Select>
+   480→            <Select value={commodityFilter} onValueChange={setCommodityFilter}>
+   481→              <SelectTrigger className="dark:border-slate-700 border-slate-300 dark:bg-slate-800 bg-white dark:text-slate-300 text-slate-700">
+   482→                <SelectValue placeholder={t('common.allCommodities')} />
+   483→              </SelectTrigger>
+   484→              <SelectContent className="dark:border-slate-700 border-slate-200 dark:bg-slate-800 bg-white">
+   485→                {['GENERAL', 'MACHINERY', 'STEEL', 'EQUIPMENT', 'MODULE'].map((c) => (
+   486→                  <SelectItem key={c} value={c} className="dark:text-slate-300 text-slate-700 dark:focus:bg-slate-700 focus:bg-slate-100">
+   487→                    {translateCommodity(c)}
+   488→                  </SelectItem>
+   489→                ))}
+   490→              </SelectContent>
+   491→            </Select>
+   492→          </div>
+   493→        </CardContent>
+   494→      </Card>
+   495→
+   496→      {/* ===== TABLE ===== */}
+   497→      <Card className="dark:border-slate-800 border-slate-200 dark:bg-slate-900/50 bg-white shadow-sm">
+   498→        <CardContent className="p-0">
+   499→          {/* Bulk actions bar */}
+   500→          {selectedRows.size > 0 && (
+   501→            <div className="flex items-center gap-3 px-4 py-2.5 border-b dark:border-slate-800 border-slate-200 dark:bg-slate-800/50 bg-slate-50 dark:text-slate-300 text-slate-600 text-sm">
+   502→              <span className="font-medium">{selectedRows.size} {t('common.selected')}</span>
+   503→              <Button variant="ghost" size="sm" className="h-7 text-xs dark:text-slate-400 text-slate-500 dark:hover:text-slate-200 hover:text-slate-800 dark:hover:bg-slate-700 hover:bg-slate-100 transition-all duration-200">
+   504→                <CheckCircle2 className="h-3.5 w-3.5 ml-1" />
+   505→                {t('common.changeStatus')}
+   506→              </Button>
+   507→              <Button variant="ghost" size="sm" className="h-7 text-xs dark:text-slate-400 text-slate-500 dark:hover:text-red-400 hover:text-red-600 dark:hover:bg-slate-700 hover:bg-slate-100 transition-all duration-200">
+   508→                <Trash2 className="h-3.5 w-3.5 ml-1" />
+   509→                {t('common.delete')}
+   510→              </Button>
+   511→            </div>
+   512→          )}
+   513→
+   514→          <div className="overflow-x-auto">
+   515→            <Table>
+   516→              <TableHeader>
+   517→                <TableRow className="dark:border-slate-800 border-slate-200 hover:bg-transparent">
+   518→                  <TableHead className="w-10">
+   519→                    <Checkbox
+   520→                      checked={isAllSelected}
+   521→                      onCheckedChange={toggleAll}
+   522→                      className="dark:border-slate-600 border-slate-300"
+   523→                    />
+   524→                  </TableHead>
+   525→                  <TableHead className="text-xs dark:text-slate-500 text-slate-500">{t('cargo.table.code')}</TableHead>
+   526→                  <TableHead className="text-xs dark:text-slate-500 text-slate-500">{t('cargo.table.description')}</TableHead>
+   527→                  <TableHead className="text-xs dark:text-slate-500 text-slate-500 hidden md:table-cell">{t('cargo.table.weight')}</TableHead>
+   528→                  <TableHead className="text-xs dark:text-slate-500 text-slate-500 hidden lg:table-cell">{t('cargo.table.category')}</TableHead>
+   529→                  <TableHead className="text-xs dark:text-slate-500 text-slate-500">{t('cargo.table.status')}</TableHead>
+   530→                  <TableHead className="text-xs dark:text-slate-500 text-slate-500 hidden lg:table-cell">{t('cargo.table.location')}</TableHead>
+   531→                  <TableHead className="text-xs dark:text-slate-500 text-slate-500 text-left">{t('common.actions')}</TableHead>
+   532→                </TableRow>
+   533→              </TableHeader>
+   534→              <TableBody>
+   535→                {loading ? (
+   536→                  Array.from({ length: 5 }).map((_, i) => (
+   537→                    <TableRow key={i} className="dark:border-slate-800 border-slate-200 hover:bg-transparent">
+   538→                      <TableCell><Skeleton className="h-4 w-4 dark:bg-slate-800 bg-slate-200" /></TableCell>
+   539→                      {Array.from({ length: 6 }).map((_, j) => (
+   540→                        <TableCell key={j} className="py-3"><Skeleton className="h-4 w-16 dark:bg-slate-800 bg-slate-200" /></TableCell>
+   541→                      ))}
+   542→                    </TableRow>
+   543→                  ))
+   544→                ) : cargo.length === 0 ? (
+   545→                  <TableRow className="dark:border-slate-800 border-slate-200 hover:bg-transparent">
+   546→                    <TableCell colSpan={8} className="text-center py-16">
+   547→                      <div className="flex flex-col items-center gap-3">
+   548→                        <div className="h-14 w-14 rounded-full dark:bg-slate-800 bg-slate-100 flex items-center justify-center">
+   549→                          <PackageSearch className="h-7 w-7 dark:text-slate-600 text-slate-400" />
+   550→                        </div>
+   551→                        <p className="text-sm dark:text-slate-400 text-slate-500 font-medium">{t('cargo.noCargoFound')}</p>
+   552→                        <p className="text-xs dark:text-slate-600 text-slate-400 max-w-xs">
+   553→                          {t('cargo.searchPlaceholder')}
+   554→                        </p>
+   555→                      </div>
+   556→                    </TableCell>
+   557→                  </TableRow>
+   558→                ) : (
+   559→                  cargo.map((item) => (
+   560→                    <TableRow
+   561→                      key={item.id}
+   562→                      className={`dark:border-slate-800 border-slate-200 cursor-pointer transition-all duration-200 group ${
+   563→                        selectedRows.has(item.id)
+   564→                          ? 'dark:bg-amber-500/5 bg-amber-50'
+   565→                          : 'dark:hover:bg-slate-800/50 hover:bg-slate-50'
+   566→                      }`}
+   567→                      onClick={() => openDetail(item)}
+   568→                    >
+   569→                      <TableCell onClick={(e) => e.stopPropagation()}>
+   570→                        <Checkbox
+   571→                          checked={selectedRows.has(item.id)}
+   572→                          onCheckedChange={() => toggleRow(item.id)}
+   573→                          className="dark:border-slate-600 border-slate-300"
+   574→                        />
+   575→                      </TableCell>
+   576→                      <TableCell className="py-3 text-xs font-mono font-semibold dark:text-amber-400/80 text-amber-600">{item.cargoCode}</TableCell>
+   577→                      <TableCell className="py-3 text-xs dark:text-slate-300 text-slate-700 max-w-[200px] truncate group-hover:dark:text-slate-100 group-hover:text-slate-900 transition-colors">{item.description}</TableCell>
+   578→                      <TableCell className="py-3 text-xs dark:text-slate-400 text-slate-500 hidden md:table-cell font-mono">{item.weight.toLocaleString()} kg</TableCell>
+   579→                      <TableCell className="py-3 hidden lg:table-cell">
+   580→                        <Badge variant="outline" className={`text-[10px] ${safeCategoryStyle(item.liftCategory)}`}>{translateCategory(item.liftCategory)}</Badge>
+   581→                      </TableCell>
+   582→                      <TableCell className="py-3">
+   583→                        <Badge variant="outline" className={`text-[10px] ${safeStatusStyle(item.status)}`}>{translateStatus(item.status)}</Badge>
+   584→                      </TableCell>
+   585→                      <TableCell className="py-3 text-xs dark:text-slate-400 text-slate-500 hidden lg:table-cell">{item.location?.code || '—'}</TableCell>
+   586→                      <TableCell className="py-3 text-left" onClick={(e) => e.stopPropagation()}>
+   587→                        <div className="flex items-center justify-start gap-1">
+   588→                          <Button variant="ghost" size="icon" className="h-7 w-7 dark:text-slate-500 text-slate-400 dark:hover:text-cyan-400 hover:text-cyan-600 dark:hover:bg-slate-800 hover:bg-slate-100 transition-all duration-200" onClick={() => openDetail(item)}>
+   589→                            <Eye className="h-3.5 w-3.5" />
+   590→                          </Button>
+   591→                          <Button variant="ghost" size="icon" className="h-7 w-7 dark:text-slate-500 text-slate-400 dark:hover:text-amber-400 hover:text-amber-600 dark:hover:bg-slate-800 hover:bg-slate-100 transition-all duration-200" onClick={() => openEdit(item)}>
+   592→                            <Pencil className="h-3.5 w-3.5" />
+   593→                          </Button>
+   594→                          <Button variant="ghost" size="icon" className="h-7 w-7 dark:text-slate-500 text-slate-400 dark:hover:text-red-400 hover:text-red-600 dark:hover:bg-slate-800 hover:bg-slate-100 transition-all duration-200" onClick={() => setDeleting(item)}>
+   595→                            <Trash2 className="h-3.5 w-3.5" />
+   596→                          </Button>
+   597→                        </div>
+   598→                      </TableCell>
+   599→                    </TableRow>
+   600→                  ))
+   601→                )}
+   602→              </TableBody>
+   603→            </Table>
+   604→          </div>
+   605→        </CardContent>
+   606→      </Card>
+   607→
+   608→      {/* ===== PAGINATION ===== */}
+   609→      {totalPages > 1 && (
+   610→        <div className="flex items-center justify-center gap-2">
+   611→          <Button variant="outline" size="sm" disabled={page <= 1} onClick={() => setPage(page - 1)}
+   612→            className="dark:border-slate-700 border-slate-300 dark:bg-slate-800 bg-white dark:text-slate-300 text-slate-700 dark:hover:bg-slate-700 hover:bg-slate-100 transition-all duration-200">
+   613→            {t('common.previous')}
+   614→          </Button>
+   615→          <span className="text-xs dark:text-slate-500 text-slate-400 px-2">
+   616→            {t('common.page')} {page} {t('common.of')} {totalPages}
+   617→          </span>
+   618→          <Button variant="outline" size="sm" disabled={page >= totalPages} onClick={() => setPage(page + 1)}
+   619→            className="dark:border-slate-700 border-slate-300 dark:bg-slate-800 bg-white dark:text-slate-300 text-slate-700 dark:hover:bg-slate-700 hover:bg-slate-100 transition-all duration-200">
+   620→            {t('common.next')}
+   621→          </Button>
+   622→        </div>
+   623→      )}
+   624→
+   625→      {/* ============================================ */}
+   626→      {/* ===== ENHANCED CARGO DETAIL SHEET =========== */}
+   627→      {/* ============================================ */}
+   628→      <Sheet open={detailOpen} onOpenChange={setDetailOpen}>
+   629→        <SheetContent
+   630→          side="left"
+   631→          className="w-full sm:max-w-[560px] dark:border-slate-700 border-slate-200 dark:bg-slate-950 bg-slate-50 p-0 overflow-hidden flex flex-col z-[100]"
+   632→        >
+   633→          {detailLoading ? (
+   634→            <div className="flex-1 flex items-center justify-center">
+   635→              <div className="flex flex-col items-center gap-3">
+   636→                <Loader2 className="h-8 w-8 animate-spin text-amber-500" />
+   637→                <p className="text-xs dark:text-slate-500 text-slate-400">{t('common.loading')}</p>
+   638→              </div>
+   639→            </div>
+   640→          ) : detailCargo ? (
+   641→            <>
+   642→              {/* ===== DETAIL HEADER ===== */}
+   643→              <SheetHeader className="p-5 border-b dark:border-slate-800 border-slate-200 dark:bg-slate-900/80 bg-white shrink-0">
+   644→                <div className="flex items-start justify-between">
+   645→                  <div className="flex-1 min-w-0">
+   646→                    <div className="flex items-center gap-3 flex-wrap">
+   647→                      <SheetTitle className="text-base font-mono font-bold dark:text-amber-400 text-amber-600">
+   648→                        {detailCargo.cargoCode}
+   649→                      </SheetTitle>
+   650→                      <Badge variant="outline" className={`text-[10px] ${safeStatusStyle(detailCargo.status)}`}>
+   651→                        {translateStatus(detailCargo.status)}
+   652→                      </Badge>
+   653→                    </div>
+   654→                    <p className="text-sm dark:text-slate-200 text-slate-800 mt-1.5 font-medium leading-relaxed line-clamp-2">
+   655→                      {detailCargo.description}
+   656→                    </p>
+   657→                    <p className="text-xs dark:text-slate-500 text-slate-400 mt-1">
+   658→                      {new Date(detailCargo.createdAt).toLocaleDateString()} {new Date(detailCargo.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+   659→                    </p>
+   660→                  </div>
+   661→                  <div className="flex items-center gap-1.5 shrink-0 ml-3">
+   662→                    <Button
+   663→                      variant="ghost"
+   664→                      size="icon"
+   665→                      className="h-8 w-8 dark:text-slate-400 text-slate-500 dark:hover:text-amber-400 hover:text-amber-600 dark:hover:bg-slate-800 hover:bg-amber-50 transition-all duration-200"
+   666→                      onClick={() => { openEdit(detailCargo); }}
+   667→                      title={t('common.edit')}
+   668→                    >
+   669→                      <Pencil className="h-4 w-4" />
+   670→                    </Button>
+   671→                    <Button
+   672→                      variant="ghost"
+   673→                      size="icon"
+   674→                      className="h-8 w-8 dark:text-slate-400 text-slate-500 dark:hover:text-cyan-400 hover:text-cyan-600 dark:hover:bg-slate-800 hover:bg-cyan-50 transition-all duration-200"
+   675→                      onClick={() => { /* print - UI only */ }}
+   676→                      title={t('common.print')}
+   677→                    >
+   678→                      <Printer className="h-4 w-4" />
+   679→                    </Button>
+   680→                    <Button
+   681→                      variant="ghost"
+   682→                      size="icon"
+   683→                      className="h-8 w-8 dark:text-slate-400 text-slate-500 dark:hover:bg-slate-800 hover:bg-slate-100 transition-all duration-200"
+   684→                      onClick={() => setDetailOpen(false)}
+   685→                      title={t('common.close')}
+   686→                    >
+   687→                      <X className="h-4 w-4" />
+   688→                    </Button>
+   689→                  </div>
+   690→                </div>
+   691→              </SheetHeader>
+   692→
+   693→              {/* ===== DETAIL SCROLL CONTENT ===== */}
+   694→              <ScrollArea className="flex-1">
+   695→                <div className="p-5 space-y-5">
+   696→
+   697→                  {/* ===== PHOTOS / ATTACHMENTS SECTION ===== */}
+   698→                  <div className="rounded-xl border dark:border-slate-800 border-slate-200 dark:bg-slate-900/50 bg-white p-4 shadow-sm">
+   699→                    <div className="flex items-center justify-between mb-3">
+   700→                      <h3 className="text-xs font-semibold dark:text-slate-300 text-slate-600 flex items-center gap-1.5">
+   701→                        <Camera className="h-3.5 w-3.5 dark:text-amber-400 text-amber-500" />
+   702→                        {t('detail.photos.title') || 'Photos & Attachments'}
+   703→                      </h3>
+   704→                      <span className="text-[10px] dark:text-slate-500 text-slate-400">4 files</span>
+   705→                    </div>
+   706→                    <div className="grid grid-cols-2 gap-2.5">
+   707→                      {[1, 2, 3].map((idx) => (
+   708→                        <div
+   709→                          key={idx}
+   710→                          className="relative aspect-[4/3] rounded-lg dark:bg-slate-800 bg-slate-100 border dark:border-slate-700 border-slate-200 flex flex-col items-center justify-center gap-2 group cursor-pointer transition-all duration-200 hover:dark:border-amber-500/30 hover:border-amber-400/30 hover:shadow-sm"
+   711→                        >
+   712→                          <ImageIcon className="h-6 w-6 dark:text-slate-600 text-slate-400 group-hover:dark:text-amber-400/60 group-hover:text-amber-400/60 transition-colors" />
+   713→                          <span className="text-[10px] dark:text-slate-500 text-slate-400 group-hover:dark:text-slate-400 group-hover:text-slate-500 transition-colors">
+   714→                            Photo {idx}
+   715→                          </span>
+   716→                          <div className="absolute inset-0 rounded-lg dark:bg-slate-900/60 bg-black/30 opacity-0 group-hover:opacity-100 transition-all duration-200 flex items-center justify-center">
+   717→                            <Eye className="h-5 w-5 text-white" />
+   718→                          </div>
+   719→                        </div>
+   720→                      ))}
+   721→                      <button
+   722→                        className="relative aspect-[4/3] rounded-lg border-2 border-dashed dark:border-slate-700 border-slate-300 dark:bg-slate-800/50 bg-slate-50 flex flex-col items-center justify-center gap-2 cursor-pointer transition-all duration-200 hover:dark:border-amber-500/40 hover:border-amber-400/40 hover:dark:bg-amber-500/5 hover:bg-amber-50 group"
+   723→                      >
+   724→                        <Upload className="h-5 w-5 dark:text-slate-500 text-slate-400 group-hover:dark:text-amber-400 group-hover:text-amber-500 transition-colors" />
+   725→                        <span className="text-[10px] dark:text-slate-500 text-slate-400 group-hover:dark:text-amber-400/80 group-hover:text-amber-500/80 transition-colors font-medium">
+   726→                          {t('detail.photos.upload') || 'Upload'}
+   727→                        </span>
+   728→                      </button>
+   729→                    </div>
+   730→                  </div>
+   731→
+   732→                  {/* ===== DOCUMENTS SECTION ===== */}
+   733→                  <div className="rounded-xl border dark:border-slate-800 border-slate-200 dark:bg-slate-900/50 bg-white p-4 shadow-sm">
+   734→                    <h3 className="text-xs font-semibold dark:text-slate-300 text-slate-600 flex items-center gap-1.5 mb-3">
+   735→                      <FileText className="h-3.5 w-3.5 dark:text-cyan-400 text-cyan-500" />
+   736→                      {t('detail.documents.title') || 'Documents'}
+   737→                    </h3>
+   738→                    <div className="space-y-2">
+   739→                      {[
+   740→                        { name: t('detail.documents.bl') || 'Bill of Lading', icon: FileBadge, color: 'dark:text-blue-400 text-blue-500' },
+   741→                        { name: t('detail.documents.po') || 'Purchase Order', icon: FileSpreadsheet, color: 'dark:text-emerald-400 text-emerald-500' },
+   742→                        { name: t('detail.documents.inspection') || 'Inspection Report', icon: FileCheck, color: 'dark:text-purple-400 text-purple-500' },
+   743→                        { name: t('detail.documents.certificate') || 'Certificate', icon: Award, color: 'dark:text-amber-400 text-amber-500' },
+   744→                      ].map((doc) => {
+   745→                        const DocIcon = doc.icon;
+   746→                        return (
+   747→                          <div
+   748→                            key={doc.name}
+   749→                            className="flex items-center justify-between p-2.5 rounded-lg dark:bg-slate-800/60 bg-slate-50 dark:hover:bg-slate-800 hover:bg-slate-100 transition-all duration-200 cursor-pointer group"
+   750→                          >
+   751→                            <div className="flex items-center gap-2.5">
+   752→                              <div className="h-8 w-8 rounded-lg dark:bg-slate-700 bg-white flex items-center justify-center shadow-sm">
+   753→                                <DocIcon className={`h-4 w-4 ${doc.color}`} />
+   754→                              </div>
+   755→                              <div>
+   756→                                <p className="text-xs font-medium dark:text-slate-200 text-slate-700 group-hover:dark:text-slate-100 group-hover:text-slate-900 transition-colors">{doc.name}</p>
+   757→                                <p className="text-[10px] dark:text-slate-500 text-slate-400">PDF • 2.4 MB</p>
+   758→                              </div>
+   759→                            </div>
+   760→                            <Button
+   761→                              variant="ghost"
+   762→                              size="icon"
+   763→                              className="h-7 w-7 dark:text-slate-500 text-slate-400 dark:hover:text-cyan-400 hover:text-cyan-600 dark:hover:bg-slate-700 hover:bg-cyan-50 transition-all duration-200"
+   764→                            >
+   765→                              <Download className="h-3.5 w-3.5" />
+   766→                            </Button>
+   767→                          </div>
+   768→                        );
+   769→                      })}
+   770→                    </div>
+   771→                  </div>
+   772→
+   773→                  {/* ===== QUICK ACTIONS PANEL ===== */}
+   774→                  <div className="rounded-xl border dark:border-slate-800 border-slate-200 dark:bg-slate-900/50 bg-white p-4 shadow-sm">
+   775→                    <h3 className="text-xs font-semibold dark:text-slate-300 text-slate-600 flex items-center gap-1.5 mb-3">
+   776→                      <Sparkles className="h-3.5 w-3.5 dark:text-amber-400 text-amber-500" />
+   777→                      {t('detail.quickActions') || 'Quick Actions'}
+   778→                    </h3>
+   779→                    <div className="grid grid-cols-3 gap-2">
+   780→                      <button
+   781→                        onClick={() => setShowTransfer(true)}
+   782→                        className="flex flex-col items-center gap-2 p-3 rounded-xl dark:bg-slate-800/60 bg-slate-50 dark:hover:bg-slate-800 hover:bg-slate-100 transition-all duration-200 group cursor-pointer border dark:border-transparent border-slate-200 dark:hover:border-amber-500/20 hover:border-amber-400/30"
+   783→                      >
+   784→                        <div className="h-9 w-9 rounded-lg dark:bg-emerald-500/10 bg-emerald-50 flex items-center justify-center group-hover:dark:bg-emerald-500/20 group-hover:bg-emerald-100 transition-colors">
+   785→                          <ArrowRightLeft className="h-4 w-4 dark:text-emerald-400 text-emerald-600" />
+   786→                        </div>
+   787→                        <span className="text-[10px] font-medium dark:text-slate-300 text-slate-600 text-center leading-tight">نقل الموقع</span>
+   788→                      </button>
+   789→                      <button
+   790→                        className="flex flex-col items-center gap-2 p-3 rounded-xl dark:bg-slate-800/60 bg-slate-50 dark:hover:bg-slate-800 hover:bg-slate-100 transition-all duration-200 group cursor-pointer border dark:border-transparent border-slate-200 dark:hover:border-amber-500/20 hover:border-amber-400/30"
+   791→                      >
+   792→                        <div className="h-9 w-9 rounded-lg dark:bg-cyan-500/10 bg-cyan-50 flex items-center justify-center group-hover:dark:bg-cyan-500/20 group-hover:bg-cyan-100 transition-colors">
+   793→                          <Printer className="h-4 w-4 dark:text-cyan-400 text-cyan-600" />
+   794→                        </div>
+   795→                        <span className="text-[10px] font-medium dark:text-slate-300 text-slate-600 text-center leading-tight">
+   796→                          {t('detail.quickActions.printLabel') || 'Print Label'}
+   797→                        </span>
+   798→                      </button>
+   799→                      <button
+   800→                        className="flex flex-col items-center gap-2 p-3 rounded-xl dark:bg-slate-800/60 bg-slate-50 dark:hover:bg-slate-800 hover:bg-slate-100 transition-all duration-200 group cursor-pointer border dark:border-transparent border-slate-200 dark:hover:border-amber-500/20 hover:border-amber-400/30"
+   801→                      >
+   802→                        <div className="h-9 w-9 rounded-lg dark:bg-purple-500/10 bg-purple-50 flex items-center justify-center group-hover:dark:bg-purple-500/20 group-hover:bg-purple-100 transition-colors">
+   803→                          <QrCode className="h-4 w-4 dark:text-purple-400 text-purple-600" />
+   804→                        </div>
+   805→                        <span className="text-[10px] font-medium dark:text-slate-300 text-slate-600 text-center leading-tight">
+   806→                          {t('detail.quickActions.generateQR') || 'Generate QR'}
+   807→                        </span>
+   808→                      </button>
+   809→                    </div>
+   810→                  </div>
+   811→
+   812→                  {/* ===== STATUS WORKFLOW STEPPER ===== */}
+   813→                  <div className="rounded-xl border dark:border-slate-800 border-slate-200 dark:bg-slate-900/50 bg-white p-4 shadow-sm">
+   814→                    <h3 className="text-xs font-semibold dark:text-slate-300 text-slate-600 mb-4 flex items-center gap-1.5">
+   815→                      <Play className="h-3.5 w-3.5 dark:text-amber-400 text-amber-500" />
+   816→                      {t('detail.workflow.title')}
+   817→                    </h3>
+   818→                    <div className="flex items-center gap-0 overflow-x-auto pb-1">
+   819→                      {ALL_STATUSES.map((s, idx) => {
+   820→                        const Icon = statusIcons[s];
+   821→                        const isCompleted = idx <= currentStep;
+   822→                        const isCurrent = idx === currentStep;
+   823→                        const isNext = STATUS_WORKFLOW[detailCargo.status]?.includes(s);
+   824→                        return (
+   825→                          <div key={s} className="flex items-center shrink-0">
+   826→                            <button
+   827→                              disabled={!isNext || statusChanging}
+   828→                              onClick={() => isNext && handleStatusChange(s)}
+   829→                              className={`flex flex-col items-center gap-2 px-3 py-2.5 rounded-xl transition-all duration-300 min-w-[64px] relative ${
+   830→                                isCurrent
+   831→                                  ? 'dark:bg-amber-500/15 bg-amber-50 ring-2 ring-amber-500/40 shadow-sm shadow-amber-500/10'
+   832→                                  : isCompleted
+   833→                                    ? 'dark:bg-emerald-500/10 bg-emerald-50 opacity-70'
+   834→                                    : isNext
+   835→                                      ? 'dark:bg-slate-800/80 bg-slate-50 dark:hover:bg-slate-700 hover:bg-slate-100 cursor-pointer hover:shadow-sm transition-all duration-200'
+   836→                                      : 'opacity-25'
+   837→                              }`}
+   838→                            >
+   839→                              <div className={`h-8 w-8 rounded-full flex items-center justify-center transition-all duration-300 ${
+   840→                                isCurrent
+   841→                                  ? 'dark:bg-amber-500/20 bg-amber-100'
+   842→                                  : isCompleted
+   843→                                    ? 'dark:bg-emerald-500/20 bg-emerald-100'
+   844→                                    : 'dark:bg-slate-700/50 bg-slate-100'
+   845→                              }`}>
+   846→                                {isCompleted && !isCurrent ? (
+   847→                                  <Check className="h-4 w-4 dark:text-emerald-400 text-emerald-600" />
+   848→                                ) : (
+   849→                                  <Icon className={`h-4 w-4 ${
+   850→                                    isCurrent ? 'dark:text-amber-400 text-amber-600' :
+   851→                                    isNext ? 'dark:text-slate-400 text-slate-500' :
+   852→                                    'dark:text-slate-600 text-slate-400'
+   853→                                  }`} />
+   854→                                )}
+   855→                              </div>
+   856→                              <span className={`text-[9px] leading-tight text-center font-medium ${
+   857→                                isCurrent
+   858→                                  ? 'dark:text-amber-400 text-amber-600'
+   859→                                  : isCompleted
+   860→                                    ? 'dark:text-emerald-400 text-emerald-600'
+   861→                                    : isNext
+   862→                                      ? 'dark:text-slate-400 text-slate-500'
+   863→                                      : 'dark:text-slate-600 text-slate-400'
+   864→                              }`}>
+   865→                                {translateStatus(s)}
+   866→                              </span>
+   867→                              {isNext && (
+   868→                                <span className="absolute -top-1 -right-1 h-3.5 w-3.5 rounded-full dark:bg-amber-500 bg-amber-400 flex items-center justify-center">
+   869→                                  <ArrowDown className="h-2 w-2 dark:text-slate-900 text-white" />
+   870→                                </span>
+   871→                              )}
+   872→                            </button>
+   873→                            {idx < ALL_STATUSES.length - 1 && (
+   874→                              <div className="flex items-center mx-1">
+   875→                                <div className={`h-0.5 w-4 rounded-full transition-all duration-500 ${
+   876→                                  idx < currentStep
+   877→                                    ? 'dark:bg-emerald-500/60 bg-emerald-400'
+   878→                                    : idx === currentStep
+   879→                                      ? 'dark:bg-amber-500/40 bg-amber-300'
+   880→                                      : 'dark:bg-slate-700 bg-slate-200'
+   881→                                }`} />
+   882→                              </div>
+   883→                            )}
+   884→                          </div>
+   885→                        );
+   886→                      })}
+   887→                    </div>
+   888→                  </div>
+   889→
+   890→                  {/* ===== SPECIFICATIONS ===== */}
+   891→                  <div className="rounded-xl border dark:border-slate-800 border-slate-200 dark:bg-slate-900/50 bg-white p-4 shadow-sm">
+   892→                    <h3 className="text-xs font-semibold dark:text-slate-300 text-slate-600 flex items-center gap-1.5 mb-3">
+   893→                      <Tag className="h-3.5 w-3.5 dark:text-cyan-400 text-cyan-500" />
+   894→                      {t('detail.info.specifications')}
+   895→                    </h3>
+   896→                    <div className="grid grid-cols-2 gap-3 text-sm">
+   897→                      <div>
+   898→                        <span className="dark:text-slate-500 text-slate-400 text-xs">{t('cargo.details.weight')}</span>
+   899→                        <p className="dark:text-slate-100 text-slate-900 font-semibold mt-0.5">{detailCargo.weight.toLocaleString()} kg</p>
+   900→                      </div>
+   901→                      <div>
+   902→                        <span className="dark:text-slate-500 text-slate-400 text-xs">{t('cargo.details.category')}</span>
+   903→                        <div className="mt-1">
+   904→                          <Badge variant="outline" className={`text-[10px] ${safeCategoryStyle(detailCargo.liftCategory)}`}>
+   905→                            {translateCategory(detailCargo.liftCategory)}
+   906→                          </Badge>
+   907→                        </div>
+   908→                      </div>
+   909→                      <div>
+   910→                        <span className="dark:text-slate-500 text-slate-400 text-xs">{t('cargo.details.commodity')}</span>
+   911→                        <p className="dark:text-slate-100 text-slate-900 mt-0.5">{translateCommodity(detailCargo.commodityType)}</p>
+   912→                      </div>
+   913→                      <div>
+   914→                        <span className="dark:text-slate-500 text-slate-400 text-xs">{t('cargo.details.liftingPoints')}</span>
+   915→                        <p className="dark:text-slate-100 text-slate-900 mt-0.5">{detailCargo.liftingPoints ?? '—'}</p>
+   916→                      </div>
+   917→                      <div>
+   918→                        <span className="dark:text-slate-500 text-slate-400 text-xs">{t('cargo.details.cog')}</span>
+   919→                        <p className="dark:text-slate-200 text-slate-800 mt-0.5 text-xs">{detailCargo.centerOfGravity || '—'}</p>
+   920→                      </div>
+   921→                      {detailCargo.volume && (
+   922→                        <div>
+   923→                          <span className="dark:text-slate-500 text-slate-400 text-xs">{t('detail.info.volume')}</span>
+   924→                          <p className="dark:text-slate-100 text-slate-900 mt-0.5">{detailCargo.volume.toFixed(1)} m³</p>
+   925→                        </div>
+   926→                      )}
+   927→                    </div>
+   928→                  </div>
+   929→
+   930→                  {/* ===== WEIGHT VISUALIZATION ===== */}
+   931→                  <div className="rounded-xl border dark:border-slate-800 border-slate-200 dark:bg-slate-900/50 bg-white p-4 shadow-sm">
+   932→                    <h3 className="text-xs font-semibold dark:text-slate-300 text-slate-600 flex items-center gap-1.5 mb-3">
+   933→                      <Weight className="h-3.5 w-3.5 dark:text-red-400 text-red-500" />
+   934→                      {t('common.weight')} Visualization
+   935→                    </h3>
+   936→                    {weightCat && (
+   937→                      <div className="space-y-3">
+   938→                        {/* Weight category badge */}
+   939→                        <div className="flex items-center gap-2">
+   940→                          <Badge variant="outline" className={`text-[10px] font-semibold ${
+   941→                            weightCat.colorDark === 'bg-emerald-500' ? 'dark:text-emerald-400 text-emerald-600 border-emerald-500/20 bg-emerald-500/10' :
+   942→                            weightCat.colorDark === 'bg-amber-500' ? 'dark:text-amber-400 text-amber-600 border-amber-500/20 bg-amber-500/10' :
+   943→                            weightCat.colorDark === 'bg-orange-500' ? 'dark:text-orange-400 text-orange-600 border-orange-500/20 bg-orange-500/10' :
+   944→                            'dark:text-red-400 text-red-600 border-red-500/20 bg-red-500/10'
+   945→                          }`}>
+   946→                            {weightCat.label}
+   947→                          </Badge>
+   948→                          <span className="text-xs dark:text-slate-400 text-slate-500">
+   949→                            {(detailCargo.weight / 1000).toFixed(1)} tonnes
+   950→                          </span>
+   951→                        </div>
+   952→
+   953→                        {/* Visual bar */}
+   954→                        <div className="relative">
+   955→                          <div className="flex gap-0.5 h-3 rounded-full overflow-hidden dark:bg-slate-800 bg-slate-100">
+   956→                            {WEIGHT_CATEGORIES.map((cat, idx) => {
+   957→                              const catStart = idx === 0 ? 0 : WEIGHT_CATEGORIES.slice(0, idx).reduce((acc, c) => acc + c.maxTonnes, 0);
+   958→                              const catEnd = catStart + cat.maxTonnes;
+   959→                              const catPct = (cat.maxTonnes / 500) * 100;
+   960→                              const fillStart = Math.max(0, (weightPct - (catStart / 500) * 100));
+   961→                              const fillPct = Math.min(catPct, Math.max(0, fillStart));
+   962→
+   963→                              return (
+   964→                                <div
+   965→                                  key={cat.label}
+   966→                                  className={`h-full relative ${idx === 0 ? 'rounded-l-full' : ''} ${idx === WEIGHT_CATEGORIES.length - 1 ? 'rounded-r-full' : ''}`}
+   967→                                  style={{ width: `${catPct}%` }}
+   968→                                >
+   969→                                  <div className="absolute inset-0 dark:bg-slate-700 bg-slate-200" />
+   970→                                  {weightPct > (catStart / 500) * 100 && (
+   971→                                    <div
+   972→                                      className={`absolute top-0 left-0 h-full ${cat.colorDark} dark:opacity-80 opacity-60 transition-all duration-700`}
+   973→                                      style={{ width: `${Math.min(100, fillPct / catPct * 100)}%` }}
+   974→                                    />
+   975→                                  )}
+   976→                                </div>
+   977→                              );
+   978→                            })}
+   979→                          </div>
+   980→                          {/* Category labels */}
+   981→                          <div className="flex justify-between mt-1.5">
+   982→                            <span className="text-[9px] dark:text-slate-600 text-slate-400">0t</span>
+   983→                            <span className="text-[9px] dark:text-slate-600 text-slate-400">5t</span>
+   984→                            <span className="text-[9px] dark:text-slate-600 text-slate-400">50t</span>
+   985→                            <span className="text-[9px] dark:text-slate-600 text-slate-400">200t</span>
+   986→                            <span className="text-[9px] dark:text-slate-600 text-slate-400">500t+</span>
+   987→                          </div>
+   988→                        </div>
+   989→                      </div>
+   990→                    )}
+   991→                  </div>
+   992→
+   993→                  {/* ===== DIMENSIONS VISUALIZATION ===== */}
+   994→                  <div className="rounded-xl border dark:border-slate-800 border-slate-200 dark:bg-slate-900/50 bg-white p-4 shadow-sm">
+   995→                    <h3 className="text-xs font-semibold dark:text-slate-300 text-slate-600 flex items-center gap-1.5 mb-3">
+   996→                      <Ruler className="h-3.5 w-3.5 dark:text-purple-400 text-purple-500" />
+   997→                      {t('common.dimensions')}
+   998→                    </h3>
+   999→                    <div className="flex items-center gap-5">
+  1000→                      {/* 3D Box visual */}
+  1001→                      <div className="relative h-20 w-20 shrink-0">
+  1002→                        {/* Back face */}
+  1003→                        <div className="absolute top-1 left-1 h-14 w-14 dark:bg-slate-700 bg-slate-300 rounded-sm border dark:border-slate-600 border-slate-300" />
+  1004→                        {/* Top face */}
+  1005→                        <div className="absolute top-0 left-3 h-14 w-14 dark:bg-slate-600 bg-slate-400 rounded-sm border dark:border-slate-500 border-slate-400 transform -skew-x-12 origin-bottom-left" />
+  1006→                        {/* Front face */}
+  1007→                        <div className="absolute top-3 left-0 h-14 w-14 dark:bg-amber-500/20 bg-amber-100 rounded-sm border dark:border-amber-500/40 border-amber-400/60" />
+  1008→                        {/* Labels on front face */}
+  1009→                        <div className="absolute top-3 left-0 h-14 w-14 flex items-center justify-center">
+  1010→                          <Box className="h-6 w-6 dark:text-amber-400/60 text-amber-500/60" />
+  1011→                        </div>
+  1012→                      </div>
+  1013→                      {/* Dimension values */}
+  1014→                      <div className="flex-1 grid grid-cols-3 gap-2">
+  1015→                        <div className="text-center p-2 rounded-lg dark:bg-slate-800/60 bg-slate-50">
+  1016→                          <span className="text-[9px] uppercase font-semibold dark:text-amber-400 text-amber-600 tracking-wider">L</span>
+  1017→                          <p className="text-sm font-bold dark:text-slate-100 text-slate-900 font-mono mt-0.5">{detailCargo.length}</p>
+  1018→                          <span className="text-[9px] dark:text-slate-500 text-slate-400">m</span>
+  1019→                        </div>
+  1020→                        <div className="text-center p-2 rounded-lg dark:bg-slate-800/60 bg-slate-50">
+  1021→                          <span className="text-[9px] uppercase font-semibold dark:text-cyan-400 text-cyan-600 tracking-wider">W</span>
+  1022→                          <p className="text-sm font-bold dark:text-slate-100 text-slate-900 font-mono mt-0.5">{detailCargo.width}</p>
+  1023→                          <span className="text-[9px] dark:text-slate-500 text-slate-400">m</span>
+  1024→                        </div>
+  1025→                        <div className="text-center p-2 rounded-lg dark:bg-slate-800/60 bg-slate-50">
+  1026→                          <span className="text-[9px] uppercase font-semibold dark:text-purple-400 text-purple-600 tracking-wider">H</span>
+  1027→                          <p className="text-sm font-bold dark:text-slate-100 text-slate-900 font-mono mt-0.5">{detailCargo.height}</p>
+  1028→                          <span className="text-[9px] dark:text-slate-500 text-slate-400">m</span>
+  1029→                        </div>
+  1030→                      </div>
+  1031→                    </div>
+  1032→                    <div className="mt-2 text-center">
+  1033→                      <p className="text-xs font-mono dark:text-slate-400 text-slate-500">
+  1034→                        {detailCargo.length} × {detailCargo.width} × {detailCargo.height} m
+  1035→                      </p>
+  1036→                    </div>
+  1037→                  </div>
+  1038→
+  1039→                  {/* ===== LOCATION ASSIGNMENT ===== */}
+  1040→                  <div className="rounded-xl border dark:border-slate-800 border-slate-200 dark:bg-slate-900/50 bg-white p-4 shadow-sm">
+  1041→                    <h3 className="text-xs font-semibold dark:text-slate-300 text-slate-600 flex items-center gap-1.5 mb-3">
+  1042→                      <MapPin className="h-3.5 w-3.5 dark:text-emerald-400 text-emerald-500" />
+  1043→                      {t('detail.assignLocation')}
+  1044→                    </h3>
+  1045→                    <div className="flex items-center gap-2">
+  1046→                      <Select value={selectedLocationId} onValueChange={setSelectedLocationId}>
+  1047→                        <SelectTrigger className="dark:border-slate-700 border-slate-300 dark:bg-slate-800 bg-white dark:text-slate-200 text-slate-900 flex-1">
+  1048→                          <SelectValue placeholder={t('common.select')} />
+  1049→                        </SelectTrigger>
+  1050→                        <SelectContent className="dark:border-slate-700 border-slate-200 dark:bg-slate-800 bg-white max-h-60">
+  1051→                          {locations.map((l) => (
+  1052→                            <SelectItem key={l.id} value={l.id} className="dark:text-slate-200 text-slate-700 dark:focus:bg-slate-700 focus:bg-slate-100">
+  1053→                              {l.code} — {l.name}
+  1054→                            </SelectItem>
+  1055→                          ))}
+  1056→                        </SelectContent>
+  1057→                      </Select>
+  1058→                      <Button
+  1059→                        size="sm"
+  1060→                        onClick={handleAssignLocation}
+  1061→                        disabled={assigningLocation || !selectedLocationId || selectedLocationId === detailCargo.locationId}
+  1062→                        className="bg-amber-500 hover:bg-amber-600 text-slate-900 shrink-0 transition-all duration-200 shadow-sm hover:shadow-md disabled:opacity-50"
+  1063→                      >
+  1064→                        {assigningLocation ? <Loader2 className="h-4 w-4 animate-spin" /> : <MapPin className="h-4 w-4" />}
+  1065→                      </Button>
+  1066→                    </div>
+  1067→                    {detailCargo.location && (
+  1068→                      <div className="mt-2.5 flex items-center gap-2 p-2 rounded-lg dark:bg-emerald-500/5 bg-emerald-50 dark:border-emerald-500/10 border-emerald-200">
+  1069→                        <CheckCircle2 className="h-3.5 w-3.5 dark:text-emerald-400 text-emerald-600 shrink-0" />
+  1070→                        <span className="text-xs dark:text-emerald-300 text-emerald-700">
+  1071→                          {t('common.location')}: {detailCargo.location.code} — {detailCargo.location.name}
+  1072→                        </span>
+  1073→                      </div>
+  1074→                    )}
+  1075→                  </div>
+  1076→
+  1077→                  {/* ===== REFERENCES ===== */}
+  1078→                  <div className="rounded-xl border dark:border-slate-800 border-slate-200 dark:bg-slate-900/50 bg-white p-4 shadow-sm">
+  1079→                    <h3 className="text-xs font-semibold dark:text-slate-300 text-slate-600 flex items-center gap-1.5 mb-3">
+  1080→                      <Tags className="h-3.5 w-3.5 dark:text-slate-400 text-slate-500" />
+  1081→                      {t('detail.info.references')}
+  1082→                    </h3>
+  1083→                    <div className="grid grid-cols-2 gap-3 text-sm">
+  1084→                      <div>
+  1085→                        <span className="dark:text-slate-500 text-slate-400 text-xs">{t('cargo.details.project')}</span>
+  1086→                        <p className="dark:text-slate-100 text-slate-900 mt-0.5">{detailCargo.project?.name || t('cargo.details.unassigned')}</p>
+  1087→                      </div>
+  1088→                      <div>
+  1089→                        <span className="dark:text-slate-500 text-slate-400 text-xs">{t('cargo.details.client')}</span>
+  1090→                        <p className="dark:text-slate-100 text-slate-900 mt-0.5">{detailCargo.clientName || '—'}</p>
+  1091→                      </div>
+  1092→                      <div>
+  1093→                        <span className="dark:text-slate-500 text-slate-400 text-xs">{t('cargo.details.poRef')}</span>
+  1094→                        <p className="dark:text-slate-200 text-slate-800 font-mono mt-0.5">{detailCargo.poReference || '—'}</p>
+  1095→                      </div>
+  1096→                      <div>
+  1097→                        <span className="dark:text-slate-500 text-slate-400 text-xs">{t('cargo.details.blRef')}</span>
+  1098→                        <p className="dark:text-slate-200 text-slate-800 font-mono mt-0.5">{detailCargo.blReference || '—'}</p>
+  1099→                      </div>
+  1100→                    </div>
+  1101→                  </div>
+  1102→
+  1103→                  {/* ===== PORT/AIRPORT INFO ===== */}
+  1104→                  {(detailCargo.containerNumber || detailCargo.customsStatus || detailCargo.vesselName || detailCargo.transportMode || detailCargo.barcode) && (
+  1105→                  <div className="rounded-xl border dark:border-slate-800 border-slate-200 dark:bg-slate-900/50 bg-white p-4 shadow-sm">
+  1106→                    <h3 className="text-xs font-semibold dark:text-slate-300 text-slate-600 flex items-center gap-1.5 mb-3">
+  1107→                      <Ship className="h-3.5 w-3.5 dark:text-slate-400 text-slate-500" />
+  1108→                      {portLabels.transportMode} / معلومات الميناء
+  1109→                    </h3>
+  1110→                    <div className="grid grid-cols-2 gap-3 text-sm">
+  1111→                      {detailCargo.containerNumber && (
+  1112→                        <div>
+  1113→                          <span className="dark:text-slate-500 text-slate-400 text-xs">{portLabels.container}{detailCargo.containerType && detailCargo.containerType !== 'NONE' ? ` — ${detailCargo.containerType}` : ''}</span>
+  1114→                          <p className="dark:text-slate-200 text-slate-800 font-mono mt-0.5">{detailCargo.containerNumber}</p>
+  1115→                        </div>
+  1116→                      )}
+  1117→                      {detailCargo.sealNumber && (
+  1118→                        <div>
+  1119→                          <span className="dark:text-slate-500 text-slate-400 text-xs">{portLabels.seal}</span>
+  1120→                          <p className="dark:text-slate-200 text-slate-800 font-mono mt-0.5">{detailCargo.sealNumber}</p>
+  1121→                        </div>
+  1122→                      )}
+  1123→                      {detailCargo.customsStatus && (
+  1124→                        <div>
+  1125→                          <span className="dark:text-slate-500 text-slate-400 text-xs">{portLabels.customs}</span>
+  1126→                          <div className="mt-0.5">
+  1127→                            <Badge className={
+  1128→                              detailCargo.customsStatus === 'CLEARED' ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20' :
+  1129→                              detailCargo.customsStatus === 'PENDING' ? 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20' :
+  1130→                              detailCargo.customsStatus === 'REJECTED' ? 'bg-red-500/10 text-red-600 dark:text-red-400 border-red-500/20' :
+  1131→                              detailCargo.customsStatus === 'ON_HOLD' ? 'bg-orange-500/10 text-orange-600 dark:text-orange-400 border-orange-500/20' :
+  1132→                              'bg-slate-500/10 text-slate-600 dark:text-slate-400 border-slate-500/20'
+  1133→                            }>
+  1134→                              {portLabels[`customs.${detailCargo.customsStatus}`] || detailCargo.customsStatus}
+  1135→                            </Badge>
+  1136→                          </div>
+  1137→                        </div>
+  1138→                      )}
+  1139→                      {detailCargo.transportMode && (
+  1140→                        <div>
+  1141→                          <span className="dark:text-slate-500 text-slate-400 text-xs">{portLabels.transportMode}</span>
+  1142→                          <p className="dark:text-slate-200 text-slate-800 mt-0.5 flex items-center gap-1.5">
+  1143→                            {detailCargo.transportMode === 'SEA' && <Ship className="h-3.5 w-3.5 dark:text-blue-400 text-blue-600" />}
+  1144→                            {detailCargo.transportMode === 'AIR' && <Plane className="h-3.5 w-3.5 dark:text-purple-400 text-purple-600" />}
+  1145→                            {detailCargo.transportMode === 'LAND' && <Truck className="h-3.5 w-3.5 dark:text-amber-400 text-amber-600" />}
+  1146→                            {detailCargo.transportMode}
+  1147→                          </p>
+  1148→                        </div>
+  1149→                      )}
+  1150→                      {(detailCargo.vesselName || detailCargo.flightNumber) && (
+  1151→                        <div>
+  1152→                          <span className="dark:text-slate-500 text-slate-400 text-xs">
+  1153→                            {detailCargo.transportMode === 'AIR' ? portLabels.flight : portLabels.vessel}
+  1154→                          </span>
+  1155→                          <p className="dark:text-slate-200 text-slate-800 mt-0.5">
+  1156→                            {detailCargo.vesselName}{detailCargo.voyageNumber ? ` — ${detailCargo.voyageNumber}` : ''}
+  1157→                            {detailCargo.flightNumber ? ` ${detailCargo.flightNumber}` : ''}
+  1158→                          </p>
+  1159→                        </div>
+  1160→                      )}
+  1161→                      {detailCargo.arrivalDate && (
+  1162→                        <div>
+  1163→                          <span className="dark:text-slate-500 text-slate-400 text-xs">{portLabels.arrival}</span>
+  1164→                          <p className="dark:text-slate-200 text-slate-800 mt-0.5">{detailCargo.arrivalDate}</p>
+  1165→                        </div>
+  1166→                      )}
+  1167→                      {detailCargo.storageDays != null && (
+  1168→                        <div>
+  1169→                          <span className="dark:text-slate-500 text-slate-400 text-xs">{portLabels.storageDays}</span>
+  1170→                          <p className={`mt-0.5 font-semibold ${detailCargo.storageDays > 15 ? 'text-red-600 dark:text-red-400' : 'dark:text-slate-200 text-slate-800'}`}>
+  1171→                            {detailCargo.storageDays} يوم
+  1172→                            {detailCargo.storageDays > 15 && (
+  1173→                              <span className="ml-1 text-[10px] font-normal dark:text-amber-400 text-amber-600">⚠</span>
+  1174→                            )}
+  1175→                          </p>
+  1176→                        </div>
+  1177→                      )}
+  1178→                      {detailCargo.barcode && (
+  1179→                        <div className="col-span-2">
+  1180→                          <span className="dark:text-slate-500 text-slate-400 text-xs">{portLabels.barcode}</span>
+  1181→                          <p className="dark:text-slate-200 text-slate-800 font-mono mt-0.5 text-xs">{detailCargo.barcode}</p>
+  1182→                        </div>
+  1183→                      )}
+  1184→                    </div>
+  1185→                  </div>
+  1186→                  )}
+  1187→
+  1188→                  {/* ===== SPECIAL HANDLING ===== */}
+  1189→                  {detailCargo.specialHandling && (
+  1190→                    <div className="rounded-xl border dark:border-amber-500/20 border-amber-200 dark:bg-amber-500/5 bg-amber-50 p-4 shadow-sm">
+  1191→                      <h3 className="text-xs font-semibold dark:text-amber-400 text-amber-600 flex items-center gap-1.5 mb-2">
+  1192→                        <AlertTriangle className="h-3.5 w-3.5" />
+  1193→                        {t('cargo.details.specialHandling')}
+  1194→                      </h3>
+  1195→                      <p className="text-xs dark:text-slate-300 text-slate-700 dark:bg-slate-800/50 bg-white rounded-lg p-3 leading-relaxed border dark:border-slate-700 border-slate-200">
+  1196→                        {detailCargo.specialHandling}
+  1197→                      </p>
+  1198→                    </div>
+  1199→                  )}
+  1200→
+  1201→                  {/* ===== MOVEMENT TIMELINE ===== */}
+  1202→                  <div className="rounded-xl border dark:border-slate-800 border-slate-200 dark:bg-slate-900/50 bg-white p-4 shadow-sm">
+  1203→                    <h3 className="text-xs font-semibold dark:text-slate-300 text-slate-600 flex items-center gap-1.5 mb-3">
+  1204→                      <Clock className="h-3.5 w-3.5 dark:text-slate-400 text-slate-500" />
+  1205→                      {t('detail.movementHistory')}
+  1206→                    </h3>
+  1207→                    {Array.isArray(detailCargo.movements) && detailCargo.movements.length > 0 ? (
+  1208→                      <div className="space-y-3">
+  1209→                        {detailCargo.movements.map((m, idx) => (
+  1210→                          <div key={m.id} className="flex gap-3">
+  1211→                            <div className="flex flex-col items-center">
+  1212→                              <div className={`h-3 w-3 rounded-full ring-2 ${
+  1213→                                idx === 0
+  1214→                                  ? 'dark:bg-amber-400 bg-amber-500 dark:ring-amber-500/30 ring-amber-300'
+  1215→                                  : 'dark:bg-slate-600 bg-slate-400 dark:ring-slate-800 ring-slate-200'
+  1216→                              } mt-1`} />
+  1217→                              {idx < (detailCargo.movements?.length || 0) - 1 && (
+  1218→                                <div className="w-px flex-1 dark:bg-slate-800 bg-slate-200" />
+  1219→                              )}
+  1220→                            </div>
+  1221→                            <div className="flex-1 pb-3">
+  1222→                              <div className="flex items-center justify-between flex-wrap gap-1">
+  1223→                                <Badge variant="outline" className={`text-[10px] ${movementTypeStyles[m.type] || ''}`}>
+  1224→                                  {translateMovementType(m.type)}
+  1225→                                </Badge>
+  1226→                                <span className="text-[10px] dark:text-slate-500 text-slate-400">
+  1227→                                  {new Date(m.createdAt).toLocaleDateString()}{' '}
+  1228→                                  {new Date(m.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+  1229→                                </span>
+  1230→                              </div>
+  1231→                              <div className="flex items-center gap-2 mt-1.5 text-xs dark:text-slate-400 text-slate-500">
+  1232→                                {m.fromLocation && <span className="font-mono text-[11px]">{m.fromLocation.code}</span>}
+  1233→                                {m.fromLocation && m.toLocation && <ArrowRight className="h-3 w-3 dark:text-slate-600 text-slate-400" />}
+  1234→                                {m.toLocation && <span className="font-mono text-[11px]">{m.toLocation.code}</span>}
+  1235→                              </div>
+  1236→                              {m.remarks && (
+  1237→                                <p className="text-[11px] dark:text-slate-500 text-slate-400 mt-1">{m.remarks}</p>
+  1238→                              )}
+  1239→                              {(m.operatorName || m.equipmentUsed) && (
+  1240→                                <div className="flex gap-3 mt-1 text-[10px] dark:text-slate-600 text-slate-400">
+  1241→                                  {m.operatorName && <span className="flex items-center gap-1"><Clock className="h-2.5 w-2.5" />{m.operatorName}</span>}
+  1242→                                  {m.equipmentUsed && <span className="flex items-center gap-1"><Weight className="h-2.5 w-2.5" />{m.equipmentUsed}</span>}
+  1243→                                </div>
+  1244→                              )}
+  1245→                            </div>
+  1246→                          </div>
+  1247→                        ))}
+  1248→                      </div>
+  1249→                    ) : (
+  1250→                      <div className="flex flex-col items-center gap-2 py-6">
+  1251→                        <div className="h-10 w-10 rounded-full dark:bg-slate-800 bg-slate-100 flex items-center justify-center">
+  1252→                          <Move className="h-5 w-5 dark:text-slate-600 text-slate-400" />
+  1253→                        </div>
+  1254→                        <p className="text-xs dark:text-slate-500 text-slate-400 text-center">{t('detail.noMovements')}</p>
+  1255→                      </div>
+  1256→                    )}
+  1257→                  </div>
+  1258→
+  1259→                  {/* Bottom padding */}
+  1260→                  <div className="h-2" />
+  1261→                </div>
+  1262→              </ScrollArea>
+  1263→            </>
+  1264→          ) : null}
+  1265→        </SheetContent>
+  1266→      </Sheet>
+  1267→
+  1268→      {/* ===== TRANSFER DIALOG ===== */}
+  1269→      <Dialog open={showTransfer} onOpenChange={(open) => {
+  1270→        if (!open) {
+  1271→          setShowTransfer(false);
+  1272→          setTransferTo('');
+  1273→          setTransferRemarks('');
+  1274→        }
+  1275→      }}>
+  1276→        <DialogContent className="dark:border-slate-700 border-slate-200 dark:bg-slate-900 bg-white max-w-md shadow-xl">
+  1277→          <DialogHeader>
+  1278→            <DialogTitle className="dark:text-slate-100 text-slate-900">نقل البضاعة</DialogTitle>
+  1279→          </DialogHeader>
+  1280→          <div className="space-y-4 py-2">
+  1281→            {detailCargo?.location && (
+  1282→              <div className="rounded-lg dark:bg-slate-800/50 bg-slate-50 p-3">
+  1283→                <span className="text-xs dark:text-slate-500 text-slate-400">الموقع الحالي</span>
+  1284→                <p className="text-sm font-medium dark:text-slate-200 text-slate-800 mt-0.5">{detailCargo.location.code} — {detailCargo.location.name}</p>
+  1285→              </div>
+  1286→            )}
+  1287→            <div>
+  1288→              <Label className="dark:text-slate-400 text-slate-600">الموقع الوجهة</Label>
+  1289→              <Select value={transferTo} onValueChange={setTransferTo}>
+  1290→                <SelectTrigger className="dark:border-slate-700 border-slate-300 dark:bg-slate-800 bg-white dark:text-slate-200 text-slate-900 mt-1">
+  1291→                  <SelectValue placeholder="اختر موقع..." />
+  1292→                </SelectTrigger>
+  1293→                <SelectContent className="dark:border-slate-700 border-slate-200 dark:bg-slate-800 bg-white">
+  1294→                  {locations.filter(l => l.id !== detailCargo?.locationId).map((l) => (
+  1295→                    <SelectItem key={l.id} value={l.id} className="dark:text-slate-200 text-slate-700">{l.code} — {l.name}</SelectItem>
+  1296→                  ))}
+  1297→                </SelectContent>
+  1298→              </Select>
+  1299→            </div>
+  1300→            <div>
+  1301→              <Label className="dark:text-slate-400 text-slate-600">ملاحظات</Label>
+  1302→              <Textarea value={transferRemarks} onChange={(e) => setTransferRemarks(e.target.value)}
+  1303→                className="dark:border-slate-700 border-slate-300 dark:bg-slate-800 bg-white dark:text-slate-200 text-slate-900 mt-1"
+  1304→                placeholder="ملاحظات اختيارية..." />
+  1305→            </div>
+  1306→          </div>
+  1307→          <DialogFooter>
+  1308→            <Button variant="outline" onClick={() => setShowTransfer(false)} className="dark:border-slate-700 border-slate-300 dark:text-slate-300 text-slate-700">إلغاء</Button>
+  1309→            <Button onClick={handleTransfer} disabled={!transferTo || transferring} className="bg-amber-500 hover:bg-amber-600 text-slate-900">
+  1310→              {transferring ? 'جاري النقل...' : 'تأكيد النقل'}
+  1311→            </Button>
+  1312→          </DialogFooter>
+  1313→        </DialogContent>
+  1314→      </Dialog>
+  1315→
+  1316→      {/* ===== ADD/EDIT DIALOG ===== */}
+  1317→      <Dialog open={showAdd || !!editing} onOpenChange={(open) => { if (!open) { setShowAdd(false); setEditing(null); setForm(emptyForm); } }}>
+  1318→        <DialogContent className="dark:border-slate-700 border-slate-200 dark:bg-slate-900 bg-white max-h-[90vh] overflow-y-auto max-w-2xl shadow-xl">
+  1319→          <DialogHeader>
+  1320→            <DialogTitle className="dark:text-slate-100 text-slate-900">
+  1321→              {editing ? t('cargo.editCargo') : t('cargo.addNewCargo')}
+  1322→            </DialogTitle>
+  1323→          </DialogHeader>
+  1324→          <div className="grid gap-4 py-4 sm:grid-cols-2">
+  1325→            <div className="sm:col-span-2">
+  1326→              <Label className="dark:text-slate-400 text-slate-600">{t('cargo.form.description')}</Label>
+  1327→              <Input value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })}
+  1328→                className="dark:border-slate-700 border-slate-300 dark:bg-slate-800 bg-white dark:text-slate-200 text-slate-900 mt-1" />
+  1329→            </div>
+  1330→            <div>
+  1331→              <Label className="dark:text-slate-400 text-slate-600">{t('cargo.form.weight')}</Label>
+  1332→              <Input type="number" value={form.weight} onChange={(e) => setForm({ ...form, weight: e.target.value })}
+  1333→                className="dark:border-slate-700 border-slate-300 dark:bg-slate-800 bg-white dark:text-slate-200 text-slate-900 mt-1" />
+  1334→            </div>
+  1335→            <div>
+  1336→              <Label className="dark:text-slate-400 text-slate-600">{t('cargo.form.dimensions')}</Label>
+  1337→              <div className="grid grid-cols-3 gap-2 mt-1">
+  1338→                <Input placeholder="L" type="number" value={form.length} onChange={(e) => setForm({ ...form, length: e.target.value })}
+  1339→                  className="dark:border-slate-700 border-slate-300 dark:bg-slate-800 bg-white dark:text-slate-200 text-slate-900 text-center" />
+  1340→                <Input placeholder="W" type="number" value={form.width} onChange={(e) => setForm({ ...form, width: e.target.value })}
+  1341→                  className="dark:border-slate-700 border-slate-300 dark:bg-slate-800 bg-white dark:text-slate-200 text-slate-900 text-center" />
+  1342→                <Input placeholder="H" type="number" value={form.height} onChange={(e) => setForm({ ...form, height: e.target.value })}
+  1343→                  className="dark:border-slate-700 border-slate-300 dark:bg-slate-800 bg-white dark:text-slate-200 text-slate-900 text-center" />
+  1344→              </div>
+  1345→            </div>
+  1346→            <div>
+  1347→              <Label className="dark:text-slate-400 text-slate-600">{t('cargo.form.liftCategory')}</Label>
+  1348→              <Select value={form.liftCategory} onValueChange={(v) => setForm({ ...form, liftCategory: v })}>
+  1349→                <SelectTrigger className="dark:border-slate-700 border-slate-300 dark:bg-slate-800 bg-white dark:text-slate-200 text-slate-900 mt-1">
+  1350→                  <SelectValue placeholder={t('common.select')} />
+  1351→                </SelectTrigger>
+  1352→                <SelectContent className="dark:border-slate-700 border-slate-200 dark:bg-slate-800 bg-white">
+  1353→                  {(['HEAVY_LIFT', 'OVERSIZE', 'STANDARD', 'PROJECT_CARGO'] as LiftCategory[]).map((c) => (
+  1354→                    <SelectItem key={c} value={c} className="dark:text-slate-200 text-slate-700 dark:focus:bg-slate-700 focus:bg-slate-100">
+  1355→                      {translateCategory(c)}
+  1356→                    </SelectItem>
+  1357→                  ))}
+  1358→                </SelectContent>
+  1359→              </Select>
+  1360→            </div>
+  1361→            <div>
+  1362→              <Label className="dark:text-slate-400 text-slate-600">{t('cargo.form.commodityType')}</Label>
+  1363→              <Select value={form.commodityType} onValueChange={(v) => setForm({ ...form, commodityType: v })}>
+  1364→                <SelectTrigger className="dark:border-slate-700 border-slate-300 dark:bg-slate-800 bg-white dark:text-slate-200 text-slate-900 mt-1">
+  1365→                  <SelectValue placeholder={t('common.select')} />
+  1366→                </SelectTrigger>
+  1367→                <SelectContent className="dark:border-slate-700 border-slate-200 dark:bg-slate-800 bg-white">
+  1368→                  {(['GENERAL', 'MACHINERY', 'STEEL', 'EQUIPMENT', 'MODULE'] as CommodityType[]).map((c) => (
+  1369→                    <SelectItem key={c} value={c} className="dark:text-slate-200 text-slate-700 dark:focus:bg-slate-700 focus:bg-slate-100">
+  1370→                      {translateCommodity(c)}
+  1371→                    </SelectItem>
+  1372→                  ))}
+  1373→                </SelectContent>
+  1374→              </Select>
+  1375→            </div>
+  1376→            <div>
+  1377→              <Label className="dark:text-slate-400 text-slate-600">{t('cargo.form.project')}</Label>
+  1378→              <Select value={form.projectId} onValueChange={(v) => setForm({ ...form, projectId: v })}>
+  1379→                <SelectTrigger className="dark:border-slate-700 border-slate-300 dark:bg-slate-800 bg-white dark:text-slate-200 text-slate-900 mt-1">
+  1380→                  <SelectValue placeholder={t('common.none')} />
+  1381→                </SelectTrigger>
+  1382→                <SelectContent className="dark:border-slate-700 border-slate-200 dark:bg-slate-800 bg-white">
+  1383→                  <SelectItem value="_none" className="dark:text-slate-200 text-slate-700 dark:focus:bg-slate-700 focus:bg-slate-100">{t('common.none')}</SelectItem>
+  1384→                  {projects.map((p) => (
+  1385→                    <SelectItem key={p.id} value={p.id} className="dark:text-slate-200 text-slate-700 dark:focus:bg-slate-700 focus:bg-slate-100">{p.name}</SelectItem>
+  1386→                  ))}
+  1387→                </SelectContent>
+  1388→              </Select>
+  1389→            </div>
+  1390→            <div>
+  1391→              <Label className="dark:text-slate-400 text-slate-600">{t('cargo.form.clientName')}</Label>
+  1392→              <Input value={form.clientName} onChange={(e) => setForm({ ...form, clientName: e.target.value })}
+  1393→                className="dark:border-slate-700 border-slate-300 dark:bg-slate-800 bg-white dark:text-slate-200 text-slate-900 mt-1" />
+  1394→            </div>
+  1395→            <div>
+  1396→              <Label className="dark:text-slate-400 text-slate-600">{t('cargo.form.poReference')}</Label>
+  1397→              <Input value={form.poReference} onChange={(e) => setForm({ ...form, poReference: e.target.value })}
+  1398→                className="dark:border-slate-700 border-slate-300 dark:bg-slate-800 bg-white dark:text-slate-200 text-slate-900 mt-1" />
+  1399→            </div>
+  1400→            <div>
+  1401→              <Label className="dark:text-slate-400 text-slate-600">{t('cargo.form.blReference')}</Label>
+  1402→              <Input value={form.blReference} onChange={(e) => setForm({ ...form, blReference: e.target.value })}
+  1403→                className="dark:border-slate-700 border-slate-300 dark:bg-slate-800 bg-white dark:text-slate-200 text-slate-900 mt-1" />
+  1404→            </div>
+  1405→            <div>
+  1406→              <Label className="dark:text-slate-400 text-slate-600">{t('cargo.form.centerOfGravity')}</Label>
+  1407→              <Input value={form.centerOfGravity} onChange={(e) => setForm({ ...form, centerOfGravity: e.target.value })}
+  1408→                className="dark:border-slate-700 border-slate-300 dark:bg-slate-800 bg-white dark:text-slate-200 text-slate-900 mt-1"
+  1409→                placeholder={t('cargo.form.cogPlaceholder')} />
+  1410→            </div>
+  1411→            <div>
+  1412→              <Label className="dark:text-slate-400 text-slate-600">{t('cargo.form.liftingPoints')}</Label>
+  1413→              <Input type="number" value={form.liftingPoints} onChange={(e) => setForm({ ...form, liftingPoints: e.target.value })}
+  1414→                className="dark:border-slate-700 border-slate-300 dark:bg-slate-800 bg-white dark:text-slate-200 text-slate-900 mt-1"
+  1415→                placeholder={t('cargo.form.liftingPointsPlaceholder')} />
+  1416→            </div>
+  1417→            <div className="sm:col-span-2">
+  1418→              <Label className="dark:text-slate-400 text-slate-600">{t('cargo.form.specialHandling')}</Label>
+  1419→              <Textarea value={form.specialHandling} onChange={(e) => setForm({ ...form, specialHandling: e.target.value })}
+  1420→                className="dark:border-slate-700 border-slate-300 dark:bg-slate-800 bg-white dark:text-slate-200 text-slate-900 mt-1 min-h-[80px]"
+  1421→                placeholder={t('cargo.form.specialHandlingPlaceholder')} />
+  1422→            </div>
+  1423→          </div>
+  1424→          <DialogFooter>
+  1425→            <Button variant="outline" onClick={() => { setShowAdd(false); setEditing(null); setForm(emptyForm); }}
+  1426→              className="dark:border-slate-700 border-slate-300 dark:text-slate-300 text-slate-700 dark:hover:bg-slate-800 hover:bg-slate-100 transition-all duration-200">
+  1427→              {t('common.cancel')}
+  1428→            </Button>
+  1429→            <Button onClick={handleSubmit}
+  1430→              disabled={submitting || !form.description || !form.weight || !form.liftCategory || !form.commodityType}
+  1431→              className="bg-amber-500 hover:bg-amber-600 text-slate-900 transition-all duration-200 shadow-sm hover:shadow-md disabled:opacity-50">
+  1432→              {submitting ? t('common.saving') : editing ? t('common.update') : t('common.create')}
+  1433→            </Button>
+  1434→          </DialogFooter>
+  1435→        </DialogContent>
+  1436→      </Dialog>
+  1437→
+  1438→      {/* ===== DELETE CONFIRMATION ===== */}
+  1439→      <Dialog open={!!deleting} onOpenChange={(open) => { if (!open) setDeleting(null); }}>
+  1440→        <DialogContent className="dark:border-slate-700 border-slate-200 dark:bg-slate-900 bg-white max-w-md shadow-xl">
+  1441→          <DialogHeader>
+  1442→            <DialogTitle className="dark:text-slate-100 text-slate-900">{t('common.confirmDelete')}</DialogTitle>
+  1443→          </DialogHeader>
+  1444→          <p className="text-sm dark:text-slate-400 text-slate-500">
+  1445→            {t('cargo.delete.message')}{' '}
+  1446→            <span className="dark:text-amber-400 text-amber-600 font-medium">{deleting?.cargoCode}</span>
+  1447→            {t('cargo.delete.cannotUndo')}
+  1448→          </p>
+  1449→          <DialogFooter>
+  1450→            <Button variant="outline" onClick={() => setDeleting(null)}
+  1451→              className="dark:border-slate-700 border-slate-300 dark:text-slate-300 text-slate-700 dark:hover:bg-slate-800 hover:bg-slate-100 transition-all duration-200">
+  1452→              {t('common.cancel')}
+  1453→            </Button>
+  1454→            <Button variant="destructive" onClick={handleDelete}
+  1455→              className="bg-red-600 hover:bg-red-700 transition-all duration-200 shadow-sm hover:shadow-md">
+  1456→              {t('common.delete')}
+  1457→            </Button>
+  1458→          </DialogFooter>
+  1459→        </DialogContent>
+  1460→      </Dialog>
+  1461→    </div>
+  1462→  );
+  1463→}
+  1464→
