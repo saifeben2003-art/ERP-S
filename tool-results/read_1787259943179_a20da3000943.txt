@@ -1,0 +1,644 @@
+     1→'use client';
+     2→
+     3→import { useEffect, useState, useCallback } from 'react';
+     4→import {
+     5→  Package, Warehouse, FolderKanban, MapPin, Wrench, Weight, Truck,
+     6→  ArrowLeftRight, TrendingUp, Calendar, RefreshCw, ChevronRight,
+     7→  ArrowUp, ArrowDown, Inbox, CircleDot, Loader2,
+     8→} from 'lucide-react';
+     9→import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+    10→import { Skeleton } from '@/components/ui/skeleton';
+    11→import { Badge } from '@/components/ui/badge';
+    12→import { Button } from '@/components/ui/button';
+    13→import {
+    14→  Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
+    15→} from '@/components/ui/table';
+    16→import {
+    17→  ChartContainer, ChartTooltip, ChartTooltipContent,
+    18→  ChartLegend, ChartLegendContent,
+    19→} from '@/components/ui/chart';
+    20→import {
+    21→  Area, AreaChart, Bar, BarChart, CartesianGrid,
+    22→  Pie, PieChart, Cell, XAxis, YAxis,
+    23→} from 'recharts';
+    24→import {
+    25→  useTranslation, translateStatus, translateCategory, translateMovementType,
+    26→} from '@/lib/translations';
+    27→import { en } from '@/lib/en';
+    28→import type { DashboardStats, Movement, WmsPage } from '@/types/wms';
+    29→
+    30→// ─── Color Constants ─────────────────────────────────────────────────────
+    31→const statusColors: Record<string, string> = {
+    32→  IN_YARD: '#10b981',
+    33→  IN_WAREHOUSE: '#14b8a6',
+    34→  IN_TRANSIT: '#f59e0b',
+    35→  RECEIVED: '#06b6d4',
+    36→  DISPATCHED: '#64748b',
+    37→  DELIVERED: '#94a3b8',
+    38→};
+    39→
+    40→const categoryColors: Record<string, string> = {
+    41→  HEAVY_LIFT: '#ef4444',
+    42→  OVERSIZE: '#f97316',
+    43→  STANDARD: '#10b981',
+    44→  PROJECT_CARGO: '#f59e0b',
+    45→};
+    46→
+    47→const movementTypeColor: Record<string, string> = {
+    48→  RECEIVE: 'text-emerald-400 bg-emerald-500/10 border-emerald-500/20',
+    49→  MOVE: 'text-cyan-400 bg-cyan-500/10 border-cyan-500/20',
+    50→  DISPATCH: 'text-orange-400 bg-orange-500/10 border-orange-500/20',
+    51→  INSPECT: 'text-purple-400 bg-purple-500/10 border-purple-500/20',
+    52→};
+    53→
+    54→const movementTypeIcon: Record<string, React.ElementType> = {
+    55→  RECEIVE: Inbox,
+    56→  MOVE: ArrowLeftRight,
+    57→  DISPATCH: Truck,
+    58→  INSPECT: CircleDot,
+    59→};
+    60→
+    61→const movementsChartConfig = {
+    62→  RECEIVE: { label: 'استلام', color: '#10b981' },
+    63→  MOVE: { label: 'نقل', color: '#06b6d4' },
+    64→  DISPATCH: { label: 'إرسال', color: '#f97316' },
+    65→};
+    66→
+    67→const pieChartConfig = {
+    68→  IN_YARD: { label: 'في الساحة', color: '#10b981' },
+    69→  IN_WAREHOUSE: { label: 'في المستودع', color: '#14b8a6' },
+    70→  IN_TRANSIT: { label: 'قيد النقل', color: '#f59e0b' },
+    71→  RECEIVED: { label: 'مستلم', color: '#06b6d4' },
+    72→  DISPATCHED: { label: 'مرسل', color: '#64748b' },
+    73→  DELIVERED: { label: 'تم التوصيل', color: '#94a3b8' },
+    74→};
+    75→
+    76→const barChartConfig = {
+    77→  weight: { label: 'الوزن', color: '#f59e0b' },
+    78→};
+    79→
+    80→// ─── KPI definitions ─────────────────────────────────────────────────────
+    81→interface KpiDefinition {
+    82→  key: string;
+    83→  icon: React.ElementType;
+    84→  label: string;
+    85→  value: () => string | number;
+    86→  suffix?: string;
+    87→  color: string;
+    88→  accentBorder: string;
+    89→  trend: number;
+    90→  page: WmsPage;
+    91→}
+    92→
+    93→// ─── Section Header ───────────────────────────────────────────────────────
+    94→function SectionHeader({ title, icon: Icon }: { title: string; icon: React.ElementType }) {
+    95→  return (
+    96→    <div className="flex items-center gap-2 pt-2 pb-1">
+    97→      <div className="h-px flex-1 dark:bg-gradient-to-r dark:from-slate-800 dark:to-transparent bg-gradient-to-r from-slate-200 to-transparent" />
+    98→      <div className="flex items-center gap-1.5">
+    99→        <Icon className="h-3.5 w-3.5 dark:text-slate-500 text-slate-400" />
+   100→        <h2 className="text-xs font-semibold uppercase tracking-widest dark:text-slate-400 text-slate-500">{title}</h2>
+   101→      </div>
+   102→      <div className="h-px flex-1 dark:bg-gradient-to-l dark:from-slate-800 dark:to-transparent bg-gradient-to-l from-slate-200 to-transparent" />
+   103→    </div>
+   104→  );
+   105→}
+   106→
+   107→// ─── KPI Card ─────────────────────────────────────────────────────────────
+   108→function KpiCard({
+   109→  icon: Icon, label, value, suffix, loading, color = 'text-amber-400',
+   110→  accentBorder = 'border-l-amber-400', trend, page, onNavigate,
+   111→}: {
+   112→  icon: React.ElementType; label: string; value: string | number;
+   113→  suffix?: string; loading: boolean; color?: string; accentBorder?: string;
+   114→  trend?: number; page?: WmsPage; onNavigate?: (page: WmsPage) => void;
+   115→}) {
+   116→  const isPositive = trend !== undefined && trend >= 0;
+   117→  return (
+   118→    <Card
+   119→      className={[
+   120→        'dark:border-slate-800 border-slate-200 dark:bg-slate-900/50 bg-white',
+   121→        'cursor-pointer select-none',
+   122→        'hover:shadow-lg hover:shadow-black/5 dark:hover:shadow-black/20',
+   123→        'hover:-translate-y-0.5 active:translate-y-0',
+   124→        'transition-all duration-200 ease-out',
+   125→        `border-l-[3px] ${accentBorder}`,
+   126→      ].join(' ')}
+   127→      onClick={() => page && onNavigate?.(page)}
+   128→      role="button"
+   129→      tabIndex={0}
+   130→      onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); if (page) onNavigate?.(page); } }}
+   131→    >
+   132→      <CardContent className="p-4">
+   133→        <div className="flex items-start justify-between">
+   134→          <div className="space-y-2 min-w-0">
+   135→            {loading ? (
+   136→              <>
+   137→                <Skeleton className="h-3 w-20 dark:bg-slate-800 bg-slate-100" />
+   138→                <Skeleton className="h-8 w-16 dark:bg-slate-800 bg-slate-100" />
+   139→              </>
+   140→            ) : (
+   141→              <>
+   142→                <p className="text-[11px] font-medium dark:text-slate-500 text-slate-400 uppercase tracking-wider">{label}</p>
+   143→                <p className="text-3xl font-extrabold tracking-tight dark:text-slate-100 text-slate-900 leading-none">
+   144→                  {typeof value === 'number' ? value.toLocaleString() : value}
+   145→                  {suffix && (
+   146→                    <span className="text-xs font-semibold dark:text-slate-500 text-slate-400 ml-1">{suffix}</span>
+   147→                  )}
+   148→                </p>
+   149→                {trend !== undefined && (
+   150→                  <div className={`flex items-center gap-1 text-[11px] font-medium ${isPositive ? 'text-emerald-500 dark:text-emerald-400' : 'text-red-500 dark:text-red-400'}`}>
+   151→                    {isPositive ? <ArrowUp className="h-3 w-3" /> : <ArrowDown className="h-3 w-3" />}
+   152→                    <span>{Math.abs(trend)}%</span>
+   153→                  </div>
+   154→                )}
+   155→              </>
+   156→            )}
+   157→          </div>
+   158→          <div className="flex flex-col items-end gap-2">
+   159→            <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl dark:bg-slate-800 bg-slate-100 ${color}`}>
+   160→              <Icon className="h-5 w-5" />
+   161→            </div>
+   162→            {page && (
+   163→              <ChevronRight className="h-4 w-4 dark:text-slate-700 text-slate-300 opacity-0 group-hover/card:opacity-100 transition-opacity duration-200" />
+   164→            )}
+   165→          </div>
+   166→        </div>
+   167→      </CardContent>
+   168→    </Card>
+   169→  );
+   170→}
+   171→
+   172→// ─── Movements Trend Chart ───────────────────────────────────────────────
+   173→function MovementsTrendChart({ data, loading, t, locale }: {
+   174→  data: DashboardStats['movementsByDay']; loading: boolean;
+   175→  t: (k: string) => string; locale: string;
+   176→}) {
+   177→  if (loading) return <Skeleton className="h-[300px] w-full dark:bg-slate-800 bg-slate-100 rounded-xl" />;
+   178→  if (!data || data.length === 0) return null;
+   179→
+   180→  return (
+   181→    <Card className="dark:border-slate-800 border-slate-200 dark:bg-slate-900/50 bg-white">
+   182→      <CardHeader className="pb-2">
+   183→        <CardTitle className="text-sm font-medium dark:text-slate-300 text-slate-700">{t('dashboard.movementsTrend')}</CardTitle>
+   184→      </CardHeader>
+   185→      <CardContent>
+   186→        <ChartContainer config={movementsChartConfig} className="h-[260px] w-full">
+   187→          <AreaChart data={data} margin={{ top: 5, right: 5, left: -20, bottom: 0 }}>
+   188→            <defs>
+   189→              <linearGradient id="fillRECEIVE" x1="0" y1="0" x2="0" y2="1">
+   190→                <stop offset="5%" stopColor="#10b981" stopOpacity={0.5} />
+   191→                <stop offset="95%" stopColor="#10b981" stopOpacity={0.05} />
+   192→              </linearGradient>
+   193→              <linearGradient id="fillMOVE" x1="0" y1="0" x2="0" y2="1">
+   194→                <stop offset="5%" stopColor="#06b6d4" stopOpacity={0.5} />
+   195→                <stop offset="95%" stopColor="#06b6d4" stopOpacity={0.05} />
+   196→              </linearGradient>
+   197→              <linearGradient id="fillDISPATCH" x1="0" y1="0" x2="0" y2="1">
+   198→                <stop offset="5%" stopColor="#f97316" stopOpacity={0.5} />
+   199→                <stop offset="95%" stopColor="#f97316" stopOpacity={0.05} />
+   200→              </linearGradient>
+   201→            </defs>
+   202→            <CartesianGrid strokeDasharray="3 3" className="stroke-slate-200 dark:stroke-slate-800" vertical={false} />
+   203→            <XAxis
+   204→              dataKey="date"
+   205→              tickFormatter={(v) => {
+   206→                const d = new Date(v + 'T00:00:00');
+   207→                return d.toLocaleDateString(locale === 'ar' ? 'ar-SA' : 'en-US', { weekday: 'short' });
+   208→              }}
+   209→              tick={{ fontSize: 11, fill: '#94a3b8' }}
+   210→              axisLine={false}
+   211→              tickLine={false}
+   212→            />
+   213→            <YAxis tick={{ fontSize: 11, fill: '#94a3b8' }} axisLine={false} tickLine={false} />
+   214→            <ChartTooltip
+   215→              content={(
+   216→                <ChartTooltipContent
+   217→                  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+   218→                  formatter={(value: any) => [Number(value).toLocaleString(), undefined]}
+   219→                />
+   220→              )}
+   221→            />
+   222→            <ChartLegend content={<ChartLegendContent />} />
+   223→            <Area type="monotone" dataKey="RECEIVE" stackId="1" stroke="#10b981" fill="url(#fillRECEIVE)" strokeWidth={2} />
+   224→            <Area type="monotone" dataKey="MOVE" stackId="1" stroke="#06b6d4" fill="url(#fillMOVE)" strokeWidth={2} />
+   225→            <Area type="monotone" dataKey="DISPATCH" stackId="1" stroke="#f97316" fill="url(#fillDISPATCH)" strokeWidth={2} />
+   226→          </AreaChart>
+   227→        </ChartContainer>
+   228→      </CardContent>
+   229→    </Card>
+   230→  );
+   231→}
+   232→
+   233→// ─── Cargo Status Donut Chart ─────────────────────────────────────────────
+   234→function CargoStatusDonutChart({ data, loading, t, locale }: {
+   235→  data: DashboardStats['statusBreakdown']; loading: boolean;
+   236→  t: (k: string) => string; locale: string;
+   237→}) {
+   238→  if (loading) return <Skeleton className="h-[300px] w-full dark:bg-slate-800 bg-slate-100 rounded-xl" />;
+   239→  if (!data || data.length === 0) return null;
+   240→
+   241→  const total = data.reduce((s, d) => s + d.count, 0);
+   242→  const chartData = data.map((d) => ({ ...d, fill: statusColors[d.status] || '#64748b' }));
+   243→
+   244→  const renderLabel = ({ cx, cy, midAngle, innerRadius, outerRadius, percent }: {
+   245→    cx: number; cy: number; midAngle: number; innerRadius: number; outerRadius: number; percent: number;
+   246→  }) => {
+   247→    if (percent < 0.08) return null;
+   248→    const RADIAN = Math.PI / 180;
+   249→    const radius = innerRadius + (outerRadius - innerRadius) * 0.5;
+   250→    const x = cx + radius * Math.cos(-midAngle * RADIAN);
+   251→    const y = cy + radius * Math.sin(-midAngle * RADIAN);
+   252→    return (
+   253→      <text x={x} y={y} textAnchor="middle" dominantBaseline="central" className="text-[10px] font-bold" fill="#f8fafc">
+   254→        {`${(percent * 100).toFixed(0)}%`}
+   255→      </text>
+   256→    );
+   257→  };
+   258→
+   259→  return (
+   260→    <Card className="dark:border-slate-800 border-slate-200 dark:bg-slate-900/50 bg-white">
+   261→      <CardHeader className="pb-2">
+   262→        <CardTitle className="text-sm font-medium dark:text-slate-300 text-slate-700">{t('dashboard.cargoStatusBreakdown')}</CardTitle>
+   263→      </CardHeader>
+   264→      <CardContent>
+   265→        <ChartContainer config={pieChartConfig} className="h-[260px] w-full">
+   266→          <PieChart>
+   267→            <ChartTooltip
+   268→              content={(
+   269→                <ChartTooltipContent
+   270→                  nameKey="status"
+   271→                  hideLabel
+   272→                  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+   273→                  formatter={(value: any, _name: any, item: any) => [
+   274→                    Number(value).toLocaleString(),
+   275→                    translateStatus(String(item?.payload?.status || ''), locale as 'ar' | 'en'),
+   276→                  ]}
+   277→                />
+   278→              )}
+   279→            />
+   280→            <Pie
+   281→              data={chartData}
+   282→              cx="50%"
+   283→              cy="50%"
+   284→              innerRadius={60}
+   285→              outerRadius={90}
+   286→              dataKey="count"
+   287→              nameKey="status"
+   288→              label={renderLabel}
+   289→              labelLine={false}
+   290→              strokeWidth={2}
+   291→              stroke="transparent"
+   292→            >
+   293→              {chartData.map((entry, index) => (
+   294→                <Cell key={`cell-${index}`} fill={entry.fill} />
+   295→              ))}
+   296→            </Pie>
+   297→            <ChartLegend
+   298→              content={({ payload }) => (
+   299→                <div className="flex flex-wrap items-center justify-center gap-3 pt-2">
+   300→                  {payload?.map((item) => (
+   301→                    <div key={item.value} className="flex items-center gap-1.5">
+   302→                      <div className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: item.color }} />
+   303→                      <span className="text-[11px] dark:text-slate-400 text-slate-600">
+   304→                        {translateStatus(item.value as string, locale as 'ar' | 'en')} ({(item.payload as any)?.count || 0})
+   305→                      </span>
+   306→                    </div>
+   307→                  ))}
+   308→                </div>
+   309→              )}
+   310→            />
+   311→          </PieChart>
+   312→        </ChartContainer>
+   313→      </CardContent>
+   314→    </Card>
+   315→  );
+   316→}
+   317→
+   318→// ─── Weight by Category Chart ─────────────────────────────────────────────
+   319→function WeightByCategoryChart({ data, loading, t, locale }: {
+   320→  data: DashboardStats['weightByCategory']; loading: boolean;
+   321→  t: (k: string) => string; locale: string;
+   322→}) {
+   323→  if (loading) return <Skeleton className="h-[300px] w-full dark:bg-slate-800 bg-slate-100 rounded-xl" />;
+   324→  if (!data || data.length === 0) return null;
+   325→
+   326→  const chartData = data.map((d) => ({
+   327→    category: translateCategory(d.category, locale as 'ar' | 'en'),
+   328→    weight: Math.round(d.weight / 1000 * 10) / 10,
+   329→    fill: categoryColors[d.category] || '#f59e0b',
+   330→  }));
+   331→
+   332→  return (
+   333→    <Card className="dark:border-slate-800 border-slate-200 dark:bg-slate-900/50 bg-white">
+   334→      <CardHeader className="pb-2">
+   335→        <CardTitle className="text-sm font-medium dark:text-slate-300 text-slate-700">{t('dashboard.weightByCategory')}</CardTitle>
+   336→      </CardHeader>
+   337→      <CardContent>
+   338→        <ChartContainer config={barChartConfig} className="h-[260px] w-full">
+   339→          <BarChart data={chartData} layout="vertical" margin={{ top: 5, right: 20, left: -20, bottom: 5 }}>
+   340→            <CartesianGrid strokeDasharray="3 3" className="stroke-slate-200 dark:stroke-slate-800" horizontal={false} />
+   341→            <XAxis type="number" tick={{ fontSize: 11, fill: '#94a3b8' }} axisLine={false} tickLine={false} />
+   342→            <YAxis
+   343→              type="category" dataKey="category"
+   344→              tick={{ fontSize: 11, fill: '#94a3b8' }}
+   345→              axisLine={false} tickLine={false} width={90}
+   346→            />
+   347→            <ChartTooltip
+   348→              content={(
+   349→                <ChartTooltipContent
+   350→                  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+   351→                  formatter={(value: any) => [`${Number(value).toLocaleString()} t`, undefined]}
+   352→                />
+   353→              )}
+   354→            />
+   355→            <Bar dataKey="weight" radius={[0, 6, 6, 0]} maxBarSize={28}>
+   356→              {chartData.map((entry, index) => (
+   357→                <Cell key={`cell-${index}`} fill={entry.fill} />
+   358→              ))}
+   359→            </Bar>
+   360→          </BarChart>
+   361→        </ChartContainer>
+   362→      </CardContent>
+   363→    </Card>
+   364→  );
+   365→}
+   366→
+   367→// ─── Recent Movements Table ───────────────────────────────────────────────
+   368→function RecentMovements({ movements, loading, t, locale, onNavigate }: {
+   369→  movements: Movement[]; loading: boolean; t: (k: string) => string; locale: string;
+   370→  onNavigate?: (page: WmsPage) => void;
+   371→}) {
+   372→  return (
+   373→    <Card className="dark:border-slate-800 border-slate-200 dark:bg-slate-900/50 bg-white">
+   374→      <CardHeader className="pb-3">
+   375→        <div className="flex items-center justify-between">
+   376→          <CardTitle className="text-sm font-medium dark:text-slate-300 text-slate-700">{t('dashboard.recentMovements')}</CardTitle>
+   377→          <ArrowLeftRight className="h-4 w-4 dark:text-slate-600 text-slate-300" />
+   378→        </div>
+   379→      </CardHeader>
+   380→      <CardContent className="p-0">
+   381→        <div className="max-h-96 overflow-y-auto [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-thumb]:bg-slate-700 dark:[&::-webkit-scrollbar-thumb]:bg-slate-600 [&::-webkit-scrollbar-thumb]:rounded-full">
+   382→          <Table>
+   383→            <TableHeader>
+   384→              <TableRow className="dark:border-slate-800 border-slate-200 hover:bg-transparent">
+   385→                <TableHead className="text-xs dark:text-slate-500 text-slate-400">{t('dashboard.ref')}</TableHead>
+   386→                <TableHead className="text-xs dark:text-slate-500 text-slate-400">{t('dashboard.cargo')}</TableHead>
+   387→                <TableHead className="text-xs dark:text-slate-500 text-slate-400">{t('dashboard.type')}</TableHead>
+   388→                <TableHead className="text-xs dark:text-slate-500 text-slate-400 hidden sm:table-cell">{t('dashboard.from')}</TableHead>
+   389→                <TableHead className="text-xs dark:text-slate-500 text-slate-400 hidden sm:table-cell">{t('dashboard.to')}</TableHead>
+   390→                <TableHead className="text-xs dark:text-slate-500 text-slate-400">{t('common.date')}</TableHead>
+   391→              </TableRow>
+   392→            </TableHeader>
+   393→            <TableBody>
+   394→              {loading
+   395→                ? Array.from({ length: 5 }).map((_, i) => (
+   396→                    <TableRow key={i} className="dark:border-slate-800 border-slate-200 hover:bg-transparent">
+   397→                      {Array.from({ length: 6 }).map((_, j) => (
+   398→                        <TableCell key={j} className="py-2"><Skeleton className="h-4 w-16 dark:bg-slate-800 bg-slate-100" /></TableCell>
+   399→                      ))}
+   400→                    </TableRow>
+   401→                  ))
+   402→                : movements.map((m) => {
+   403→                    const TypeIcon = movementTypeIcon[m.type] || ArrowLeftRight;
+   404→                    return (
+   405→                      <TableRow
+   406→                        key={m.id}
+   407→                        className={[
+   408→                          'dark:border-slate-800 border-slate-200',
+   409→                          'dark:hover:bg-slate-800/50 hover:bg-slate-50',
+   410→                          'cursor-pointer transition-colors duration-150',
+   411→                        ].join(' ')}
+   412→                        onClick={() => onNavigate?.('movements')}
+   413→                      >
+   414→                        <TableCell className="py-2.5 text-xs font-mono dark:text-slate-400 text-slate-500">{m.movementRef}</TableCell>
+   415→                        <TableCell className="py-2.5 text-xs font-medium dark:text-slate-300 text-slate-700">{m.cargoCode}</TableCell>
+   416→                        <TableCell className="py-2.5">
+   417→                          <Badge variant="outline" className={`text-[10px] gap-1 ${movementTypeColor[m.type] || ''}`}>
+   418→                            <TypeIcon className="h-3 w-3" />
+   419→                            {translateMovementType(m.type, locale as 'ar' | 'en')}
+   420→                          </Badge>
+   421→                        </TableCell>
+   422→                        <TableCell className="py-2.5 text-xs dark:text-slate-400 text-slate-500 hidden sm:table-cell">{m.fromLocation?.code || '—'}</TableCell>
+   423→                        <TableCell className="py-2.5 text-xs dark:text-slate-400 text-slate-500 hidden sm:table-cell">{m.toLocation?.code || '—'}</TableCell>
+   424→                        <TableCell className="py-2.5 text-xs dark:text-slate-500 text-slate-400">{new Date(m.createdAt).toLocaleDateString()}</TableCell>
+   425→                      </TableRow>
+   426→                    );
+   427→                  })}
+   428→            </TableBody>
+   429→          </Table>
+   430→        </div>
+   431→      </CardContent>
+   432→    </Card>
+   433→  );
+   434→}
+   435→
+   436→// ─── Project Progress ─────────────────────────────────────────────────────
+   437→function ProjectProgress({ projects, loading, t }: {
+   438→  projects: { name: string; total: number; received: number; status: string }[];
+   439→  loading: boolean; t: (k: string) => string;
+   440→}) {
+   441→  return (
+   442→    <Card className="dark:border-slate-800 border-slate-200 dark:bg-slate-900/50 bg-white">
+   443→      <CardHeader className="pb-3">
+   444→        <div className="flex items-center justify-between">
+   445→          <CardTitle className="text-sm font-medium dark:text-slate-300 text-slate-700">{t('dashboard.projectProgress')}</CardTitle>
+   446→          <TrendingUp className="h-4 w-4 dark:text-slate-600 text-slate-300" />
+   447→        </div>
+   448→      </CardHeader>
+   449→      <CardContent className="space-y-5">
+   450→        {loading
+   451→          ? Array.from({ length: 4 }).map((_, i) => (
+   452→              <div key={i} className="space-y-2">
+   453→                <div className="flex items-center justify-between">
+   454→                  <Skeleton className="h-4 w-40 dark:bg-slate-800 bg-slate-100" />
+   455→                  <Skeleton className="h-4 w-12 dark:bg-slate-800 bg-slate-100" />
+   456→                </div>
+   457→                <Skeleton className="h-2 w-full dark:bg-slate-800 bg-slate-100 rounded-full" />
+   458→              </div>
+   459→            ))
+   460→          : projects.map((p) => {
+   461→              const pct = p.total > 0 ? Math.round((p.received / p.total) * 100) : 0;
+   462→              return (
+   463→                <div key={p.name} className="space-y-2">
+   464→                  <div className="flex items-center justify-between">
+   465→                    <span className="text-xs font-medium dark:text-slate-300 text-slate-700 truncate max-w-[200px] sm:max-w-[300px]">{p.name}</span>
+   466→                    <span className="text-xs font-semibold dark:text-slate-400 text-slate-500 shrink-0 ml-2">{p.received}/{p.total} <span className="dark:text-slate-600 text-slate-300">({pct}%)</span></span>
+   467→                  </div>
+   468→                  <div className="relative h-2.5 w-full overflow-hidden rounded-full dark:bg-slate-800 bg-slate-100">
+   469→                    <div
+   470→                      className="h-full rounded-full bg-gradient-to-r from-amber-500 via-orange-500 to-amber-400 transition-all duration-700 ease-out"
+   471→                      style={{ width: `${pct}%` }}
+   472→                    />
+   473→                  </div>
+   474→                </div>
+   475→              );
+   476→            })}
+   477→      </CardContent>
+   478→    </Card>
+   479→  );
+   480→}
+   481→
+   482→// ─── Icon / Page Maps ─────────────────────────────────────────────────────
+   483→const iconMap: Record<string, React.ElementType> = { Package, FolderKanban, MapPin, Wrench, ArrowLeftRight };
+   484→const pageMap: Record<number, WmsPage> = { 0: 'cargo', 1: 'projects', 2: 'locations', 3: 'equipment', 4: 'movements' };
+   485→
+   486→// ─── Main Dashboard Page ──────────────────────────────────────────────────
+   487→interface DashboardPageProps { onNavigate?: (page: WmsPage) => void; }
+   488→
+   489→export function DashboardPage({ onNavigate }: DashboardPageProps) {
+   490→  const [stats, setStats] = useState<DashboardStats | null>(null);
+   491→  const [loading, setLoading] = useState(true);
+   492→  const [refreshing, setRefreshing] = useState(false);
+   493→  const { t, locale } = useTranslation();
+   494→
+   495→  const welcomeSteps = locale === 'en'
+   496→    ? (en['welcome.guideStep1.title'] ? [
+   497→        { title: en['welcome.guideStep1.title'], description: en['welcome.guideStep1.description'], icon: 'Package' as const },
+   498→        { title: en['welcome.guideStep2.title'], description: en['welcome.guideStep2.description'], icon: 'FolderKanban' as const },
+   499→        { title: en['welcome.guideStep3.title'], description: en['welcome.guideStep3.description'], icon: 'MapPin' as const },
+   500→        { title: en['welcome.guideStep4.title'], description: en['welcome.guideStep4.description'], icon: 'Wrench' as const },
+   501→        { title: en['welcome.guideStep5.title'], description: en['welcome.guideStep5.description'], icon: 'ArrowLeftRight' as const },
+   502→      ] : [
+   503→        { title: t('welcome.guideStep1.title'), description: t('welcome.guideStep1.description'), icon: 'Package' as const },
+   504→        { title: t('welcome.guideStep2.title'), description: t('welcome.guideStep2.description'), icon: 'FolderKanban' as const },
+   505→        { title: t('welcome.guideStep3.title'), description: t('welcome.guideStep3.description'), icon: 'MapPin' as const },
+   506→        { title: t('welcome.guideStep4.title'), description: t('welcome.guideStep4.description'), icon: 'Wrench' as const },
+   507→        { title: t('welcome.guideStep5.title'), description: t('welcome.guideStep5.description'), icon: 'ArrowLeftRight' as const },
+   508→      ])
+   509→    : [
+   510→        { title: t('welcome.guideStep1.title'), description: t('welcome.guideStep1.description'), icon: 'Package' as const },
+   511→        { title: t('welcome.guideStep2.title'), description: t('welcome.guideStep2.description'), icon: 'FolderKanban' as const },
+   512→        { title: t('welcome.guideStep3.title'), description: t('welcome.guideStep3.description'), icon: 'MapPin' as const },
+   513→        { title: t('welcome.guideStep4.title'), description: t('welcome.guideStep4.description'), icon: 'Wrench' as const },
+   514→        { title: t('welcome.guideStep5.title'), description: t('welcome.guideStep5.description'), icon: 'ArrowLeftRight' as const },
+   515→      ];
+   516→
+   517→  const fetchData = useCallback(() => {
+   518→    fetch('/api/dashboard')
+   519→      .then((r) => r.json())
+   520→      .then((data) => { setStats(data.data || data); setLoading(false); setRefreshing(false); })
+   521→      .catch(() => { setLoading(false); setRefreshing(false); });
+   522→  }, []);
+   523→
+   524→  useEffect(() => { fetchData(); }, [fetchData]);
+   525→
+   526→  const handleRefresh = () => {
+   527→    setRefreshing(true);
+   528→    fetchData();
+   529→  };
+   530→
+   531→  // KPI definitions with trends and navigation
+   532→  const kpis: KpiDefinition[] = [
+   533→    { key: 'totalCargo', icon: Package, label: t('dashboard.totalCargo'), value: () => stats?.totalCargo ?? 0, color: 'text-amber-400', accentBorder: 'border-l-amber-400', trend: 12, page: 'cargo' },
+   534→    { key: 'inYardStorage', icon: Warehouse, label: t('dashboard.inYardStorage'), value: () => (stats?.inYard ?? 0) + (stats?.inWarehouse ?? 0), color: 'text-emerald-400', accentBorder: 'border-l-emerald-400', trend: 8, page: 'locations' },
+   535→    { key: 'activeProjects', icon: FolderKanban, label: t('dashboard.activeProjects'), value: () => stats?.activeProjects ?? 0, color: 'text-orange-400', accentBorder: 'border-l-orange-400', trend: 0, page: 'projects' },
+   536→    { key: 'equipmentAvail', icon: Wrench, label: t('dashboard.equipmentAvail'), value: () => stats?.equipmentAvailable ?? 0, color: 'text-teal-400', accentBorder: 'border-l-teal-400', trend: -3, page: 'equipment' },
+   537→    { key: 'totalWeight', icon: Weight, label: t('dashboard.totalWeight'), value: () => stats?.totalWeight ?? 0, suffix: t('common.tonnes'), color: 'text-red-400', accentBorder: 'border-l-red-400', trend: 15, page: 'cargo' },
+   538→    { key: 'pendingDispatch', icon: Truck, label: t('dashboard.pendingDispatch'), value: () => stats?.pendingDispatch ?? 0, color: 'text-yellow-400', accentBorder: 'border-l-yellow-400', trend: -5, page: 'movements' },
+   539→  ];
+   540→
+   541→  return (
+   542→    <div className="space-y-6">
+   543→      {/* ─── Page Header with Date Range & Refresh ─── */}
+   544→      <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-3">
+   545→        <div>
+   546→          <h1 className="text-2xl font-bold dark:text-slate-100 text-slate-900">{t('dashboard.title')}</h1>
+   547→          <p className="text-sm dark:text-slate-500 text-slate-400 mt-1">{t('dashboard.subtitle')}</p>
+   548→        </div>
+   549→        <div className="flex items-center gap-2">
+   550→          <Badge variant="outline" className="gap-1.5 py-1.5 px-3 text-xs font-medium dark:border-slate-700 border-slate-200 dark:bg-slate-900/50 bg-slate-50 dark:text-slate-400 text-slate-500">
+   551→            <Calendar className="h-3.5 w-3.5" />
+   552→            {locale === 'ar' ? 'آخر 30 يوم' : 'Last 30 days'}
+   553→          </Badge>
+   554→          <Button
+   555→            variant="outline" size="sm" className="gap-1.5 dark:border-slate-700 border-slate-200 dark:bg-slate-900/50 bg-slate-50 dark:text-slate-400 text-slate-500 dark:hover:bg-slate-800 hover:bg-slate-100 h-8"
+   556→            onClick={handleRefresh} disabled={refreshing}
+   557→          >
+   558→            <RefreshCw className={`h-3.5 w-3.5 ${refreshing ? 'animate-spin' : ''}`} />
+   559→            <span className="hidden sm:inline">{locale === 'ar' ? 'تحديث' : 'Refresh'}</span>
+   560→          </Button>
+   561→        </div>
+   562→      </div>
+   563→
+   564→      {/* ─── Welcome Guide ─── */}
+   565→      <div className="relative overflow-hidden rounded-xl">
+   566→        {/* Animated gradient background */}
+   567→        <div className="pointer-events-none absolute inset-0 dark:opacity-40 opacity-20">
+   568→          <div className="absolute inset-0 bg-gradient-to-br from-amber-500/20 via-orange-500/10 to-transparent dark:from-amber-500/10 dark:via-orange-500/5 dark:to-transparent animate-pulse" style={{ animationDuration: '4s' }} />
+   569→        </div>
+   570→        <div className="relative grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
+   571→          {welcomeSteps.map((step, idx) => {
+   572→            const StepIcon = iconMap[step.icon] || Package;
+   573→            return (
+   574→              <Card
+   575→                key={idx}
+   576→                className={[
+   577→                  'dark:border-slate-800 border-slate-200 dark:bg-slate-900/50 bg-white/80 backdrop-blur-sm',
+   578→                  'cursor-pointer hover:border-amber-500/30',
+   579→                  'dark:hover:bg-slate-900/80 hover:bg-white',
+   580→                  'hover:shadow-md hover:shadow-amber-500/5 dark:hover:shadow-amber-500/10',
+   581→                  'hover:-translate-y-0.5 active:translate-y-0',
+   582→                  'transition-all duration-200 ease-out group',
+   583→                ].join(' ')}
+   584→                onClick={() => onNavigate?.(pageMap[idx])}
+   585→                role="button"
+   586→                tabIndex={0}
+   587→                onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onNavigate?.(pageMap[idx]); } }}
+   588→              >
+   589→                <CardContent className="p-5 flex flex-col items-center text-center gap-3.5">
+   590→                  <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-amber-500/10 group-hover:bg-amber-500/20 group-hover:scale-110 transition-all duration-300">
+   591→                    <StepIcon className="h-6 w-6 text-amber-400" />
+   592→                  </div>
+   593→                  <div>
+   594→                    <p className="text-sm font-semibold dark:text-slate-200 text-slate-800 group-hover:text-amber-400 transition-colors">{step.title}</p>
+   595→                    <p className="text-[11px] dark:text-slate-500 text-slate-400 mt-1.5 leading-relaxed">{step.description}</p>
+   596→                  </div>
+   597→                </CardContent>
+   598→              </Card>
+   599→            );
+   600→          })}
+   601→        </div>
+   602→      </div>
+   603→
+   604→      {/* ─── KPI Cards ─── */}
+   605→      <SectionHeader title={locale === 'ar' ? 'المؤشرات' : 'Key Metrics'} icon={TrendingUp} />
+   606→      <div className="grid grid-cols-2 gap-3 sm:gap-4 md:grid-cols-3 xl:grid-cols-6">
+   607→        {kpis.map((kpi) => (
+   608→          <KpiCard
+   609→            key={kpi.key}
+   610→            icon={kpi.icon}
+   611→            label={kpi.label}
+   612→            value={kpi.value()}
+   613→            suffix={kpi.suffix}
+   614→            loading={loading}
+   615→            color={kpi.color}
+   616→            accentBorder={kpi.accentBorder}
+   617→            trend={kpi.trend}
+   618→            page={kpi.page}
+   619→            onNavigate={onNavigate}
+   620→          />
+   621→        ))}
+   622→      </div>
+   623→
+   624→      {/* ─── Movements Trend Chart ─── */}
+   625→      <SectionHeader title={locale === 'ar' ? 'الاتجاهات' : 'Trends'} icon={ArrowLeftRight} />
+   626→      <MovementsTrendChart data={stats?.movementsByDay ?? []} loading={loading} t={t} locale={locale} />
+   627→
+   628→      {/* ─── Status Donut + Weight Bar ─── */}
+   629→      <SectionHeader title={locale === 'ar' ? 'التحليلات' : 'Analytics'} icon={Weight} />
+   630→      <div className="grid gap-6 lg:grid-cols-2">
+   631→        <CargoStatusDonutChart data={stats?.statusBreakdown ?? []} loading={loading} t={t} locale={locale} />
+   632→        <WeightByCategoryChart data={stats?.weightByCategory ?? []} loading={loading} t={t} locale={locale} />
+   633→      </div>
+   634→
+   635→      {/* ─── Recent Movements + Project Progress ─── */}
+   636→      <SectionHeader title={locale === 'ar' ? 'التفاصيل' : 'Details'} icon={TrendingUp} />
+   637→      <div className="grid gap-6 lg:grid-cols-2">
+   638→        <RecentMovements movements={stats?.recentMovements ?? []} loading={loading} t={t} locale={locale} onNavigate={onNavigate} />
+   639→        <ProjectProgress projects={stats?.projectProgress ?? []} loading={loading} t={t} />
+   640→      </div>
+   641→    </div>
+   642→  );
+   643→}
+   644→

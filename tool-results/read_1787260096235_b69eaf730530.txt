@@ -1,0 +1,1004 @@
+     1→'use client';
+     2→
+     3→import { useEffect, useState, useCallback, useMemo } from 'react';
+     4→import {
+     5→  BarChart3, TrendingUp, Clock, AlertTriangle, Package,
+     6→  ArrowDownToLine, ArrowUpFromLine, Users, Weight,
+     7→  Download, Calendar, Filter, RotateCcw, Loader2, FileJson,
+     8→  Activity, Warehouse, ArrowRightLeft,
+     9→} from 'lucide-react';
+    10→import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+    11→import { Badge } from '@/components/ui/badge';
+    12→import { Button } from '@/components/ui/button';
+    13→import { Skeleton } from '@/components/ui/skeleton';
+    14→import {
+    15→  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
+    16→} from '@/components/ui/select';
+    17→import {
+    18→  Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
+    19→} from '@/components/ui/table';
+    20→import { toast } from 'sonner';
+    21→import { useTranslation, translateStatus, translateCategory, translateMovementType } from '@/lib/translations';
+    22→import type { ReportData } from '@/types/wms';
+    23→
+    24→// ==================== LOCAL TRANSLATION MAPPING ====================
+    25→const localTranslations: Record<string, Record<string, string>> = {
+    26→  ar: {
+    27→    'reports.title': 'التقارير والتحليلات',
+    28→    'reports.subtitle': 'تحليل شامل لحركة البضائع والأداء التشغيلي',
+    29→    'reports.period': 'الفترة',
+    30→    'reports.daily': 'يومي',
+    31→    'reports.weekly': 'أسبوعي',
+    32→    'reports.monthly': 'شهري',
+    33→    'reports.yearly': 'سنوي',
+    34→    'reports.from': 'من',
+    35→    'reports.to': 'إلى',
+    36→    'reports.apply': 'تطبيق',
+    37→    'reports.reset': 'إعادة تعيين',
+    38→    'reports.kpi.movements': 'إجمالي الحركات',
+    39→    'reports.kpi.dwellTime': 'متوسط مدة البقاء',
+    40→    'reports.kpi.utilization': 'نسبة التخزين',
+    41→    'reports.kpi.critical': 'بضائع حرجة',
+    42→    'reports.cargoFlow': 'تدفق البضائع',
+    43→    'reports.cargoFlowDesc': 'حركة البضائع الواردة والصادرة خلال الفترة المحددة',
+    44→    'reports.inbound': 'وارد',
+    45→    'reports.outbound': 'صادر',
+    46→    'reports.statusDist': 'توزيع الحالات',
+    47→    'reports.statusDistDesc': 'توزيع البضائع حسب حالتها الحالية',
+    48→    'reports.locationUtil': 'استخدام المواقع',
+    49→    'reports.locationUtilDesc': 'نسبة occupancy لكل موقع تخزيني',
+    50→    'reports.topClients': 'أكبر العملاء',
+    51→    'reports.topClientsDesc': 'أكثر العملاء نشاطاً من حيث البضائع والأوزان',
+    52→    'reports.weightAnalysis': 'تحليل الأوزان',
+    53→    'reports.weightAnalysisDesc': 'توزيع الأوزان حسب فئة البضاعة',
+    54→    'reports.movementTypes': 'أنواع الحركات',
+    55→    'reports.movementTypesDesc': 'توزيع الحركات حسب النوع',
+    56→    'reports.days': 'يوم',
+    57→    'reports.items': 'قطعة',
+    58→    'reports.noData': 'لا توجد بيانات للتقرير',
+    59→    'reports.export': 'تصدير التقرير',
+    60→    'reports.exportSuccess': 'تم تصدير التقرير بنجاح',
+    61→    'reports.exportFailed': 'فشل تصدير التقرير',
+    62→    'reports.fetchFailed': 'فشل تحميل بيانات التقرير',
+    63→    'reports.total': 'الإجمالي',
+    64→    'reports.client': 'العميل',
+    65→    'reports.weight': 'الوزن (طن)',
+    66→    'reports.count': 'العدد',
+    67→    'reports.percentage': 'النسبة',
+    68→    'reports.location': 'الموقع',
+    69→    'reports.capacity': 'السعة',
+    70→    'reports.used': 'المستخدم',
+    71→    'reports.status': 'الحالة',
+    72→    'reports.date': 'التاريخ',
+    73→    'reports.category': 'الفئة',
+    74→    'reports.avgWeight': 'متوسط الوزن',
+    75→    'reports.maxWeight': 'أقصى وزن',
+    76→    'reports.storagePct': 'نسبة التخزين',
+    77→  },
+    78→  en: {
+    79→    'reports.title': 'Reports & Analytics',
+    80→    'reports.subtitle': 'Comprehensive analysis of cargo movement and operational performance',
+    81→    'reports.period': 'Period',
+    82→    'reports.daily': 'Daily',
+    83→    'reports.weekly': 'Weekly',
+    84→    'reports.monthly': 'Monthly',
+    85→    'reports.yearly': 'Yearly',
+    86→    'reports.from': 'From',
+    87→    'reports.to': 'To',
+    88→    'reports.apply': 'Apply',
+    89→    'reports.reset': 'Reset',
+    90→    'reports.kpi.movements': 'Total Movements',
+    91→    'reports.kpi.dwellTime': 'Avg Dwell Time',
+    92→    'reports.kpi.utilization': 'Storage Utilization',
+    93→    'reports.kpi.critical': 'Critical Cargo',
+    94→    'reports.cargoFlow': 'Cargo Flow',
+    95→    'reports.cargoFlowDesc': 'Inbound and outbound cargo movement over the selected period',
+    96→    'reports.inbound': 'Inbound',
+    97→    'reports.outbound': 'Outbound',
+    98→    'reports.statusDist': 'Status Distribution',
+    99→    'reports.statusDistDesc': 'Cargo distribution by current status',
+   100→    'reports.locationUtil': 'Location Utilization',
+   101→    'reports.locationUtilDesc': 'Occupancy rate for each storage location',
+   102→    'reports.topClients': 'Top Clients',
+   103→    'reports.topClientsDesc': 'Most active clients by cargo items and weight',
+   104→    'reports.weightAnalysis': 'Weight Analysis',
+   105→    'reports.weightAnalysisDesc': 'Weight distribution by commodity category',
+   106→    'reports.movementTypes': 'Movement Types',
+   107→    'reports.movementTypesDesc': 'Movement distribution by type',
+   108→    'reports.days': 'days',
+   109→    'reports.items': 'items',
+   110→    'reports.noData': 'No data available for this report',
+   111→    'reports.export': 'Export Report',
+   112→    'reports.exportSuccess': 'Report exported successfully',
+   113→    'reports.exportFailed': 'Failed to export report',
+   114→    'reports.fetchFailed': 'Failed to load report data',
+   115→    'reports.total': 'Total',
+   116→    'reports.client': 'Client',
+   117→    'reports.weight': 'Weight (t)',
+   118→    'reports.count': 'Count',
+   119→    'reports.percentage': 'Percentage',
+   120→    'reports.location': 'Location',
+   121→    'reports.capacity': 'Capacity',
+   122→    'reports.used': 'Used',
+   123→    'reports.status': 'Status',
+   124→    'reports.date': 'Date',
+   125→    'reports.category': 'Category',
+   126→    'reports.avgWeight': 'Avg Weight',
+   127→    'reports.maxWeight': 'Max Weight',
+   128→    'reports.storagePct': 'Storage %',
+   129→  },
+   130→};
+   131→
+   132→// ==================== COLOR CONSTANTS ====================
+   133→const STATUS_COLORS: Record<string, string> = {
+   134→  IN_YARD: '#10b981',
+   135→  IN_WAREHOUSE: '#14b8a6',
+   136→  IN_TRANSIT: '#f59e0b',
+   137→  RECEIVED: '#06b6d4',
+   138→  DISPATCHED: '#64748b',
+   139→  DELIVERED: '#94a3b8',
+   140→  STAGING: '#f97316',
+   141→};
+   142→
+   143→const MOVEMENT_COLORS: Record<string, { color: string; bg: string; icon: React.ElementType }> = {
+   144→  RECEIVE: { color: '#10b981', bg: 'bg-emerald-500', icon: ArrowDownToLine },
+   145→  MOVE: { color: '#06b6d4', bg: 'bg-cyan-500', icon: ArrowRightLeft },
+   146→  DISPATCH: { color: '#f97316', bg: 'bg-orange-500', icon: ArrowUpFromLine },
+   147→  INSPECT: { color: '#8b5cf6', bg: 'bg-violet-500', icon: Activity },
+   148→};
+   149→
+   150→const CATEGORY_COLORS: Record<string, string> = {
+   151→  GENERAL: '#10b981',
+   152→  MACHINERY: '#3b82f6',
+   153→  STEEL: '#64748b',
+   154→  EQUIPMENT: '#f59e0b',
+   155→  MODULE: '#ef4444',
+   156→};
+   157→
+   158→// ==================== HELPERS ====================
+   159→function formatDate(dateStr: string): string {
+   160→  const d = new Date(dateStr);
+   161→  return d.toLocaleDateString('ar-SA', { year: 'numeric', month: 'short', day: 'numeric' });
+   162→}
+   163→
+   164→function formatDateShort(dateStr: string): string {
+   165→  const d = new Date(dateStr);
+   166→  return d.toLocaleDateString('ar-SA', { month: 'short', day: 'numeric' });
+   167→}
+   168→
+   169→function todayISO(): string {
+   170→  return new Date().toISOString().split('T')[0];
+   171→}
+   172→
+   173→function daysAgoISO(days: number): string {
+   174→  const d = new Date();
+   175→  d.setDate(d.getDate() - days);
+   176→  return d.toISOString().split('T')[0];
+   177→}
+   178→
+   179→// ==================== SUB-COMPONENTS ====================
+   180→
+   181→function SectionHeader({ title, subtitle, icon: Icon }: { title: string; subtitle: string; icon: React.ElementType }) {
+   182→  return (
+   183→    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 pb-4">
+   184→      <div className="flex items-center gap-3">
+   185→        <div className="h-9 w-9 rounded-xl dark:bg-amber-500/10 bg-amber-500/10 flex items-center justify-center shrink-0">
+   186→          <Icon className="h-4.5 w-4.5 dark:text-amber-400 text-amber-600" />
+   187→        </div>
+   188→        <div>
+   189→          <h3 className="text-base font-semibold dark:text-slate-100 text-slate-900">{title}</h3>
+   190→          <p className="text-xs dark:text-slate-500 text-slate-400 mt-0.5">{subtitle}</p>
+   191→        </div>
+   192→      </div>
+   193→    </div>
+   194→  );
+   195→}
+   196→
+   197→function KPICard({
+   198→  icon: Icon, label, value, suffix, trend, loading, colorClass, accentFrom, accentTo,
+   199→}: {
+   200→  icon: React.ElementType; label: string; value: string | number; suffix?: string;
+   201→  trend?: string; loading: boolean;
+   202→  colorClass: string; accentFrom: string; accentTo: string;
+   203→}) {
+   204→  return (
+   205→    <Card className="dark:border-slate-800 border-slate-200 dark:bg-slate-900/50 bg-white overflow-hidden relative group transition-all duration-300 hover:dark:border-slate-700 hover:border-slate-300 hover:shadow-lg hover:dark:shadow-amber-500/5 hover:shadow-amber-500/10">
+   206→      {/* Gradient top accent */}
+   207→      <div className={`h-1 w-full bg-gradient-to-l ${accentFrom} ${accentTo} transition-all duration-300 group-hover:h-1.5`} />
+   208→      <CardContent className="p-4 sm:p-5">
+   209→        <div className="flex items-start justify-between">
+   210→          <div className="space-y-2 min-w-0">
+   211→            <p className="text-xs font-medium dark:text-slate-500 text-slate-400 uppercase tracking-wider">{label}</p>
+   212→            {loading ? (
+   213→              <Skeleton className="h-8 w-24 dark:bg-slate-800 bg-slate-200 rounded" />
+   214→            ) : (
+   215→              <div className="flex items-baseline gap-1.5">
+   216→                <p className="text-2xl sm:text-3xl font-bold dark:text-slate-100 text-slate-900 tabular-nums">{value}</p>
+   217→                {suffix && <p className="text-xs font-medium dark:text-slate-500 text-slate-400">{suffix}</p>}
+   218→              </div>
+   219→            )}
+   220→          </div>
+   221→          <div className={`h-11 w-11 rounded-2xl flex items-center justify-center shrink-0 ${colorClass} transition-transform duration-300 group-hover:scale-110`}>
+   222→            <Icon className="h-5 w-5" />
+   223→          </div>
+   224→        </div>
+   225→        {trend && !loading && (
+   226→          <div className="mt-3 pt-3 border-t dark:border-slate-800/50 border-slate-200/50">
+   227→            <p className="text-xs dark:text-slate-500 text-slate-400">{trend}</p>
+   228→          </div>
+   229→        )}
+   230→      </CardContent>
+   231→    </Card>
+   232→  );
+   233→}
+   234→
+   235→// ==================== MAIN COMPONENT ====================
+   236→export function ReportsPage() {
+   237→  const { t, locale } = useTranslation();
+   238→
+   239→  // Local translation with fallback to Arabic
+   240→  const lt = useCallback((key: string): string => {
+   241→    return localTranslations[locale]?.[key] || localTranslations.ar[key] || key;
+   242→  }, [locale]);
+   243→
+   244→  // State
+   245→  const [period, setPeriod] = useState<string>('monthly');
+   246→  const [startDate, setStartDate] = useState<string>(daysAgoISO(30));
+   247→  const [endDate, setEndDate] = useState<string>(todayISO());
+   248→  const [reportData, setReportData] = useState<ReportData | null>(null);
+   249→  const [loading, setLoading] = useState(true);
+   250→  const [exporting, setExporting] = useState(false);
+   251→
+   252→  // Fetch reports data
+   253→  const fetchReport = useCallback(async () => {
+   254→    setLoading(true);
+   255→    try {
+   256→      const params = new URLSearchParams({
+   257→        period,
+   258→        startDate,
+   259→        endDate,
+   260→      });
+   261→      const res = await fetch(`/api/reports?${params}`);
+   262→      if (!res.ok) throw new Error('Failed');
+   263→      const data = await res.json();
+   264→      setReportData(data);
+   265→    } catch {
+   266→      toast.error(lt('reports.fetchFailed'));
+   267→    } finally {
+   268→      setLoading(false);
+   269→    }
+   270→  }, [period, startDate, endDate, lt]);
+   271→
+   272→  useEffect(() => {
+   273→    fetchReport();
+   274→  }, [fetchReport]);
+   275→
+   276→  // Reset to defaults
+   277→  const handleReset = () => {
+   278→    setPeriod('monthly');
+   279→    setStartDate(daysAgoISO(30));
+   280→    setEndDate(todayISO());
+   281→  };
+   282→
+   283→  // Export as JSON
+   284→  const handleExport = async () => {
+   285→    setExporting(true);
+   286→    try {
+   287→      const params = new URLSearchParams({ period, startDate, endDate });
+   288→      const res = await fetch(`/api/reports?${params}`);
+   289→      if (!res.ok) throw new Error('Failed');
+   290→      const data = await res.json();
+   291→      const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+   292→      const url = URL.createObjectURL(blob);
+   293→      const a = document.createElement('a');
+   294→      a.href = url;
+   295→      a.download = `wms-report-${startDate}-${endDate}.json`;
+   296→      a.click();
+   297→      URL.revokeObjectURL(url);
+   298→      toast.success(lt('reports.exportSuccess'));
+   299→    } catch {
+   300→      toast.error(lt('reports.exportFailed'));
+   301→    } finally {
+   302→      setExporting(false);
+   303→    }
+   304→  };
+   305→
+   306→  // Calculate KPIs
+   307→  const kpis = useMemo(() => {
+   308→    if (!reportData) return { totalMovements: 0, avgDwell: 0, utilization: 0, critical: 0 };
+   309→    const totalMovements = reportData.movementStats.total;
+   310→    const avgDwell = reportData.dwellTime.avgDays;
+   311→    const utilization = reportData.locationUtilization.length > 0
+   312→      ? Math.round(reportData.locationUtilization.reduce((s, l) => s + l.percentage, 0) / reportData.locationUtilization.length)
+   313→      : 0;
+   314→    const critical = reportData.dwellTime.critical;
+   315→    return { totalMovements, avgDwell, utilization, critical };
+   316→  }, [reportData]);
+   317→
+   318→  // Donut chart data
+   319→  const donutData = useMemo(() => {
+   320→    if (!reportData?.statusDistribution || reportData.statusDistribution.length === 0) return { data: [], gradient: '' };
+   321→    const entries = reportData.statusDistribution;
+   322→    const total = entries.reduce((s, e) => s + e.count, 0);
+   323→    let cumulative = 0;
+   324→    const segments = entries.map((entry) => {
+   325→      const start = (cumulative / total) * 100;
+   326→      cumulative += entry.count;
+   327→      const end = (cumulative / total) * 100;
+   328→      const color = STATUS_COLORS[entry.status] || '#64748b';
+   329→      return { ...entry, start, end, color };
+   330→    });
+   331→    const gradient = segments.map((s) => `${s.color} ${s.start}% ${s.end}%`).join(', ');
+   332→    return { data: segments, gradient };
+   333→  }, [reportData]);
+   334→
+   335→  // Max values for bar charts
+   336→  const maxFlow = useMemo(() => {
+   337→    if (!reportData?.cargoFlow) return 0;
+   338→    return Math.max(1, ...reportData.cargoFlow.map((d) => Math.max(d.inbound, d.outbound)));
+   339→  }, [reportData]);
+   340→
+   341→  const maxWeight = useMemo(() => {
+   342→    if (!reportData?.weightStats?.byCategory) return 0;
+   343→    return Math.max(1, ...reportData.weightStats.byCategory.map((c) => c.weight));
+   344→  }, [reportData]);
+   345→
+   346→  const maxMovement = useMemo(() => {
+   347→    if (!reportData?.movementStats?.byType) return 0;
+   348→    return Math.max(1, ...reportData.movementStats.byType.map((m) => m.count));
+   349→  }, [reportData]);
+   350→
+   351→  return (
+   352→    <div className="space-y-6">
+   353→      {/* ===== PAGE HEADER ===== */}
+   354→      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+   355→        <div>
+   356→          <h1 className="text-2xl font-bold dark:text-slate-100 text-slate-900">{lt('reports.title')}</h1>
+   357→          <p className="text-sm dark:text-slate-500 text-slate-400 mt-1">{lt('reports.subtitle')}</p>
+   358→        </div>
+   359→        <Button
+   360→          onClick={handleExport}
+   361→          disabled={exporting || loading}
+   362→          className="bg-gradient-to-l from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-slate-900 font-medium shadow-lg shadow-amber-500/20 transition-all duration-200 hover:shadow-xl hover:shadow-amber-500/30"
+   363→        >
+   364→          {exporting ? <Loader2 className="h-4 w-4 ml-2 animate-spin" /> : <FileJson className="h-4 w-4 ml-2" />}
+   365→          {lt('reports.export')}
+   366→        </Button>
+   367→      </div>
+   368→
+   369→      {/* ===== FILTER BAR ===== */}
+   370→      <Card className="dark:border-slate-800 border-slate-200 dark:bg-slate-900/50 bg-white">
+   371→        <CardContent className="p-4">
+   372→          <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:flex-wrap">
+   373→            {/* Period selector */}
+   374→            <div className="flex flex-col gap-1.5 min-w-0 sm:w-auto">
+   375→              <label className="text-xs font-medium dark:text-slate-500 text-slate-400">{lt('reports.period')}</label>
+   376→              <Select value={period} onValueChange={setPeriod}>
+   377→                <SelectTrigger className="w-full sm:w-[160px] dark:bg-slate-800/60 bg-slate-50 dark:border-slate-700 border-slate-300">
+   378→                  <SelectValue />
+   379→                </SelectTrigger>
+   380→                <SelectContent>
+   381→                  <SelectItem value="daily">{lt('reports.daily')}</SelectItem>
+   382→                  <SelectItem value="weekly">{lt('reports.weekly')}</SelectItem>
+   383→                  <SelectItem value="monthly">{lt('reports.monthly')}</SelectItem>
+   384→                  <SelectItem value="yearly">{lt('reports.yearly')}</SelectItem>
+   385→                </SelectContent>
+   386→              </Select>
+   387→            </div>
+   388→
+   389→            {/* Date range */}
+   390→            <div className="flex flex-col gap-1.5">
+   391→              <label className="text-xs font-medium dark:text-slate-500 text-slate-400">{lt('reports.from')}</label>
+   392→              <input
+   393→                type="date"
+   394→                value={startDate}
+   395→                onChange={(e) => setStartDate(e.target.value)}
+   396→                className="h-9 rounded-md border dark:bg-slate-800/60 bg-slate-50 dark:border-slate-700 border-slate-300 px-3 text-sm dark:text-slate-200 text-slate-800 focus:outline-none focus:ring-2 focus:ring-amber-500/30 focus:border-amber-500 transition-colors"
+   397→              />
+   398→            </div>
+   399→            <div className="flex flex-col gap-1.5">
+   400→              <label className="text-xs font-medium dark:text-slate-500 text-slate-400">{lt('reports.to')}</label>
+   401→              <input
+   402→                type="date"
+   403→                value={endDate}
+   404→                onChange={(e) => setEndDate(e.target.value)}
+   405→                className="h-9 rounded-md border dark:bg-slate-800/60 bg-slate-50 dark:border-slate-700 border-slate-300 px-3 text-sm dark:text-slate-200 text-slate-800 focus:outline-none focus:ring-2 focus:ring-amber-500/30 focus:border-amber-500 transition-colors"
+   406→              />
+   407→            </div>
+   408→
+   409→            {/* Action buttons */}
+   410→            <div className="flex gap-2">
+   411→              <Button
+   412→                size="sm"
+   413→                onClick={fetchReport}
+   414→                disabled={loading}
+   415→                className="bg-amber-500 hover:bg-amber-600 text-slate-900 font-medium transition-all duration-200"
+   416→              >
+   417→                {loading ? <Loader2 className="h-3.5 w-3.5 ml-1.5 animate-spin" /> : <Filter className="h-3.5 w-3.5 ml-1.5" />}
+   418→                {lt('reports.apply')}
+   419→              </Button>
+   420→              <Button variant="outline" size="sm" onClick={handleReset} className="dark:border-slate-700 border-slate-300 dark:text-slate-400 text-slate-600 dark:hover:bg-slate-800 hover:bg-slate-100 transition-all duration-200">
+   421→                <RotateCcw className="h-3.5 w-3.5 ml-1.5" />
+   422→                {lt('reports.reset')}
+   423→              </Button>
+   424→            </div>
+   425→          </div>
+   426→        </CardContent>
+   427→      </Card>
+   428→
+   429→      {/* ===== KPI CARDS ROW ===== */}
+   430→      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+   431→        <KPICard
+   432→          icon={ArrowRightLeft}
+   433→          label={lt('reports.kpi.movements')}
+   434→          value={loading ? '...' : kpis.totalMovements.toLocaleString()}
+   435→          loading={loading}
+   436→          colorClass="dark:bg-emerald-500/10 bg-emerald-500/10 text-emerald-500 dark:text-emerald-400"
+   437→          accentFrom="from-emerald-500"
+   438→          accentTo="to-teal-500"
+   439→          trend={loading ? undefined : `${lt('reports.total')}: ${reportData?.movementStats?.total || 0}`}
+   440→        />
+   441→        <KPICard
+   442→          icon={Clock}
+   443→          label={lt('reports.kpi.dwellTime')}
+   444→          value={loading ? '...' : kpis.avgDwell}
+   445→          suffix={lt('reports.days')}
+   446→          loading={loading}
+   447→          colorClass="dark:bg-amber-500/10 bg-amber-500/10 text-amber-500 dark:text-amber-400"
+   448→          accentFrom="from-amber-500"
+   449→          accentTo="to-yellow-500"
+   450→          trend={loading ? undefined : `Max: ${reportData?.dwellTime?.maxDays || 0} ${lt('reports.days')}`}
+   451→        />
+   452→        <KPICard
+   453→          icon={Warehouse}
+   454→          label={lt('reports.kpi.utilization')}
+   455→          value={loading ? '...' : `${kpis.utilization}%`}
+   456→          loading={loading}
+   457→          colorClass="dark:bg-teal-500/10 bg-teal-500/10 text-teal-500 dark:text-teal-400"
+   458→          accentFrom="from-teal-500"
+   459→          accentTo="to-cyan-500"
+   460→          trend={loading ? undefined : `${reportData?.locationUtilization?.length || 0} ${lt('reports.location')}`}
+   461→        />
+   462→        <KPICard
+   463→          icon={AlertTriangle}
+   464→          label={lt('reports.kpi.critical')}
+   465→          value={loading ? '...' : kpis.critical}
+   466→          suffix={lt('reports.items')}
+   467→          loading={loading}
+   468→          colorClass="dark:bg-red-500/10 bg-red-500/10 text-red-500 dark:text-red-400"
+   469→          accentFrom="from-red-500"
+   470→          accentTo="to-orange-500"
+   471→          trend={loading ? undefined : `> 30 ${lt('reports.days')}`}
+   472→        />
+   473→      </div>
+   474→
+   475→      {/* ===== CARGO FLOW BAR CHART ===== */}
+   476→      <Card className="dark:border-slate-800 border-slate-200 dark:bg-slate-900/50 bg-white overflow-hidden">
+   477→        <div className="h-1 w-full bg-gradient-to-l from-amber-500 to-emerald-500" />
+   478→        <CardContent className="p-4 sm:p-6">
+   479→          <SectionHeader title={lt('reports.cargoFlow')} subtitle={lt('reports.cargoFlowDesc')} icon={BarChart3} />
+   480→
+   481→          {loading ? (
+   482→            <div className="space-y-3">
+   483→              {Array.from({ length: 7 }).map((_, i) => (
+   484→                <div key={i} className="flex items-center gap-3">
+   485→                  <Skeleton className="h-4 w-16 dark:bg-slate-800 bg-slate-200 rounded" />
+   486→                  <div className="flex-1 flex gap-1">
+   487→                    <Skeleton className="h-6 flex-1 dark:bg-slate-800 bg-slate-200 rounded" />
+   488→                    <Skeleton className="h-6 flex-1 dark:bg-slate-800 bg-slate-200 rounded" />
+   489→                  </div>
+   490→                </div>
+   491→              ))}
+   492→            </div>
+   493→          ) : !reportData?.cargoFlow?.length ? (
+   494→            <EmptyState message={lt('reports.noData')} />
+   495→          ) : (
+   496→            <>
+   497→              {/* Legend */}
+   498→              <div className="flex items-center gap-4 mb-4">
+   499→                <div className="flex items-center gap-2">
+   500→                  <div className="h-3 w-3 rounded-sm bg-emerald-500" />
+   501→                  <span className="text-xs dark:text-slate-400 text-slate-500">{lt('reports.inbound')}</span>
+   502→                </div>
+   503→                <div className="flex items-center gap-2">
+   504→                  <div className="h-3 w-3 rounded-sm bg-orange-500" />
+   505→                  <span className="text-xs dark:text-slate-400 text-slate-500">{lt('reports.outbound')}</span>
+   506→                </div>
+   507→              </div>
+   508→
+   509→              {/* Bar Chart */}
+   510→              <div className="space-y-2 max-h-80 overflow-y-auto pl-1 custom-scrollbar">
+   511→                {reportData.cargoFlow.slice(-14).map((item) => {
+   512→                  const inboundH = maxFlow > 0 ? (item.inbound / maxFlow) * 100 : 0;
+   513→                  const outboundH = maxFlow > 0 ? (item.outbound / maxFlow) * 100 : 0;
+   514→                  return (
+   515→                    <div key={item.date} className="flex items-center gap-2 min-h-[28px]">
+   516→                      <span className="text-[10px] font-mono dark:text-slate-500 text-slate-400 w-16 shrink-0 text-left">
+   517→                        {formatDateShort(item.date)}
+   518→                      </span>
+   519→                      <div className="flex-1 flex gap-1 h-7 items-end">
+   520→                        {/* Inbound bar */}
+   521→                        <div className="flex-1 flex items-center">
+   522→                          <div
+   523→                            className="h-full bg-gradient-to-t from-emerald-600 to-emerald-400 dark:from-emerald-700 dark:to-emerald-500 rounded-sm transition-all duration-500 ease-out min-w-[2px]"
+   524→                            style={{ width: `${Math.max(inboundH, inboundH > 0 ? 3 : 0)}%` }}
+   525→                            title={`${lt('reports.inbound')}: ${item.inbound}`}
+   526→                          />
+   527→                        </div>
+   528→                        {/* Outbound bar */}
+   529→                        <div className="flex-1 flex items-center">
+   530→                          <div
+   531→                            className="h-full bg-gradient-to-t from-orange-600 to-orange-400 dark:from-orange-700 dark:to-orange-500 rounded-sm transition-all duration-500 ease-out min-w-[2px]"
+   532→                            style={{ width: `${Math.max(outboundH, outboundH > 0 ? 3 : 0)}%` }}
+   533→                            title={`${lt('reports.outbound')}: ${item.outbound}`}
+   534→                          />
+   535→                        </div>
+   536→                      </div>
+   537→                      <div className="flex gap-2 w-16 shrink-0 justify-end">
+   538→                        <span className="text-[10px] font-mono dark:text-emerald-400 text-emerald-600">{item.inbound}</span>
+   539→                        <span className="text-[10px] font-mono dark:text-orange-400 text-orange-600">{item.outbound}</span>
+   540→                      </div>
+   541→                    </div>
+   542→                  );
+   543→                })}
+   544→              </div>
+   545→            </>
+   546→          )}
+   547→        </CardContent>
+   548→      </Card>
+   549→
+   550→      {/* ===== STATUS DISTRIBUTION + LOCATION UTILIZATION (2-col) ===== */}
+   551→      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+   552→        {/* Status Distribution - Donut Chart */}
+   553→        <Card className="dark:border-slate-800 border-slate-200 dark:bg-slate-900/50 bg-white overflow-hidden">
+   554→          <div className="h-1 w-full bg-gradient-to-l from-amber-500 to-teal-500" />
+   555→          <CardContent className="p-4 sm:p-6">
+   556→            <SectionHeader title={lt('reports.statusDist')} subtitle={lt('reports.statusDistDesc')} icon={Activity} />
+   557→
+   558→            {loading ? (
+   559→              <div className="flex flex-col items-center gap-4 py-6">
+   560→                <Skeleton className="h-40 w-40 rounded-full dark:bg-slate-800 bg-slate-200" />
+   561→                <div className="space-y-2 w-full max-w-xs">
+   562→                  <Skeleton className="h-4 w-full dark:bg-slate-800 bg-slate-200 rounded" />
+   563→                  <Skeleton className="h-4 w-3/4 dark:bg-slate-800 bg-slate-200 rounded" />
+   564→                  <Skeleton className="h-4 w-1/2 dark:bg-slate-800 bg-slate-200 rounded" />
+   565→                </div>
+   566→              </div>
+   567→            ) : !donutData.data.length ? (
+   568→              <EmptyState message={lt('reports.noData')} />
+   569→            ) : (
+   570→              <div className="flex flex-col items-center gap-5">
+   571→                {/* Donut chart */}
+   572→                <div className="relative h-44 w-44">
+   573→                  <div
+   574→                    className="h-full w-full rounded-full shadow-inner"
+   575→                    style={{
+   576→                      background: `conic-gradient(${donutData.gradient})`,
+   577→                    }}
+   578→                  />
+   579→                  <div className="absolute inset-0 m-auto h-28 w-28 rounded-full dark:bg-[#0e1019] bg-white shadow-inner flex flex-col items-center justify-center">
+   580→                    <p className="text-2xl font-bold dark:text-slate-100 text-slate-900 tabular-nums">
+   581→                      {reportData?.statusDistribution.reduce((s, d) => s + d.count, 0)}
+   582→                    </p>
+   583→                    <p className="text-[10px] dark:text-slate-500 text-slate-400 uppercase tracking-wider">{lt('reports.total')}</p>
+   584→                  </div>
+   585→                </div>
+   586→
+   587→                {/* Legend */}
+   588→                <div className="grid grid-cols-2 gap-x-6 gap-y-2 w-full max-w-xs">
+   589→                  {donutData.data.map((item) => (
+   590→                    <div key={item.status} className="flex items-center gap-2">
+   591→                      <div className="h-3 w-3 rounded-sm shrink-0" style={{ backgroundColor: item.color }} />
+   592→                      <div className="flex items-center justify-between flex-1 min-w-0">
+   593→                        <span className="text-xs dark:text-slate-400 text-slate-500 truncate">
+   594→                          {translateStatus(item.status as any)}
+   595→                        </span>
+   596→                        <span className="text-xs font-semibold dark:text-slate-300 text-slate-700 tabular-nums">
+   597→                          {item.count}
+   598→                          <span className="text-[10px] dark:text-slate-500 text-slate-400 ml-1">({item.percentage}%)</span>
+   599→                        </span>
+   600→                      </div>
+   601→                    </div>
+   602→                  ))}
+   603→                </div>
+   604→              </div>
+   605→            )}
+   606→          </CardContent>
+   607→        </Card>
+   608→
+   609→        {/* Location Utilization - Horizontal bars */}
+   610→        <Card className="dark:border-slate-800 border-slate-200 dark:bg-slate-900/50 bg-white overflow-hidden">
+   611→          <div className="h-1 w-full bg-gradient-to-l from-teal-500 to-cyan-500" />
+   612→          <CardContent className="p-4 sm:p-6">
+   613→            <SectionHeader title={lt('reports.locationUtil')} subtitle={lt('reports.locationUtilDesc')} icon={Warehouse} />
+   614→
+   615→            {loading ? (
+   616→              <div className="space-y-4 py-2">
+   617→                {Array.from({ length: 5 }).map((_, i) => (
+   618→                  <div key={i} className="space-y-1.5">
+   619→                    <div className="flex justify-between">
+   620→                      <Skeleton className="h-4 w-24 dark:bg-slate-800 bg-slate-200 rounded" />
+   621→                      <Skeleton className="h-4 w-10 dark:bg-slate-800 bg-slate-200 rounded" />
+   622→                    </div>
+   623→                    <Skeleton className="h-5 w-full dark:bg-slate-800 bg-slate-200 rounded-full" />
+   624→                  </div>
+   625→                ))}
+   626→              </div>
+   627→            ) : !reportData?.locationUtilization?.length ? (
+   628→              <EmptyState message={lt('reports.noData')} />
+   629→            ) : (
+   630→              <div className="space-y-4 max-h-80 overflow-y-auto custom-scrollbar pr-1">
+   631→                {reportData.locationUtilization
+   632→                  .sort((a, b) => b.percentage - a.percentage)
+   633→                  .map((loc) => {
+   634→                    const pct = loc.percentage;
+   635→                    const barColor = pct >= 80
+   636→                      ? 'from-red-500 to-red-400 dark:from-red-600 dark:to-red-500'
+   637→                      : pct >= 50
+   638→                        ? 'from-amber-500 to-amber-400 dark:from-amber-600 dark:to-amber-500'
+   639→                        : 'from-emerald-500 to-emerald-400 dark:from-emerald-600 dark:to-emerald-500';
+   640→                    return (
+   641→                      <div key={loc.location} className="space-y-1.5">
+   642→                        <div className="flex items-center justify-between text-xs">
+   643→                          <div className="flex items-center gap-2 min-w-0">
+   644→                            <span className="font-mono dark:text-slate-300 text-slate-700 font-medium">{loc.location}</span>
+   645→                            {loc.name && (
+   646→                              <span className="dark:text-slate-500 text-slate-400 truncate">{loc.name}</span>
+   647→                            )}
+   648→                          </div>
+   649→                          <div className="flex items-center gap-2 shrink-0">
+   650→                            <span className="dark:text-slate-500 text-slate-400">{loc.used}/{loc.capacity}</span>
+   651→                            <Badge
+   652→                              variant="outline"
+   653→                              className={`text-[10px] px-1.5 py-0 font-semibold tabular-nums ${
+   654→                                pct >= 80
+   655→                                  ? 'dark:text-red-400 text-red-600 dark:border-red-500/30 border-red-300 dark:bg-red-500/10 bg-red-50'
+   656→                                  : pct >= 50
+   657→                                    ? 'dark:text-amber-400 text-amber-600 dark:border-amber-500/30 border-amber-300 dark:bg-amber-500/10 bg-amber-50'
+   658→                                    : 'dark:text-emerald-400 text-emerald-600 dark:border-emerald-500/30 border-emerald-300 dark:bg-emerald-500/10 bg-emerald-50'
+   659→                              }`}
+   660→                            >
+   661→                              {pct}%
+   662→                            </Badge>
+   663→                          </div>
+   664→                        </div>
+   665→                        <div className="h-2.5 w-full rounded-full dark:bg-slate-800 bg-slate-100 overflow-hidden">
+   666→                          <div
+   667→                            className={`h-full rounded-full bg-gradient-to-l ${barColor} transition-all duration-700 ease-out`}
+   668→                            style={{ width: `${pct}%` }}
+   669→                          />
+   670→                        </div>
+   671→                      </div>
+   672→                    );
+   673→                  })}
+   674→              </div>
+   675→            )}
+   676→          </CardContent>
+   677→        </Card>
+   678→      </div>
+   679→
+   680→      {/* ===== TOP CLIENTS TABLE ===== */}
+   681→      <Card className="dark:border-slate-800 border-slate-200 dark:bg-slate-900/50 bg-white overflow-hidden">
+   682→        <div className="h-1 w-full bg-gradient-to-l from-amber-500 to-cyan-500" />
+   683→        <CardContent className="p-4 sm:p-6">
+   684→          <SectionHeader title={lt('reports.topClients')} subtitle={lt('reports.topClientsDesc')} icon={Users} />
+   685→
+   686→          {loading ? (
+   687→            <div className="space-y-3">
+   688→              {Array.from({ length: 5 }).map((_, i) => (
+   689→                <div key={i} className="flex items-center gap-4">
+   690→                  <Skeleton className="h-8 w-8 rounded-full dark:bg-slate-800 bg-slate-200" />
+   691→                  <Skeleton className="h-4 w-32 dark:bg-slate-800 bg-slate-200 rounded" />
+   692→                  <Skeleton className="h-4 w-16 dark:bg-slate-800 bg-slate-200 rounded" />
+   693→                  <Skeleton className="h-4 w-20 dark:bg-slate-800 bg-slate-200 rounded" />
+   694→                </div>
+   695→              ))}
+   696→            </div>
+   697→          ) : !reportData?.topClients?.length ? (
+   698→            <EmptyState message={lt('reports.noData')} />
+   699→          ) : (
+   700→            <div className="overflow-x-auto">
+   701→              <Table>
+   702→                <TableHeader>
+   703→                  <TableRow className="dark:border-slate-800 border-slate-200 dark:hover:bg-slate-800/30 hover:bg-slate-50">
+   704→                    <TableHead className="dark:text-slate-500 text-slate-400 text-xs font-medium">#</TableHead>
+   705→                    <TableHead className="dark:text-slate-500 text-slate-400 text-xs font-medium">{lt('reports.client')}</TableHead>
+   706→                    <TableHead className="dark:text-slate-500 text-slate-400 text-xs font-medium text-center">{lt('reports.count')}</TableHead>
+   707→                    <TableHead className="dark:text-slate-500 text-slate-400 text-xs font-medium text-left">{lt('reports.weight')}</TableHead>
+   708→                  </TableRow>
+   709→                </TableHeader>
+   710→                <TableBody>
+   711→                  {reportData.topClients.map((client, idx) => (
+   712→                    <TableRow key={client.client} className="dark:border-slate-800/50 border-slate-100 dark:hover:bg-slate-800/30 hover:bg-slate-50 transition-colors">
+   713→                      <TableCell className="dark:text-slate-500 text-slate-400 text-xs font-mono tabular-nums">
+   714→                        {idx + 1}
+   715→                      </TableCell>
+   716→                      <TableCell>
+   717→                        <div className="flex items-center gap-3">
+   718→                          <div className={`h-9 w-9 rounded-xl flex items-center justify-center text-sm font-bold shrink-0 ${
+   719→                            idx === 0 ? 'dark:bg-amber-500/15 bg-amber-500/10 dark:text-amber-400 text-amber-600'
+   720→                              : idx === 1 ? 'dark:bg-slate-500/15 bg-slate-500/10 dark:text-slate-300 text-slate-600'
+   721→                              : idx === 2 ? 'dark:bg-orange-500/15 bg-orange-500/10 dark:text-orange-400 text-orange-600'
+   722→                              : 'dark:bg-slate-800/60 bg-slate-100 dark:text-slate-400 text-slate-500'
+   723→                          }`}>
+   724→                            {client.client.charAt(0)?.toUpperCase() || '?'}
+   725→                          </div>
+   726→                          <div>
+   727→                            <p className="text-sm font-semibold dark:text-slate-200 text-slate-800">{client.client}</p>
+   728→                          </div>
+   729→                        </div>
+   730→                      </TableCell>
+   731→                      <TableCell className="text-center">
+   732→                        <Badge variant="outline" className="dark:bg-cyan-500/10 bg-cyan-50 dark:text-cyan-400 text-cyan-600 dark:border-cyan-500/20 border-cyan-200 text-xs font-semibold tabular-nums">
+   733→                          {client.items} {lt('reports.items')}
+   734→                        </Badge>
+   735→                      </TableCell>
+   736→                      <TableCell>
+   737→                        <div className="flex items-center gap-2">
+   738→                          <Weight className="h-3.5 w-3.5 dark:text-slate-500 text-slate-400" />
+   739→                          <span className="text-sm font-semibold dark:text-slate-200 text-slate-800 tabular-nums">
+   740→                            {client.weight.toLocaleString()} {lt('reports.weight').replace(/ \(.*\)/, '')}
+   741→                          </span>
+   742→                        </div>
+   743→                      </TableCell>
+   744→                    </TableRow>
+   745→                  ))}
+   746→                </TableBody>
+   747→              </Table>
+   748→            </div>
+   749→          )}
+   750→        </CardContent>
+   751→      </Card>
+   752→
+   753→      {/* ===== WEIGHT ANALYSIS + MOVEMENT TYPES (2-col) ===== */}
+   754→      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+   755→        {/* Weight Analysis */}
+   756→        <Card className="dark:border-slate-800 border-slate-200 dark:bg-slate-900/50 bg-white overflow-hidden">
+   757→          <div className="h-1 w-full bg-gradient-to-l from-emerald-500 to-teal-500" />
+   758→          <CardContent className="p-4 sm:p-6">
+   759→            <SectionHeader title={lt('reports.weightAnalysis')} subtitle={lt('reports.weightAnalysisDesc')} icon={Weight} />
+   760→
+   761→            {loading ? (
+   762→              <div className="space-y-4 py-2">
+   763→                {Array.from({ length: 4 }).map((_, i) => (
+   764→                  <div key={i} className="space-y-1.5">
+   765→                    <Skeleton className="h-4 w-20 dark:bg-slate-800 bg-slate-200 rounded" />
+   766→                    <Skeleton className="h-5 w-full dark:bg-slate-800 bg-slate-200 rounded-full" />
+   767→                  </div>
+   768→                ))}
+   769→              </div>
+   770→            ) : !reportData?.weightStats?.byCategory?.length ? (
+   771→              <EmptyState message={lt('reports.noData')} />
+   772→            ) : (
+   773→              <>
+   774→                {/* Summary stats */}
+   775→                <div className="grid grid-cols-3 gap-3 mb-5">
+   776→                  <div className="dark:bg-slate-800/40 bg-slate-50 rounded-xl p-3 text-center">
+   777→                    <p className="text-[10px] uppercase tracking-wider dark:text-slate-500 text-slate-400">{lt('reports.total')}</p>
+   778→                    <p className="text-lg font-bold dark:text-slate-100 text-slate-900 tabular-nums mt-0.5">
+   779→                      {reportData.weightStats.total.toLocaleString()}
+   780→                    </p>
+   781→                  </div>
+   782→                  <div className="dark:bg-slate-800/40 bg-slate-50 rounded-xl p-3 text-center">
+   783→                    <p className="text-[10px] uppercase tracking-wider dark:text-slate-500 text-slate-400">{lt('reports.avgWeight')}</p>
+   784→                    <p className="text-lg font-bold dark:text-slate-100 text-slate-900 tabular-nums mt-0.5">
+   785→                      {reportData.weightStats.avg}
+   786→                    </p>
+   787→                  </div>
+   788→                  <div className="dark:bg-slate-800/40 bg-slate-50 rounded-xl p-3 text-center">
+   789→                    <p className="text-[10px] uppercase tracking-wider dark:text-slate-500 text-slate-400">{lt('reports.maxWeight')}</p>
+   790→                    <p className="text-lg font-bold dark:text-slate-100 text-slate-900 tabular-nums mt-0.5">
+   791→                      {reportData.weightStats.max.toLocaleString()}
+   792→                    </p>
+   793→                  </div>
+   794→                </div>
+   795→
+   796→                {/* Bars */}
+   797→                <div className="space-y-3">
+   798→                  {reportData.weightStats.byCategory.map((cat) => {
+   799→                    const pct = maxWeight > 0 ? (cat.weight / maxWeight) * 100 : 0;
+   800→                    const color = CATEGORY_COLORS[cat.category] || '#64748b';
+   801→                    return (
+   802→                      <div key={cat.category} className="space-y-1.5">
+   803→                        <div className="flex items-center justify-between text-xs">
+   804→                          <span className="dark:text-slate-300 text-slate-700 font-medium">
+   805→                            {translateCategory(cat.category as any)}
+   806→                          </span>
+   807→                          <span className="dark:text-slate-400 text-slate-500 font-mono tabular-nums">
+   808→                            {cat.weight.toLocaleString()} t
+   809→                          </span>
+   810→                        </div>
+   811→                        <div className="h-3 w-full rounded-full dark:bg-slate-800 bg-slate-100 overflow-hidden">
+   812→                          <div
+   813→                            className="h-full rounded-full transition-all duration-700 ease-out"
+   814→                            style={{ width: `${pct}%`, backgroundColor: color }}
+   815→                          />
+   816→                        </div>
+   817→                      </div>
+   818→                    );
+   819→                  })}
+   820→                </div>
+   821→              </>
+   822→            )}
+   823→          </CardContent>
+   824→        </Card>
+   825→
+   826→        {/* Movement Type Breakdown */}
+   827→        <Card className="dark:border-slate-800 border-slate-200 dark:bg-slate-900/50 bg-white overflow-hidden">
+   828→          <div className="h-1 w-full bg-gradient-to-l from-cyan-500 to-violet-500" />
+   829→          <CardContent className="p-4 sm:p-6">
+   830→            <SectionHeader title={lt('reports.movementTypes')} subtitle={lt('reports.movementTypesDesc')} icon={ArrowRightLeft} />
+   831→
+   832→            {loading ? (
+   833→              <div className="space-y-4 py-2">
+   834→                {Array.from({ length: 3 }).map((_, i) => (
+   835→                  <div key={i} className="flex items-center gap-3">
+   836→                    <Skeleton className="h-10 w-10 rounded-xl dark:bg-slate-800 bg-slate-200" />
+   837→                    <div className="flex-1 space-y-1.5">
+   838→                      <Skeleton className="h-4 w-20 dark:bg-slate-800 bg-slate-200 rounded" />
+   839→                      <Skeleton className="h-5 w-full dark:bg-slate-800 bg-slate-200 rounded-full" />
+   840→                    </div>
+   841→                  </div>
+   842→                ))}
+   843→              </div>
+   844→            ) : !reportData?.movementStats?.byType?.length ? (
+   845→              <EmptyState message={lt('reports.noData')} />
+   846→            ) : (
+   847→              <>
+   848→                {/* Total badge */}
+   849→                <div className="flex items-center gap-2 mb-5">
+   850→                  <Badge variant="outline" className="dark:bg-slate-800/60 bg-slate-100 dark:text-slate-300 text-slate-600 dark:border-slate-700 border-slate-300 text-xs font-semibold px-3 py-1">
+   851→                    {lt('reports.total')}: {reportData.movementStats.total}
+   852→                  </Badge>
+   853→                </div>
+   854→
+   855→                {/* Movement type cards with bars */}
+   856→                <div className="space-y-4">
+   857→                  {reportData.movementStats.byType.map((move) => {
+   858→                    const config = MOVEMENT_COLORS[move.type] || { color: '#64748b', bg: 'bg-slate-500', icon: ArrowRightLeft };
+   859→                    const IconComp = config.icon;
+   860→                    const pct = maxMovement > 0 ? (move.count / maxMovement) * 100 : 0;
+   861→                    const pctOfTotal = reportData.movementStats.total > 0
+   862→                      ? Math.round((move.count / reportData.movementStats.total) * 100)
+   863→                      : 0;
+   864→                    return (
+   865→                      <div key={move.type} className="flex items-start gap-3">
+   866→                        {/* Icon */}
+   867→                        <div
+   868→                          className="h-10 w-10 rounded-xl flex items-center justify-center shrink-0 transition-transform duration-200 hover:scale-110"
+   869→                          style={{ backgroundColor: `${config.color}15` }}
+   870→                        >
+   871→                          <IconComp className="h-5 w-5" style={{ color: config.color }} />
+   872→                        </div>
+   873→
+   874→                        {/* Content */}
+   875→                        <div className="flex-1 min-w-0 space-y-1.5">
+   876→                          <div className="flex items-center justify-between">
+   877→                            <div className="flex items-center gap-2">
+   878→                              <span className="text-sm font-semibold dark:text-slate-200 text-slate-800">
+   879→                                {translateMovementType(move.type as any)}
+   880→                              </span>
+   881→                              <Badge variant="outline" className="text-[10px] px-1.5 py-0 font-mono tabular-nums dark:text-slate-400 text-slate-500 dark:border-slate-700 border-slate-300">
+   882→                                {move.count}
+   883→                              </Badge>
+   884→                            </div>
+   885→                            <span className="text-xs font-semibold font-mono tabular-nums" style={{ color: config.color }}>
+   886→                              {pctOfTotal}%
+   887→                            </span>
+   888→                          </div>
+   889→                          <div className="h-3 w-full rounded-full dark:bg-slate-800 bg-slate-100 overflow-hidden">
+   890→                            <div
+   891→                              className={`h-full rounded-full ${config.bg} transition-all duration-700 ease-out`}
+   892→                              style={{ width: `${pct}%` }}
+   893→                            />
+   894→                          </div>
+   895→                        </div>
+   896→                      </div>
+   897→                    );
+   898→                  })}
+   899→                </div>
+   900→              </>
+   901→            )}
+   902→          </CardContent>
+   903→        </Card>
+   904→      </div>
+   905→
+   906→      {/* ===== CARGO FLOW DETAILED TABLE ===== */}
+   907→      <Card className="dark:border-slate-800 border-slate-200 dark:bg-slate-900/50 bg-white overflow-hidden">
+   908→        <div className="h-1 w-full bg-gradient-to-l from-amber-500 via-emerald-500 to-teal-500" />
+   909→        <CardContent className="p-4 sm:p-6">
+   910→          <SectionHeader title={lt('reports.cargoFlow')} subtitle={lt('reports.cargoFlowDesc')} icon={TrendingUp} />
+   911→
+   912→          {loading ? (
+   913→            <div className="space-y-3">
+   914→              {Array.from({ length: 5 }).map((_, i) => (
+   915→                <Skeleton key={i} className="h-10 w-full dark:bg-slate-800 bg-slate-200 rounded" />
+   916→              ))}
+   917→            </div>
+   918→          ) : !reportData?.cargoFlow?.length ? (
+   919→            <EmptyState message={lt('reports.noData')} />
+   920→          ) : (
+   921→            <div className="overflow-x-auto">
+   922→              <Table>
+   923→                <TableHeader>
+   924→                  <TableRow className="dark:border-slate-800 border-slate-200">
+   925→                    <TableHead className="dark:text-slate-500 text-slate-400 text-xs">{lt('reports.date')}</TableHead>
+   926→                    <TableHead className="dark:text-slate-500 text-slate-400 text-xs text-center">{lt('reports.inbound')}</TableHead>
+   927→                    <TableHead className="dark:text-slate-500 text-slate-400 text-xs text-center">{lt('reports.outbound')}</TableHead>
+   928→                    <TableHead className="dark:text-slate-500 text-slate-400 text-xs text-center dark:text-emerald-400/70 text-emerald-600/70">
+   929→                      {t('status.IN_YARD')}
+   930→                    </TableHead>
+   931→                    <TableHead className="dark:text-slate-500 text-slate-400 text-xs text-center dark:text-teal-400/70 text-teal-600/70">
+   932→                      {t('status.IN_WAREHOUSE')}
+   933→                    </TableHead>
+   934→                  </TableRow>
+   935→                </TableHeader>
+   936→                <TableBody>
+   937→                  {reportData.cargoFlow
+   938→                    .slice()
+   939→                    .reverse()
+   940→                    .slice(0, 10)
+   941→                    .map((row) => (
+   942→                      <TableRow key={row.date} className="dark:border-slate-800/50 border-slate-100 dark:hover:bg-slate-800/30 hover:bg-slate-50 transition-colors">
+   943→                        <TableCell className="dark:text-slate-300 text-slate-700 text-xs font-mono">
+   944→                          {formatDate(row.date)}
+   945→                        </TableCell>
+   946→                        <TableCell className="text-center">
+   947→                          <div className="inline-flex items-center gap-1">
+   948→                            <ArrowDownToLine className="h-3 w-3 dark:text-emerald-400 text-emerald-600" />
+   949→                            <span className="text-xs font-semibold dark:text-emerald-400 text-emerald-600 tabular-nums">{row.inbound}</span>
+   950→                          </div>
+   951→                        </TableCell>
+   952→                        <TableCell className="text-center">
+   953→                          <div className="inline-flex items-center gap-1">
+   954→                            <ArrowUpFromLine className="h-3 w-3 dark:text-orange-400 text-orange-600" />
+   955→                            <span className="text-xs font-semibold dark:text-orange-400 text-orange-600 tabular-nums">{row.outbound}</span>
+   956→                          </div>
+   957→                        </TableCell>
+   958→                        <TableCell className="text-center">
+   959→                          <span className="text-xs font-medium dark:text-emerald-300/70 text-emerald-700 tabular-nums">{row.inYard}</span>
+   960→                        </TableCell>
+   961→                        <TableCell className="text-center">
+   962→                          <span className="text-xs font-medium dark:text-teal-300/70 text-teal-700 tabular-nums">{row.inWarehouse}</span>
+   963→                        </TableCell>
+   964→                      </TableRow>
+   965→                    ))}
+   966→                </TableBody>
+   967→              </Table>
+   968→            </div>
+   969→          )}
+   970→        </CardContent>
+   971→      </Card>
+   972→
+   973→      {/* ===== Inline Styles for Scrollbar ===== */}
+   974→      <style jsx global>{`
+   975→        .custom-scrollbar::-webkit-scrollbar {
+   976→          width: 4px;
+   977→        }
+   978→        .custom-scrollbar::-webkit-scrollbar-track {
+   979→          background: transparent;
+   980→        }
+   981→        .custom-scrollbar::-webkit-scrollbar-thumb {
+   982→          background: theme(colors.slate.700);
+   983→          border-radius: 4px;
+   984→        }
+   985→        .dark .custom-scrollbar::-webkit-scrollbar-thumb {
+   986→          background: theme(colors.slate.600);
+   987→        }
+   988→      `}</style>
+   989→    </div>
+   990→  );
+   991→}
+   992→
+   993→// ==================== EMPTY STATE COMPONENT ====================
+   994→function EmptyState({ message }: { message: string }) {
+   995→  return (
+   996→    <div className="flex flex-col items-center justify-center py-10 gap-3">
+   997→      <div className="h-14 w-14 rounded-2xl dark:bg-slate-800/60 bg-slate-100 flex items-center justify-center">
+   998→        <BarChart3 className="h-7 w-7 dark:text-slate-600 text-slate-400" />
+   999→      </div>
+  1000→      <p className="text-sm dark:text-slate-500 text-slate-400 text-center">{message}</p>
+  1001→    </div>
+  1002→  );
+  1003→}
+  1004→
