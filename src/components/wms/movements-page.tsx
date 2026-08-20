@@ -159,7 +159,7 @@ export function MovementsPage() {
       const res = await fetch(`/api/movements?${params}`);
       const data = await res.json();
       if (!res.ok) { setMovements([]); return; }
-      const items: Movement[] = data.items || [];
+      const items: Movement[] = Array.isArray(data.items) ? data.items : [];
       setMovements(items);
       // Compute stats from items
       const now = new Date();
@@ -467,7 +467,7 @@ export function MovementsPage() {
   // ==================== RENDER: FULL TIMELINE ====================
 
   const renderFullTimeline = () => {
-    if (cargoTimeline.length === 0) return (
+    if (!Array.isArray(cargoTimeline) || cargoTimeline.length === 0) return (
       <div className="rounded-xl border dark:border-slate-800 border-slate-200 dark:bg-slate-900/30 bg-slate-50/50 p-5">
         <h3 className="text-xs font-semibold uppercase tracking-wider dark:text-slate-400 text-slate-500 mb-3">{t('detail.movement.fullTimeline')}</h3>
         <p className="text-sm dark:text-slate-500 text-slate-400 text-center py-6">{t('detail.movement.noTimeline')}</p>
@@ -488,7 +488,7 @@ export function MovementsPage() {
                       ? 'bg-amber-500 border-amber-500 ring-4 ring-amber-500/20'
                       : typeDotColors[tm.type] + ' border-transparent'
                   }`} />
-                  {idx < cargoTimeline.length - 1 && (
+                  {Array.isArray(cargoTimeline) && idx < cargoTimeline.length - 1 && (
                     <div className={`w-0.5 h-full min-h-[24px] ${
                       isCurrent ? 'bg-amber-500/30' : 'dark:bg-slate-800 bg-slate-200'
                     }`} />
@@ -755,7 +755,7 @@ export function MovementsPage() {
                         ))}
                       </TableRow>
                     ))
-                  : movements.length === 0
+                  : !Array.isArray(movements) || movements.length === 0
                     ? (
                       <TableRow className={`${rb} hover:bg-transparent`}>
                         <TableCell colSpan={9} className="text-center py-12">

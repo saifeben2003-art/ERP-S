@@ -170,12 +170,12 @@ export function ProjectsPage() {
   const currentStep = selectedProject ? PROJECT_STATUSES.indexOf(selectedProject.status) : -1;
 
   const cargoStatusCounts = useMemo(() => 
-    projectCargo.reduce((acc, c) => { acc[c.status] = (acc[c.status] || 0) + 1; return acc; }, {} as Record<string, number>),
+    (Array.isArray(projectCargo) ? projectCargo : []).reduce((acc, c) => { acc[c.status] = (acc[c.status] || 0) + 1; return acc; }, {} as Record<string, number>),
     [projectCargo]
   );
 
   const completionPct = useMemo(() => {
-    if (projectCargo.length === 0) return 0;
+    if (!Array.isArray(projectCargo) || projectCargo.length === 0) return 0;
     const completed = projectCargo.filter((c) => c.status === 'DISPATCHED' || c.status === 'DELIVERED').length;
     return Math.round((completed / projectCargo.length) * 100);
   }, [projectCargo]);
@@ -195,7 +195,7 @@ export function ProjectsPage() {
   }, [cargoStatusCounts]);
 
   const donutGradient = useMemo(() => {
-    if (donutData.length === 0) return '';
+    if (!Array.isArray(donutData) || donutData.length === 0) return '';
     return donutData.map((d) => `${d.color} ${d.start}% ${d.end}%`).join(', ');
   }, [donutData]);
 
@@ -529,11 +529,11 @@ export function ProjectsPage() {
               <CardContent className="p-5">
                 <div className="flex items-center justify-between mb-4">
                   <h3 className="text-sm font-semibold dark:text-slate-200 text-slate-800">{t('projects.cargoItems')}</h3>
-                  <span className="text-xs dark:text-slate-500 text-slate-400 bg-slate-100 dark:bg-slate-800 px-2.5 py-1 rounded-full">{projectCargo.length} {t('common.items')}</span>
+                  <span className="text-xs dark:text-slate-500 text-slate-400 bg-slate-100 dark:bg-slate-800 px-2.5 py-1 rounded-full">{Array.isArray(projectCargo) ? projectCargo.length : 0} {t('common.items')}</span>
                 </div>
                 {detailLoading ? (
                   <div className="space-y-3">{Array.from({ length: 5 }).map((_, i) => <Skeleton key={i} className="h-12 dark:bg-slate-800 bg-slate-100" />)}</div>
-                ) : projectCargo.length === 0 ? (
+                ) : !Array.isArray(projectCargo) || projectCargo.length === 0 ? (
                   <div className="flex flex-col items-center justify-center py-12 text-center">
                     <div className="h-12 w-12 rounded-full dark:bg-slate-800 bg-slate-100 flex items-center justify-center mb-3">
                       <Package className="h-5 w-5 dark:text-slate-600 text-slate-400" />
@@ -584,7 +584,7 @@ export function ProjectsPage() {
             <Card className="dark:border-slate-800 border-slate-200 dark:bg-slate-900/50 bg-white transition-all duration-200">
               <CardContent className="p-5">
                 <h3 className="text-sm font-semibold dark:text-slate-200 text-slate-800 mb-5">{t('detail.project.cargoStatusBreakdown')}</h3>
-                {projectCargo.length === 0 ? (
+                {!Array.isArray(projectCargo) || projectCargo.length === 0 ? (
                   <div className="flex flex-col items-center justify-center py-10">
                     <div className="h-10 w-10 rounded-full dark:bg-slate-800 bg-slate-100 flex items-center justify-center mb-2">
                       <Package className="h-4 w-4 dark:text-slate-600 text-slate-400" />
@@ -598,21 +598,21 @@ export function ProjectsPage() {
                       <div
                         className="h-full w-full rounded-full"
                         style={{
-                          background: donutData.length > 0
+                          background: Array.isArray(donutData) && donutData.length > 0
                             ? `conic-gradient(${donutGradient})`
                             : 'conic-gradient(dark:bg-slate-800 bg-slate-100 0% 100%)',
                         }}
                       />
                       {/* Center circle (donut hole) */}
                       <div className="absolute inset-0 m-auto h-28 w-28 rounded-full dark:bg-slate-900/50 bg-white shadow-inner flex flex-col items-center justify-center">
-                        <p className="text-2xl font-bold dark:text-slate-100 text-slate-900">{projectCargo.length}</p>
+                        <p className="text-2xl font-bold dark:text-slate-100 text-slate-900">{Array.isArray(projectCargo) ? projectCargo.length : 0}</p>
                         <p className="text-[10px] dark:text-slate-500 text-slate-400">{t('common.items')}</p>
                       </div>
                     </div>
                     {/* Legend */}
                     <div className="w-full space-y-2.5">
                       {Object.entries(cargoStatusCounts).sort((a, b) => b[1] - a[1]).map(([status, count]) => {
-                        const pct = Math.round((count / projectCargo.length) * 100);
+                        const pct = Math.round((count / (Array.isArray(projectCargo) ? projectCargo.length : 1)) * 100);
                         const color = CARGO_STATUS_COLORS[status]?.donut || '#64748b';
                         return (
                           <div key={status} className="flex items-center justify-between text-xs">
@@ -639,9 +639,9 @@ export function ProjectsPage() {
             <CardContent className="p-5">
               <div className="flex items-center justify-between mb-5">
                 <h3 className="text-sm font-semibold dark:text-slate-200 text-slate-800">{t('detail.project.timeline')}</h3>
-                <span className="text-xs dark:text-slate-500 text-slate-400 bg-slate-100 dark:bg-slate-800 px-2.5 py-1 rounded-full">{projectMovements.length} {t('common.all')}</span>
+                <span className="text-xs dark:text-slate-500 text-slate-400 bg-slate-100 dark:bg-slate-800 px-2.5 py-1 rounded-full">{Array.isArray(projectMovements) ? projectMovements.length : 0} {t('common.all')}</span>
               </div>
-              {projectMovements.length === 0 ? (
+              {!Array.isArray(projectMovements) || projectMovements.length === 0 ? (
                 <div className="flex flex-col items-center justify-center py-10 text-center">
                   <div className="h-12 w-12 rounded-full dark:bg-slate-800 bg-slate-100 flex items-center justify-center mb-3">
                     <Clock className="h-5 w-5 dark:text-slate-600 text-slate-400" />
@@ -722,7 +722,7 @@ export function ProjectsPage() {
                 <Skeleton className="h-2 w-full dark:bg-slate-800 bg-slate-100" />
               </CardContent>
             </Card>
-          )) : projects.length === 0 ? (
+          )) : !Array.isArray(projects) || projects.length === 0 ? (
             <div className="col-span-full text-center py-16">
               <div className="h-14 w-14 rounded-full dark:bg-slate-800 bg-slate-100 flex items-center justify-center mx-auto mb-4">
                 <Package className="h-6 w-6 dark:text-slate-600 text-slate-400" />

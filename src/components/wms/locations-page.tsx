@@ -263,10 +263,11 @@ export function LocationsPage() {
   };
 
   const toggleSelectAll = () => {
-    if (selectedRows.size === filteredLocations.length) {
+    const fLocs = Array.isArray(filteredLocations) ? filteredLocations : [];
+    if (selectedRows.size === fLocs.length) {
       setSelectedRows(new Set());
     } else {
-      setSelectedRows(new Set(filteredLocations.map((l) => l.id)));
+      setSelectedRows(new Set(fLocs.map((l) => l.id)));
     }
   };
 
@@ -382,7 +383,7 @@ export function LocationsPage() {
                 <Skeleton key={i} className="h-12 w-full bg-slate-100 dark:bg-slate-800 rounded-lg" />
               ))}
             </div>
-          ) : filteredLocations.length === 0 ? (
+          ) : !Array.isArray(filteredLocations) || filteredLocations.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-16 text-slate-400 dark:text-slate-500">
               <MapPin className="h-10 w-10 mb-3 text-slate-300 dark:text-slate-600" />
               <p className="text-sm font-medium">{t('detail.location.emptyState')}</p>
@@ -393,7 +394,7 @@ export function LocationsPage() {
                 <TableHeader>
                   <TableRow className="border-slate-200 dark:border-slate-800 hover:bg-transparent">
                     <TableHead className="w-10 ps-4">
-                      <Checkbox checked={selectedRows.size === filteredLocations.length && filteredLocations.length > 0} onCheckedChange={toggleSelectAll} />
+                      <Checkbox checked={Array.isArray(filteredLocations) && selectedRows.size === filteredLocations.length && filteredLocations.length > 0} onCheckedChange={toggleSelectAll} />
                     </TableHead>
                     <TableHead className="text-[11px] font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">{t('locations.table.code')}</TableHead>
                     <TableHead className="text-[11px] font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">{t('locations.table.name')}</TableHead>
@@ -492,7 +493,7 @@ export function LocationsPage() {
                 </Card>
               ))}
             </div>
-          ) : filteredLocations.length === 0 ? (
+          ) : !Array.isArray(filteredLocations) || filteredLocations.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-16 text-slate-400 dark:text-slate-500">
               <MapPin className="h-10 w-10 mb-3 text-slate-300 dark:text-slate-600" />
               <p className="text-sm font-medium">{t('detail.location.emptyState')}</p>
@@ -616,8 +617,8 @@ export function LocationsPage() {
                       <div className="flex items-center justify-between mb-4">
                         <h3 className="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">{t('detail.location.cargoInventory')}</h3>
                         <Badge variant="secondary" className={cn('text-[10px] font-medium',
-                          detailCargo.length > 0 ? 'bg-amber-500/10 text-amber-600 dark:text-amber-400' : 'bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400')}>
-                          {detailCargo.length} {t('common.items')}
+                          Array.isArray(detailCargo) && detailCargo.length > 0 ? 'bg-amber-500/10 text-amber-600 dark:text-amber-400' : 'bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400')}>
+                          {Array.isArray(detailCargo) ? detailCargo.length : 0} {t('common.items')}
                         </Badge>
                       </div>
                       {detailLoading ? (
@@ -626,7 +627,7 @@ export function LocationsPage() {
                             <Skeleton key={i} className="h-20 w-full bg-slate-100 dark:bg-slate-800 rounded-lg" />
                           ))}
                         </div>
-                      ) : detailCargo.length === 0 ? (
+                      ) : !Array.isArray(detailCargo) || detailCargo.length === 0 ? (
                         <div className="flex flex-col items-center justify-center py-8 text-slate-400 dark:text-slate-500">
                           <Package className="h-8 w-8 mb-2 text-slate-300 dark:text-slate-600" />
                           <p className="text-xs">{t('detail.location.noCargo')}</p>

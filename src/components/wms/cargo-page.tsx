@@ -7,7 +7,7 @@ import {
   Loader2, X, Camera, Image as ImageIcon, FileText, Download, Upload, Box,
   Printer, QrCode, ClipboardList, Ruler, AlertTriangle, PackageSearch,
   ArrowDown, Play, Check, MoreHorizontal, Tags, Tag, FileCheck, FileSpreadsheet,
-  FileBadge, Sparkles, Award, Ship, Plane, ArrowRightLeft,
+  FileBadge, Sparkles, Award, Ship, Plane, ArrowRightLeft, RefreshCw,
 } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -41,6 +41,9 @@ import type {
 } from '@/types/wms';
 
 // ==================== STYLE MAPS ====================
+
+const safeStatusStyle = (s: string) => (statusStyles as Record<string, string>)[s] || 'bg-slate-500/10 text-slate-500 border-slate-500/20';
+const safeCategoryStyle = (c: string) => (categoryStyles as Record<string, string>)[c] || 'bg-slate-500/10 text-slate-500 border-slate-500/20';
 
 const statusStyles: Record<CargoStatus, string> = {
   IN_YARD: 'bg-emerald-500/10 text-emerald-500 dark:text-emerald-400 border-emerald-500/20',
@@ -141,6 +144,7 @@ const emptyForm = {
 // ==================== MAIN COMPONENT ====================
 
 export function CargoPage() {
+  const [error, setError] = useState<string | null>(null);
   const [cargo, setCargo] = useState<CargoItem[]>([]);
   const [totalPages, setTotalPages] = useState(1);
   const [page, setPage] = useState(1);
@@ -204,11 +208,13 @@ export function CargoPage() {
     });
     try {
       const res = await fetch(`/api/cargo?${params}`);
-      const data: CargoListResponse = await res.json();
       if (!res.ok) { setCargo([]); return; }
-      setCargo(data.items || []);
-      setTotalPages(data.totalPages);
-    } catch { toast.error(t('cargo.toast.fetchFailed')); } finally { setLoading(false); }
+      const json = await res.json().catch(() => null);
+      if (!json || typeof json !== 'object') { setCargo([]); return; }
+      const items = Array.isArray(json.items) ? json.items : [];
+      setCargo(items);
+      setTotalPages(typeof json.totalPages === 'number' ? json.totalPages : 1);
+    } catch (e) { console.error('fetchCargo error:', e); toast.error(t('cargo.toast.fetchFailed')); } finally { setLoading(false); }
   }, [page, search, statusFilter, categoryFilter, commodityFilter, t]);
 
   const fetchLookups = useCallback(async () => {
@@ -217,10 +223,10 @@ export function CargoPage() {
         fetch('/api/locations?limit=100'),
         fetch('/api/projects?limit=100'),
       ]);
-      const locData = await locRes.json();
-      const projData = await projRes.json();
-      setLocations(locData.items || []);
-      setProjects(projData.items || []);
+      const locJson = await locRes.json().catch(() => ({ items: [] }));
+      const projJson = await projRes.json().catch(() => ({ items: [] }));
+      setLocations(Array.isArray(locJson?.items) ? locJson.items : []);
+      setProjects(Array.isArray(projJson?.items) ? projJson.items : []);
     } catch { /* silent */ }
   }, []);
 
@@ -384,11 +390,11 @@ export function CargoPage() {
     }
   };
 
-  const isAllSelected = cargo.length > 0 && selectedRows.size === cargo.length;
+  const isAllSelected = Array.isArray(cargo) && cargo.length > 0 && selectedRows.size === cargo.length;
 
   // ==================== COMPUTED ====================
 
-  const currentStep = detailCargo ? ALL_STATUSES.indexOf(detailCargo.status) : -1;
+  const currentStep = detailCargo ? ALL_STATUSES.indexOf(detailCargo.status as CargoStatus) : -1;
 
   const weightCat = useMemo(() => {
     if (!detailCargo) return null;
@@ -401,6 +407,21 @@ export function CargoPage() {
   }, [detailCargo]);
 
   // ==================== RENDER ====================
+
+  if (error) {
+    return (
+      <div className="flex items-center justify-center min-h-[60vh]">
+        <div className="text-center space-y-4">
+          <AlertTriangle className="h-10 w-10 text-red-500 mx-auto" />
+          <p className="text-sm dark:text-slate-300 text-slate-700">{error}</p>
+          <Button variant="outline" onClick={() => { setError(null); fetchCargo(); }}>
+            <RefreshCw className="h-4 w-4 ml-2" />
+            {t('common.refresh')}
+          </Button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -556,10 +577,10 @@ export function CargoPage() {
                       <TableCell className="py-3 text-xs dark:text-slate-300 text-slate-700 max-w-[200px] truncate group-hover:dark:text-slate-100 group-hover:text-slate-900 transition-colors">{item.description}</TableCell>
                       <TableCell className="py-3 text-xs dark:text-slate-400 text-slate-500 hidden md:table-cell font-mono">{item.weight.toLocaleString()} kg</TableCell>
                       <TableCell className="py-3 hidden lg:table-cell">
-                        <Badge variant="outline" className={`text-[10px] ${categoryStyles[item.liftCategory]}`}>{translateCategory(item.liftCategory)}</Badge>
+                        <Badge variant="outline" className={`text-[10px] ${safeCategoryStyle(item.liftCategory)}`}>{translateCategory(item.liftCategory)}</Badge>
                       </TableCell>
                       <TableCell className="py-3">
-                        <Badge variant="outline" className={`text-[10px] ${statusStyles[item.status]}`}>{translateStatus(item.status)}</Badge>
+                        <Badge variant="outline" className={`text-[10px] ${safeStatusStyle(item.status)}`}>{translateStatus(item.status)}</Badge>
                       </TableCell>
                       <TableCell className="py-3 text-xs dark:text-slate-400 text-slate-500 hidden lg:table-cell">{item.location?.code || '—'}</TableCell>
                       <TableCell className="py-3 text-left" onClick={(e) => e.stopPropagation()}>
@@ -626,7 +647,7 @@ export function CargoPage() {
                       <SheetTitle className="text-base font-mono font-bold dark:text-amber-400 text-amber-600">
                         {detailCargo.cargoCode}
                       </SheetTitle>
-                      <Badge variant="outline" className={`text-[10px] ${statusStyles[detailCargo.status]}`}>
+                      <Badge variant="outline" className={`text-[10px] ${safeStatusStyle(detailCargo.status)}`}>
                         {translateStatus(detailCargo.status)}
                       </Badge>
                     </div>
@@ -880,7 +901,7 @@ export function CargoPage() {
                       <div>
                         <span className="dark:text-slate-500 text-slate-400 text-xs">{t('cargo.details.category')}</span>
                         <div className="mt-1">
-                          <Badge variant="outline" className={`text-[10px] ${categoryStyles[detailCargo.liftCategory]}`}>
+                          <Badge variant="outline" className={`text-[10px] ${safeCategoryStyle(detailCargo.liftCategory)}`}>
                             {translateCategory(detailCargo.liftCategory)}
                           </Badge>
                         </div>
@@ -1183,7 +1204,7 @@ export function CargoPage() {
                       <Clock className="h-3.5 w-3.5 dark:text-slate-400 text-slate-500" />
                       {t('detail.movementHistory')}
                     </h3>
-                    {detailCargo.movements && detailCargo.movements.length > 0 ? (
+                    {Array.isArray(detailCargo.movements) && detailCargo.movements.length > 0 ? (
                       <div className="space-y-3">
                         {detailCargo.movements.map((m, idx) => (
                           <div key={m.id} className="flex gap-3">
@@ -1193,7 +1214,7 @@ export function CargoPage() {
                                   ? 'dark:bg-amber-400 bg-amber-500 dark:ring-amber-500/30 ring-amber-300'
                                   : 'dark:bg-slate-600 bg-slate-400 dark:ring-slate-800 ring-slate-200'
                               } mt-1`} />
-                              {idx < detailCargo.movements!.length - 1 && (
+                              {idx < (detailCargo.movements?.length || 0) - 1 && (
                                 <div className="w-px flex-1 dark:bg-slate-800 bg-slate-200" />
                               )}
                             </div>

@@ -4,6 +4,7 @@ import { ThemeProvider } from "next-themes";
 import "./globals.css";
 import { Toaster } from "@/components/ui/sonner";
 import { StoreInitializer } from "@/components/store-initializer";
+import { ErrorBoundary } from "@/components/error-boundary";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -39,9 +40,11 @@ export default function RootLayout({
           enableSystem={false}
           disableTransitionOnChange
         >
-          <StoreInitializer />
-          {children}
-          <Toaster richColors position="top-center" />
+          <ErrorBoundary>
+            <StoreInitializer />
+            {children}
+            <Toaster richColors position="top-center" />
+          </ErrorBoundary>
         </ThemeProvider>
       </body>
     </html>

@@ -308,8 +308,9 @@ export function ReportsPage() {
     if (!reportData) return { totalMovements: 0, avgDwell: 0, utilization: 0, critical: 0 };
     const totalMovements = reportData.movementStats.total;
     const avgDwell = reportData.dwellTime.avgDays;
-    const utilization = reportData.locationUtilization.length > 0
-      ? Math.round(reportData.locationUtilization.reduce((s, l) => s + l.percentage, 0) / reportData.locationUtilization.length)
+    const locUtil = Array.isArray(reportData.locationUtilization) ? reportData.locationUtilization : [];
+    const utilization = locUtil.length > 0
+      ? Math.round(locUtil.reduce((s, l) => s + l.percentage, 0) / locUtil.length)
       : 0;
     const critical = reportData.dwellTime.critical;
     return { totalMovements, avgDwell, utilization, critical };
@@ -317,7 +318,7 @@ export function ReportsPage() {
 
   // Donut chart data
   const donutData = useMemo(() => {
-    if (!reportData?.statusDistribution || reportData.statusDistribution.length === 0) return { data: [], gradient: '' };
+    if (!Array.isArray(reportData?.statusDistribution) || reportData.statusDistribution.length === 0) return { data: [], gradient: '' };
     const entries = reportData.statusDistribution;
     const total = entries.reduce((s, e) => s + e.count, 0);
     let cumulative = 0;
@@ -490,7 +491,7 @@ export function ReportsPage() {
                 </div>
               ))}
             </div>
-          ) : !reportData?.cargoFlow?.length ? (
+          ) : !Array.isArray(reportData?.cargoFlow) || !reportData.cargoFlow.length ? (
             <EmptyState message={lt('reports.noData')} />
           ) : (
             <>
@@ -564,7 +565,7 @@ export function ReportsPage() {
                   <Skeleton className="h-4 w-1/2 dark:bg-slate-800 bg-slate-200 rounded" />
                 </div>
               </div>
-            ) : !donutData.data.length ? (
+            ) : !Array.isArray(donutData.data) || !donutData.data.length ? (
               <EmptyState message={lt('reports.noData')} />
             ) : (
               <div className="flex flex-col items-center gap-5">
@@ -624,7 +625,7 @@ export function ReportsPage() {
                   </div>
                 ))}
               </div>
-            ) : !reportData?.locationUtilization?.length ? (
+            ) : !Array.isArray(reportData?.locationUtilization) || !reportData.locationUtilization.length ? (
               <EmptyState message={lt('reports.noData')} />
             ) : (
               <div className="space-y-4 max-h-80 overflow-y-auto custom-scrollbar pr-1">
@@ -694,7 +695,7 @@ export function ReportsPage() {
                 </div>
               ))}
             </div>
-          ) : !reportData?.topClients?.length ? (
+          ) : !Array.isArray(reportData?.topClients) || !reportData.topClients.length ? (
             <EmptyState message={lt('reports.noData')} />
           ) : (
             <div className="overflow-x-auto">
@@ -767,7 +768,7 @@ export function ReportsPage() {
                   </div>
                 ))}
               </div>
-            ) : !reportData?.weightStats?.byCategory?.length ? (
+            ) : !Array.isArray(reportData?.weightStats?.byCategory) || !reportData.weightStats.byCategory.length ? (
               <EmptyState message={lt('reports.noData')} />
             ) : (
               <>
@@ -841,7 +842,7 @@ export function ReportsPage() {
                   </div>
                 ))}
               </div>
-            ) : !reportData?.movementStats?.byType?.length ? (
+            ) : !Array.isArray(reportData?.movementStats?.byType) || !reportData.movementStats.byType.length ? (
               <EmptyState message={lt('reports.noData')} />
             ) : (
               <>
@@ -915,7 +916,7 @@ export function ReportsPage() {
                 <Skeleton key={i} className="h-10 w-full dark:bg-slate-800 bg-slate-200 rounded" />
               ))}
             </div>
-          ) : !reportData?.cargoFlow?.length ? (
+          ) : !Array.isArray(reportData?.cargoFlow) || !reportData.cargoFlow.length ? (
             <EmptyState message={lt('reports.noData')} />
           ) : (
             <div className="overflow-x-auto">

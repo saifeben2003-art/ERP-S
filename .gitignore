@@ -51,4 +51,13 @@ prompt
 
 server.log
 # Skills directory
-/skills/
+/skills/tool-results/
+.zscripts/
+db/*.db
+skills/
+download/
+screenshot*.png
+wms_research.json
+setup-vercel.sh
+dev.log
+*.pid

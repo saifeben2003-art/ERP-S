@@ -211,8 +211,9 @@ export function EquipmentPage() {
   };
 
   const toggleSelectAll = () => {
-    if (selectedRows.size === filteredEquipment.length) setSelectedRows(new Set());
-    else setSelectedRows(new Set(filteredEquipment.map(e => e.id)));
+    const fEq = Array.isArray(filteredEquipment) ? filteredEquipment : [];
+    if (selectedRows.size === fEq.length) setSelectedRows(new Set());
+    else setSelectedRows(new Set(fEq.map(e => e.id)));
   };
 
   const toggleRow = (id: string) => {
@@ -299,7 +300,7 @@ export function EquipmentPage() {
               <TableHeader>
                 <TableRow className={`${rowBorder} hover:bg-transparent`}>
                   <TableHead className="w-10">
-                    <Checkbox checked={filteredEquipment.length > 0 && selectedRows.size === filteredEquipment.length} onCheckedChange={toggleSelectAll} className="dark:border-slate-600 border-slate-300" />
+                    <Checkbox checked={Array.isArray(filteredEquipment) && filteredEquipment.length > 0 && selectedRows.size === filteredEquipment.length} onCheckedChange={toggleSelectAll} className="dark:border-slate-600 border-slate-300" />
                   </TableHead>
                   <TableHead className={headCls}>{t('equipment.table.code')}</TableHead>
                   <TableHead className={headCls}>{t('equipment.table.name')}</TableHead>
@@ -320,7 +321,7 @@ export function EquipmentPage() {
                         {Array.from({ length: 8 }).map((_, j) => <TableCell key={j} className="py-3"><Skeleton className="h-4 w-16 dark:bg-slate-800 bg-slate-100" /></TableCell>)}
                       </TableRow>
                     ))
-                  : filteredEquipment.length === 0
+                  : !Array.isArray(filteredEquipment) || filteredEquipment.length === 0
                     ? <TableRow className={`${rowBorder} hover:bg-transparent`}>
                         <TableCell colSpan={10} className="text-center py-12">
                           <div className="flex flex-col items-center gap-2">
