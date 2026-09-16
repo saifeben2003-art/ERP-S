@@ -61,3 +61,8 @@ wms_research.json
 setup-vercel.sh
 dev.log
 *.pid
+tool-results/
+agent-ctx/
+verification-*.png
+dashboard-verified.png
+extract-i18n.mjs
