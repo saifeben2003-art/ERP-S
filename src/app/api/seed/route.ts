@@ -21,15 +21,15 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Clear existing data if force reseed
+    // Clear existing data if force reseed - delete in correct order for FK constraints
     if (forceReseed && existingCargo > 0) {
-      await db.$transaction([
-        db.movement.deleteMany(),
-        db.cargoItem.deleteMany(),
-        db.project.deleteMany(),
-        db.equipment.deleteMany(),
-        db.location.deleteMany(),
-      ]);
+      await db.movement.deleteMany();
+      await db.cargoItem.deleteMany();
+      await db.project.deleteMany();
+      await db.equipment.deleteMany();
+      await db.location.deleteMany();
+      await db.sAPIntegration.deleteMany();
+      await db.syncLog.deleteMany();
     }
 
     // ==================== LOCATIONS ====================
