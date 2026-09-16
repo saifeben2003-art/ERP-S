@@ -51,7 +51,7 @@ export async function PATCH(
     // Validate destination location exists and is active
     const destLocation = await db.location.findUnique({
       where: { id: toLocationId },
-      select: { id: true, code: true, name: true, isActive: true },
+      select: { id: true, code: true, name: true, type: true, isActive: true },
     });
 
     if (!destLocation || !destLocation.isActive) {

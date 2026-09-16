@@ -643,8 +643,8 @@ export function ReportsPage() {
                         <div className="flex items-center justify-between text-xs">
                           <div className="flex items-center gap-2 min-w-0">
                             <span className="font-mono dark:text-slate-300 text-slate-700 font-medium">{loc.location}</span>
-                            {loc.name && (
-                              <span className="dark:text-slate-500 text-slate-400 truncate">{loc.name}</span>
+                            {loc.locationName && (
+                              <span className="dark:text-slate-500 text-slate-400 truncate">{loc.locationName}</span>
                             )}
                           </div>
                           <div className="flex items-center gap-2 shrink-0">

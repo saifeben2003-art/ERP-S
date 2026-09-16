@@ -669,7 +669,7 @@ export function ScannerPage() {
 
               {/* Details Grid */}
               <div className="grid grid-cols-2 gap-3">
-                {(scanResult.data as Record<string, unknown>).location && (
+                {!!(scanResult.data as Record<string, unknown>).location && (
                   <div className="flex items-center gap-2">
                     <MapPin className="w-4 h-4 text-slate-400" />
                     <div>

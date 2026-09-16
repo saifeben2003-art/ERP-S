@@ -76,6 +76,7 @@ export async function PATCH(
       data: {
         movementRef,
         cargoItemId: id,
+        cargoCode: existing.cargoCode,
         type: movementType,
         fromLocationId: fromLocationId || null,
         toLocationId: toLocationId || null,

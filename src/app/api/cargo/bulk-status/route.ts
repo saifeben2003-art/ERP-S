@@ -103,7 +103,7 @@ export async function POST(request: NextRequest) {
       });
 
       // Create individual movement records
-      const movements = [];
+      const movements: Record<string, unknown>[] = [];
       for (const item of existingItems) {
         // Skip if status hasn't actually changed
         if (item.status === status) continue;

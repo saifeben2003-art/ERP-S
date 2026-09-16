@@ -81,7 +81,7 @@ export async function GET() {
       const key = m.createdAt.toISOString().split('T')[0];
       const entry = dayMap.get(key);
       if (entry && m.type in entry) {
-        (entry as Record<string, number>)[m.type] += 1;
+        (entry as unknown as Record<string, number>)[m.type] += 1;
       }
     }
     const movementsByDay = Array.from(dayMap.values());

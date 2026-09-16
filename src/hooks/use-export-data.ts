@@ -10,7 +10,7 @@ export function useExportData(data: Record<string, unknown>[]) {
   const setDataRef = useRef<((d: Record<string, unknown>[]) => void) | null>(null);
 
   useEffect(() => {
-    setDataRef.current = (window as Record<string, unknown>).__wmsExportData as ((d: Record<string, unknown>[]) => void) | null;
+    setDataRef.current = (window as unknown as Record<string, unknown>).__wmsExportData as ((d: Record<string, unknown>[]) => void) | null;
   }, []);
 
   useEffect(() => {
