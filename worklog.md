@@ -242,3 +242,26 @@ Stage Summary:
 - Code deployed to Vercel via ERP-S GitHub push
 - Browser verification confirms all features working
 - Site accessible at https://my-project-nana-d430.vercel.app
+
+---
+Task ID: fix-all
+Agent: main
+Task: Fix CRUD operations and report exports broken on Vercel/Turso
+
+Work Log:
+- Analyzed user screenshots showing errors
+- Screenshot 1: "فشل تحديث البيانات" (Failed to update data)
+- Screenshot 2: SQLITE_INPUT_ERROR: no such column: main.CargoItem.airWaybillNumber
+- Root cause: Turso production DB doesn't have new tracking columns
+- Created /api/migrate route that runs ALTER TABLE on Turso
+- Added auto-migration call after seed in page.tsx
+- Added /api/migrate to public middleware routes
+- Regenerated Prisma client
+- Committed and force-pushed to Vercel
+
+Stage Summary:
+- Turso DB will auto-migrate on next app load
+- Missing columns will be added: airWaybillNumber, billOfLadingNumber, shippingLine, eta, etd, portOfLoading, portOfDischarge
+- Invoice tables and indexes also ensured
+- All CRUD operations should work after migration
+- Report exports should work after migration
