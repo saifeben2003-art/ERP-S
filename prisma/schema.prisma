@@ -10,6 +10,24 @@ datasource db {
 
 // ==================== HEAVY LIFT WMS SCHEMA ====================
 
+model User {
+  id           String    @id @default(cuid())
+  email        String    @unique
+  passwordHash String
+  name         String
+  role         String    @default("VIEWER") // ADMIN, MANAGER, OPERATOR, VIEWER
+  avatar       String?
+  language     String    @default("en") // en, ar
+  isActive     Boolean   @default(true)
+  lastLogin    DateTime?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  @@index([email])
+  @@index([role])
+  @@index([isActive])
+}
+
 model CargoItem {
   id            String   @id @default(cuid())
   cargoCode     String   @unique
@@ -276,4 +294,101 @@ model SyncLog {
   @@index([eventType])
   @@index([direction])
   @@index([createdAt])
+}
+
+// ==================== INVOICE SYSTEM (UAE) ====================
+
+model Invoice {
+  id              String    @id @default(cuid())
+  invoiceNumber   String    @unique        // INV-DXB-STO-2026-03-0001
+  type            String                     // STORAGE, HANDLING, CUSTOMS, TRANSPORT, EQUIPMENT, CREDIT_NOTE
+  status          String    @default("DRAFT") // DRAFT, ISSUED, PAID, PARTIAL, OVERDUE, CANCELLED
+
+  // Client
+  clientId        String
+  clientName      String
+  clientEmail     String?
+  clientAddress   String?
+
+  // Period
+  periodStart     DateTime
+  periodEnd       DateTime
+  issueDate       DateTime  @default(now())
+  dueDate       DateTime
+
+  // Amounts (AED — UAE Dirham)
+  subtotal        Float
+  taxRate         Float     @default(0.05)  // UAE VAT 5%
+  taxAmount       Float
+  totalAmount     Float
+  paidAmount      Float     @default(0)
+  balanceDue      Float
+
+  // Currency (ISO 4217)
+  currency        String    @default("AED")
+
+  // References
+  projectId       String?
+  poReference     String?
+  contractRef     String?
+
+  // Payment terms
+  paymentTerms    String    @default("NET_30") // NET_15, NET_30, NET_60, IMMEDIATE
+  notes           String?
+
+  // Branch (UAE)
+  branch          String    @default("DXB") // AUH, DXB, SHJ, AJM, RAK, FJR
+
+  // Audit
+  createdBy       String    @default("SYSTEM")
+  approvedBy      String?
+  approvedAt      DateTime?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  items           InvoiceItem[]
+  payments        InvoicePayment[]
+
+  @@index([clientId])
+  @@index([status])
+  @@index([type])
+  @@index([dueDate])
+  @@index([branch])
+}
+
+model InvoiceItem {
+  id              String    @id @default(cuid())
+  invoiceId       String
+  lineNumber      Int
+
+  description     String
+  quantity        Float
+  unit            String    @default("DAY") // DAY, KG, ITEM, LIFT, CONTAINER, CBM
+  unitPrice       Float
+  discountPercent Float     @default(0)
+  lineTotal       Float
+
+  // Tracking
+  cargoItemId     String?
+  locationId      String?
+  equipmentId     String?
+  movementId      String?
+
+  invoice         Invoice   @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+
+  @@index([invoiceId])
+}
+
+model InvoicePayment {
+  id              String    @id @default(cuid())
+  invoiceId       String
+  amount          Float
+  method          String    // BANK_TRANSFER, CHECK, CASH, CREDIT_CARD, WIRE
+  reference       String?
+  paymentDate     DateTime  @default(now())
+  notes           String?
+
+  invoice         Invoice   @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+
+  @@index([invoiceId])
 }

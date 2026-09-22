@@ -655,7 +655,7 @@ export function LocationsPage() {
                     {/* ===== Quick Actions ===== */}
                     <div className="rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/50 p-5">
                       <h3 className="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-4">{t('detail.location.quickActions')}</h3>
-                      <div className="grid grid-cols-3 gap-3">
+                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                         <QuickActionButton icon={PackagePlus} label={t('detail.location.assignCargo')} color="green" />
                         <QuickActionButton icon={ArrowRightLeft} label={t('detail.location.transferAll')} color="amber" />
                         <QuickActionButton icon={Printer} label={t('detail.location.printLabel')} color="cyan" />
@@ -686,7 +686,7 @@ export function LocationsPage() {
         <DialogContent className="border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 max-w-lg">
           <DialogHeader><DialogTitle className="text-slate-900 dark:text-slate-100">{editing ? t('locations.editLocation') : t('locations.addNewLocation')}</DialogTitle></DialogHeader>
           <div className="grid gap-4 py-4">
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
                 <Label className="text-slate-500 dark:text-slate-400">{t('locations.form.code')}</Label>
                 <Input value={form.code} onChange={(e) => setForm({ ...form, code: e.target.value })} className="border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-200 mt-1" />
@@ -696,7 +696,7 @@ export function LocationsPage() {
                 <Input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} className="border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-200 mt-1" />
               </div>
             </div>
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
                 <Label className="text-slate-500 dark:text-slate-400">{t('locations.form.type')}</Label>
                 <Select value={form.type} onValueChange={(v) => setForm({ ...form, type: v })}>
@@ -711,7 +711,7 @@ export function LocationsPage() {
                 <Input value={form.zone} onChange={(e) => setForm({ ...form, zone: e.target.value })} className="border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-200 mt-1" />
               </div>
             </div>
-            <div className="grid grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
               <div>
                 <Label className="text-slate-500 dark:text-slate-400">{t('locations.form.maxWeight')}</Label>
                 <Input type="number" value={form.maxWeight} onChange={(e) => setForm({ ...form, maxWeight: e.target.value })} className="border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-200 mt-1" />

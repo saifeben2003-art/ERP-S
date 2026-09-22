@@ -392,7 +392,7 @@ export function EquipmentPage() {
                     <Settings2 className="h-4 w-4 text-amber-400" />
                     {t('detail.equipment.profile')}
                   </h3>
-                  <div className="grid grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <ProfileField icon={Gauge} label={t('detail.equipment.capacityTons')} value={detailEquip.capacity ? `${detailEquip.capacity} ${t('common.tons')}` : '—'} />
                     <ProfileField icon={Factory} label={t('detail.equipment.manufacturer')} value={detailEquip.manufacturer || '—'} />
                     <ProfileField icon={Settings2} label={t('detail.equipment.model')} value={detailEquip.model || '—'} />
@@ -523,7 +523,7 @@ export function EquipmentPage() {
                     <Wrench className="h-4 w-4 text-amber-400" />
                     {t('detail.quickActions')}
                   </h3>
-                  <div className="grid grid-cols-3 gap-3">
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                     <QuickActionButton
                       icon={ClipboardCheck}
                       label={t('detail.equipment.recordInspection')}
@@ -578,7 +578,7 @@ export function EquipmentPage() {
             {/* Basic Info */}
             <div>
               <p className={`text-xs font-semibold uppercase tracking-wider mb-3 ${textTertiary}`}>{t('equipment.form.specifications')}</p>
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
                   <Label className={textSecondary}>{t('equipment.form.name')}</Label>
                   <Input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} className={`${inputCls} mt-1`} />
@@ -623,7 +623,7 @@ export function EquipmentPage() {
             <Separator className="dark:bg-slate-800 bg-slate-200" />
 
             {/* Manufacturer / Model */}
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div>
                 <Label className={textSecondary}>{t('equipment.form.manufacturer')}</Label>
                 <Input value={form.manufacturer} onChange={(e) => setForm({ ...form, manufacturer: e.target.value })} className={`${inputCls} mt-1`} />
@@ -633,7 +633,7 @@ export function EquipmentPage() {
                 <Input value={form.model} onChange={(e) => setForm({ ...form, model: e.target.value })} className={`${inputCls} mt-1`} />
               </div>
             </div>
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div>
                 <Label className={textSecondary}>{t('equipment.form.serialNumber')}</Label>
                 <Input value={form.serialNumber} onChange={(e) => setForm({ ...form, serialNumber: e.target.value })} className={`${inputCls} mt-1`} />
@@ -649,7 +649,7 @@ export function EquipmentPage() {
             {/* Inspection & Certification */}
             <div>
               <p className={`text-xs font-semibold uppercase tracking-wider mb-3 ${textTertiary}`}>{t('equipment.form.inspectionCertification')}</p>
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
                   <Label className={textSecondary}>{t('equipment.form.lastInspection')}</Label>
                   <Input type="date" value={form.lastInspection} onChange={(e) => setForm({ ...form, lastInspection: e.target.value })} className={`${inputCls} mt-1`} />

@@ -523,7 +523,7 @@ export function ProjectsPage() {
           </div>
 
           {/* ===== Cargo Table + Donut Chart ===== */}
-          <div className="grid gap-4 lg:grid-cols-3">
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             {/* Cargo Items Table */}
             <Card className="dark:border-slate-800 border-slate-200 dark:bg-slate-900/50 bg-white lg:col-span-2 transition-all duration-200">
               <CardContent className="p-5">
@@ -826,7 +826,7 @@ export function ProjectsPage() {
               <Label className="dark:text-slate-400 text-slate-500">{t('projects.form.description')}</Label>
               <Textarea value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} className="dark:border-slate-700 border-slate-300 dark:bg-slate-800 bg-white dark:text-slate-200 text-slate-900 mt-1 min-h-[60px]" />
             </div>
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
                 <Label className="dark:text-slate-400 text-slate-500">{t('projects.form.clientName')}</Label>
                 <Input value={form.clientName} onChange={(e) => setForm({ ...form, clientName: e.target.value })} className="dark:border-slate-700 border-slate-300 dark:bg-slate-800 bg-white dark:text-slate-200 text-slate-900 mt-1" />
@@ -840,7 +840,7 @@ export function ProjectsPage() {
               <Label className="dark:text-slate-400 text-slate-500">{t('projects.form.destination')}</Label>
               <Input value={form.destination} onChange={(e) => setForm({ ...form, destination: e.target.value })} className="dark:border-slate-700 border-slate-300 dark:bg-slate-800 bg-white dark:text-slate-200 text-slate-900 mt-1" />
             </div>
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
                 <Label className="dark:text-slate-400 text-slate-500">{t('projects.form.shippingLine')}</Label>
                 <Input value={form.shippingLine} onChange={(e) => setForm({ ...form, shippingLine: e.target.value })} className="dark:border-slate-700 border-slate-300 dark:bg-slate-800 bg-white dark:text-slate-200 text-slate-900 mt-1" />
@@ -850,7 +850,7 @@ export function ProjectsPage() {
                 <Input value={form.vesselName} onChange={(e) => setForm({ ...form, vesselName: e.target.value })} className="dark:border-slate-700 border-slate-300 dark:bg-slate-800 bg-white dark:text-slate-200 text-slate-900 mt-1" />
               </div>
             </div>
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
                 <Label className="dark:text-slate-400 text-slate-500">{t('projects.form.etd')}</Label>
                 <Input type="date" value={form.etd} onChange={(e) => setForm({ ...form, etd: e.target.value })} className="dark:border-slate-700 border-slate-300 dark:bg-slate-800 bg-white dark:text-slate-200 text-slate-900 mt-1" />

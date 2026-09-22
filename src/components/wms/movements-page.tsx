@@ -270,7 +270,7 @@ export function MovementsPage() {
   // ==================== RENDER: STATS BAR ====================
 
   const renderStatsBar = () => (
-    <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
       <StatCard icon={Activity} label={`${t('movements.stats.today')} — ${t('movements.stats.movements')}`} value={stats.today} accent="bg-amber-500/10 text-amber-500" />
       <StatCard icon={Clock} label={`${t('movements.stats.thisWeek')} — ${t('movements.stats.movements')}`} value={stats.week} accent="bg-cyan-500/10 text-cyan-500" />
       <StatCard icon={Download} label={t('movements.stats.received')} value={stats.receive} accent="bg-emerald-500/10 text-emerald-500" />
@@ -674,7 +674,7 @@ export function MovementsPage() {
       {/* Filters */}
       <Card className="dark:border-slate-800 border-slate-200 dark:bg-slate-900/50 bg-white">
         <CardContent className="p-4">
-          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
+          <div className="grid gap-3 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5">
             <div className="relative">
               <Search className="absolute right-2.5 top-2.5 h-4 w-4 dark:text-slate-500 text-slate-400" />
               <Input
@@ -799,7 +799,7 @@ export function MovementsPage() {
                 </SelectContent>
               </Select>
             </div>
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
                 <Label className="dark:text-slate-400 text-slate-500">{t('movements.form.movementType')}</Label>
                 <Select value={form.type} onValueChange={(v) => setForm({ ...form, type: v })}>
@@ -825,7 +825,7 @@ export function MovementsPage() {
                 />
               </div>
             </div>
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
                 <Label className="dark:text-slate-400 text-slate-500">{t('movements.form.fromLocation')}</Label>
                 <Select value={form.fromLocationId} onValueChange={(v) => setForm({ ...form, fromLocationId: v })}>
@@ -855,7 +855,7 @@ export function MovementsPage() {
                 </Select>
               </div>
             </div>
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
                 <Label className="dark:text-slate-400 text-slate-500">{t('movements.form.equipmentUsed')}</Label>
                 <Select value={form.equipmentUsed} onValueChange={(v) => setForm({ ...form, equipmentUsed: v })}>

@@ -183,4 +183,4 @@ export interface ScannerResult {
   data: CargoItem | Location;
 }
 
-export type WmsPage = 'dashboard' | 'cargo' | 'projects' | 'locations' | 'equipment' | 'movements' | 'reports' | 'scanner' | 'integration';
+export type WmsPage = 'dashboard' | 'cargo' | 'projects' | 'locations' | 'equipment' | 'movements' | 'reports' | 'scanner' | 'integration' | 'invoices' | 'standards';

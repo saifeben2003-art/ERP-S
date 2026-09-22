@@ -1,0 +1,900 @@
+'use client';
+
+import { useEffect, useState, useCallback, useMemo } from 'react';
+import {
+  FileText, DollarSign, AlertCircle, FileEdit, CheckCircle2,
+  Plus, Download, Search, Filter, Loader2, ChevronLeft,
+  CalendarDays, Building2, Send, CreditCard, X, Trash2,
+  FileSpreadsheet, FileType, Printer,
+} from 'lucide-react';
+import { Card, CardContent } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Badge } from '@/components/ui/badge';
+import {
+  Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
+} from '@/components/ui/table';
+import {
+  Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription,
+} from '@/components/ui/dialog';
+import {
+  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
+} from '@/components/ui/select';
+import {
+  Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription, SheetFooter,
+} from '@/components/ui/sheet';
+import {
+  DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
+import { Skeleton } from '@/components/ui/skeleton';
+import { toast } from 'sonner';
+import { useTranslation } from '@/lib/translations';
+
+// ─── Types (matching API/DB schema) ────────────────────────────────────────
+type InvoiceStatus = 'DRAFT' | 'ISSUED' | 'PAID' | 'PARTIAL' | 'OVERDUE' | 'CANCELLED';
+type InvoiceType = 'STORAGE' | 'HANDLING' | 'CUSTOMS' | 'TRANSPORT' | 'EQUIPMENT' | 'CREDIT_NOTE';
+type Branch = 'AUH' | 'DXB' | 'SHJ' | 'AJM' | 'RAK' | 'FJR';
+type PaymentTerms = 'IMMEDIATE' | 'NET_15' | 'NET_30' | 'NET_60' | 'NET_90';
+
+interface InvoiceItem {
+  id?: string;
+  lineNumber: number;
+  description: string;
+  quantity: number;
+  unit: string;
+  unitPrice: number;
+  discountPercent?: number;
+  lineTotal: number;
+}
+
+interface InvoicePayment {
+  id: string;
+  amount: number;
+  method: string;
+  reference?: string;
+  paymentDate: string;
+  notes?: string;
+}
+
+interface Invoice {
+  id: string;
+  invoiceNumber: string;
+  type: InvoiceType;
+  status: InvoiceStatus;
+  // Client
+  clientId: string;
+  clientName: string;
+  clientEmail?: string;
+  clientAddress?: string;
+  // Period
+  periodStart: string;
+  periodEnd: string;
+  issueDate: string;
+  dueDate: string;
+  // Amounts (AED)
+  subtotal: number;
+  taxRate: number;
+  taxAmount: number;
+  totalAmount: number;
+  paidAmount: number;
+  balanceDue: number;
+  currency: string;
+  // References
+  projectId?: string;
+  poReference?: string;
+  contractRef?: string;
+  // Terms
+  paymentTerms: PaymentTerms;
+  notes?: string;
+  branch: Branch;
+  // Items & Payments
+  items?: InvoiceItem[];
+  payments?: InvoicePayment[];
+  lineItems?: InvoiceItem[]; // for backward compat with detail sheet
+  // Audit
+  createdBy: string;
+  createdAt: string;
+}
+
+// ─── Constants ────────────────────────────────────────────────────────────
+const INVOICE_TYPE_LABELS: Record<InvoiceType, string> = {
+  STORAGE: 'فاتورة تخزين',
+  HANDLING: 'فاتورة مناولة',
+  CUSTOMS: 'فاتورة جمركية',
+  TRANSPORT: 'فاتورة نقل',
+  EQUIPMENT: 'فاتورة معدات',
+  CREDIT_NOTE: 'إشعار دائن',
+};
+
+const BRANCH_LABELS: Record<Branch, string> = {
+  AUH: 'أبوظبي', DXB: 'دبي', SHJ: 'الشارقة',
+  AJM: 'عجمان', RAK: 'رأس الخيمة', FJR: 'الفجيرة',
+};
+
+const PAYMENT_TERMS_LABELS: Record<PaymentTerms, string> = {
+  IMMEDIATE: 'فوري', NET_15: 'صاف 15 يوم', NET_30: 'صاف 30 يوم',
+  NET_60: 'صاف 60 يوم', NET_90: 'صاف 90 يوم',
+};
+
+const STATUS_VARIANT: Record<InvoiceStatus, string> = {
+  DRAFT: 'bg-slate-500/15 text-slate-600 dark:text-slate-400 border-slate-500/20',
+  ISSUED: 'bg-blue-500/15 text-blue-600 dark:text-blue-400 border-blue-500/20',
+  PAID: 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border-emerald-500/20',
+  PARTIAL: 'bg-amber-500/15 text-amber-600 dark:text-amber-400 border-amber-500/20',
+  OVERDUE: 'bg-red-500/15 text-red-600 dark:text-red-400 border-red-500/20',
+  CANCELLED: 'bg-gray-500/15 text-gray-600 dark:text-gray-400 border-gray-500/20',
+};
+
+const STATUS_LABELS: Record<InvoiceStatus, string> = {
+  DRAFT: 'مسودة', ISSUED: 'صادرة', PAID: 'مدفوعة',
+  PARTIAL: 'مدفوعة جزئياً', OVERDUE: 'متأخرة', CANCELLED: 'ملغاة',
+};
+
+const PAYMENT_METHOD_LABELS: Record<string, string> = {
+  BANK_TRANSFER: 'تحويل بنكي',
+  CHECK: 'شيك',
+  CASH: 'نقدي',
+  CREDIT_CARD: 'بطاقة ائتمانية',
+  WIRE: 'تحويل سريع',
+};
+
+// ─── Helpers ──────────────────────────────────────────────────────────────
+const fmt = (n: number) => n.toLocaleString('ar-AE', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+const fmtDate = (d: string) => { try { return new Date(d).toLocaleDateString('ar-AE'); } catch { return d; } };
+
+function daysDiff(dateStr: string): number {
+  return Math.floor((new Date().getTime() - new Date(dateStr).getTime()) / 86400000);
+}
+
+function agingBucket(days: number): string {
+  if (days <= 0) return 'current';
+  if (days <= 30) return '1-30';
+  if (days <= 60) return '31-60';
+  if (days <= 90) return '61-90';
+  return '90+';
+}
+
+// ─── Component ────────────────────────────────────────────────────────────
+export function InvoicesPage() {
+  const { t } = useTranslation();
+  const [invoices, setInvoices] = useState<Invoice[]>([]);
+  const [agingData, setAgingData] = useState<Record<string, number>>({ CURRENT: 0, '1-30': 0, '31-60': 0, '61-90': 0, '90+': 0 });
+  const [loading, setLoading] = useState(true);
+  const [statusFilter, setStatusFilter] = useState<string>('ALL');
+  const [typeFilter, setTypeFilter] = useState<string>('ALL');
+  const [search, setSearch] = useState('');
+  const [showAdd, setShowAdd] = useState(false);
+  const [selected, setSelected] = useState<Invoice | null>(null);
+  const [saving, setSaving] = useState(false);
+  const [showPayment, setShowPayment] = useState(false);
+  const [paymentAmount, setPaymentAmount] = useState('');
+  const [paymentMethod, setPaymentMethod] = useState('BANK_TRANSFER');
+  const [paymentRef, setPaymentRef] = useState('');
+  const [paying, setPaying] = useState(false);
+
+  // Add form state
+  const [form, setForm] = useState({
+    type: 'STORAGE' as InvoiceType,
+    clientName: '', clientEmail: '', clientId: '',
+    branch: 'DXB' as Branch,
+    paymentTerms: 'NET_30' as PaymentTerms,
+    periodStart: '', periodEnd: '',
+    notes: '',
+  });
+  const [lineItems, setLineItems] = useState<InvoiceItem[]>([
+    { lineNumber: 1, description: '', quantity: 1, unit: 'DAY', unitPrice: 0, lineTotal: 0 },
+  ]);
+
+  // Fetch
+  const fetchInvoices = useCallback(async () => {
+    setLoading(true);
+    try {
+      const res = await fetch('/api/invoices?limit=100');
+      if (!res.ok) throw new Error();
+      const data = await res.json();
+      // API returns { items, total, page, limit, totalPages, aging }
+      const invoiceList = Array.isArray(data) ? data : data.items ?? [];
+      setInvoices(invoiceList);
+      if (data.aging) {
+        setAgingData(data.aging);
+      }
+    } catch {
+      toast.error(t('invoices.fetchFailed') ?? 'فشل تحميل الفواتير');
+    } finally {
+      setLoading(false);
+    }
+  }, [t]);
+
+  useEffect(() => { fetchInvoices(); }, [fetchInvoices]);
+
+  // KPIs
+  const kpis = useMemo(() => {
+    const now = new Date();
+    const thisMonth = now.getMonth();
+    const thisYear = now.getFullYear();
+    const outstanding = invoices.filter(i => ['ISSUED', 'PARTIAL', 'OVERDUE'].includes(i.status)).reduce((s, i) => s + (i.balanceDue || i.totalAmount || 0), 0);
+    const overdue = invoices.filter(i => i.status === 'OVERDUE').length;
+    const draft = invoices.filter(i => i.status === 'DRAFT').length;
+    const paidThisMonth = invoices.filter(i => i.status === 'PAID' && new Date(i.createdAt).getMonth() === thisMonth && new Date(i.createdAt).getFullYear() === thisYear).reduce((s, i) => s + (i.totalAmount || 0), 0);
+    return { outstanding, overdue, draft, paidThisMonth };
+  }, [invoices]);
+
+  // Aging (use server-side data when available, otherwise calculate from invoices)
+  const aging = useMemo(() => {
+    // If we have server-side aging data, use it
+    if (agingData.CURRENT || agingData['1-30'] || agingData['31-60'] || agingData['61-90'] || agingData['90+']) {
+      return {
+        current: agingData.CURRENT || 0,
+        '1-30': agingData['1-30'] || 0,
+        '31-60': agingData['31-60'] || 0,
+        '61-90': agingData['61-90'] || 0,
+        '90+': agingData['90+'] || 0,
+      };
+    }
+    // Fallback: calculate from invoices using balanceDue
+    const buckets: Record<string, number> = { current: 0, '1-30': 0, '31-60': 0, '61-90': 0, '90+': 0 };
+    invoices.filter(i => ['ISSUED', 'PARTIAL', 'OVERDUE'].includes(i.status)).forEach(i => {
+      buckets[agingBucket(daysDiff(i.dueDate))] += (i.balanceDue || i.totalAmount || 0);
+    });
+    return buckets;
+  }, [invoices, agingData]);
+
+  // Filtered
+  const filtered = useMemo(() => {
+    return invoices.filter(i => {
+      if (statusFilter !== 'ALL' && i.status !== statusFilter) return false;
+      if (typeFilter !== 'ALL' && i.type !== typeFilter) return false;
+      if (search && !i.invoiceNumber.toLowerCase().includes(search.toLowerCase()) && !i.clientName.toLowerCase().includes(search.toLowerCase())) return false;
+      return true;
+    });
+  }, [invoices, statusFilter, typeFilter, search]);
+
+  // Add invoice — FIXED: sends `items` not `lineItems`, includes `clientId`, calculates `lineTotal`
+  const handleAdd = async () => {
+    if (!form.clientName.trim()) { toast.error('يرجى إدخال اسم العميل'); return; }
+    const validItems = lineItems.filter(l => l.description.trim());
+    if (validItems.length === 0) { toast.error('يرجى إضافة بند واحد على الأقل'); return; }
+    if (!form.periodStart || !form.periodEnd) { toast.error('يرجى تحديد فترة الفاتورة'); return; }
+    setSaving(true);
+    try {
+      // Calculate lineTotal for each item
+      const items = validItems.map((l, idx) => ({
+        lineNumber: idx + 1,
+        description: l.description,
+        quantity: l.quantity,
+        unit: l.unit,
+        unitPrice: l.unitPrice,
+        discountPercent: 0,
+        lineTotal: Math.round(l.quantity * l.unitPrice * 100) / 100,
+      }));
+
+      const res = await fetch('/api/invoices', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          type: form.type,
+          clientId: form.clientId || form.clientName.replace(/\s+/g, '-').toLowerCase(),
+          clientName: form.clientName,
+          clientEmail: form.clientEmail || undefined,
+          branch: form.branch,
+          paymentTerms: form.paymentTerms,
+          periodStart: form.periodStart,
+          periodEnd: form.periodEnd,
+          notes: form.notes || undefined,
+          items,
+        }),
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error(err.error || 'Failed');
+      }
+      toast.success(t('invoices.addSuccess') ?? 'تم إنشاء الفاتورة بنجاح');
+      setShowAdd(false);
+      resetForm();
+      fetchInvoices();
+    } catch (e) {
+      toast.error(t('invoices.addFailed') ?? 'فشل إنشاء الفاتورة');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  // Issue invoice — FIXED: sends { action: 'issue' }
+  const handleIssue = async (inv: Invoice) => {
+    try {
+      const res = await fetch(`/api/invoices/${inv.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'issue' }),
+      });
+      if (!res.ok) throw new Error();
+      toast.success('تم إصدار الفاتورة');
+      // Refresh the selected invoice
+      const detailRes = await fetch(`/api/invoices/${inv.id}`);
+      if (detailRes.ok) {
+        const detailData = await detailRes.json();
+        setSelected(detailData.data || detailData);
+      } else {
+        setSelected({ ...inv, status: 'ISSUED' });
+      }
+      fetchInvoices();
+    } catch {
+      toast.error('فشل إصدار الفاتورة');
+    }
+  };
+
+  // Record payment — FIXED: uses PATCH with action: 'payment'
+  const handleRecordPayment = async () => {
+    if (!selected || !paymentAmount || +paymentAmount <= 0) {
+      toast.error('يرجى إدخال مبلغ صحيح');
+      return;
+    }
+    setPaying(true);
+    try {
+      const res = await fetch(`/api/invoices/${selected.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'payment',
+          paymentAmount: +paymentAmount,
+          paymentMethod,
+          paymentReference: paymentRef || undefined,
+        }),
+      });
+      if (!res.ok) throw new Error();
+      toast.success('تم تسجيل الدفعة بنجاح');
+      setShowPayment(false);
+      setPaymentAmount('');
+      setPaymentRef('');
+      // Refresh
+      const detailRes = await fetch(`/api/invoices/${selected.id}`);
+      if (detailRes.ok) {
+        const detailData = await detailRes.json();
+        setSelected(detailData.data || detailData);
+      }
+      fetchInvoices();
+    } catch {
+      toast.error('فشل تسجيل الدفعة');
+    } finally {
+      setPaying(false);
+    }
+  };
+
+  // Cancel invoice
+  const handleCancel = async (inv: Invoice) => {
+    try {
+      const res = await fetch(`/api/invoices/${inv.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'cancel' }),
+      });
+      if (!res.ok) throw new Error();
+      toast.success('تم إلغاء الفاتورة');
+      setSelected({ ...inv, status: 'CANCELLED' });
+      fetchInvoices();
+    } catch {
+      toast.error('فشل إلغاء الفاتورة');
+    }
+  };
+
+  // Download PDF — FIXED: uses proper endpoint
+  const handleDownloadPdf = async (inv: Invoice) => {
+    try {
+      const res = await fetch(`/api/invoices/${inv.id}/pdf`);
+      if (!res.ok) throw new Error();
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `${inv.invoiceNumber}.pdf`;
+      a.click();
+      URL.revokeObjectURL(url);
+      toast.success('تم تحميل PDF');
+    } catch {
+      toast.error('فشل تحميل PDF');
+    }
+  };
+
+  // Export Excel
+  const handleExport = () => {
+    const csvRows = [
+      ['رقم الفاتورة', 'النوع', 'العميل', 'الإجمالي', 'المدفوع', 'المستحق', 'الحالة', 'تاريخ الاستحقاق', 'الفرع'],
+      ...filtered.map(i => [
+        i.invoiceNumber,
+        INVOICE_TYPE_LABELS[i.type],
+        i.clientName,
+        fmt(i.totalAmount || 0),
+        fmt(i.paidAmount || 0),
+        fmt(i.balanceDue || 0),
+        STATUS_LABELS[i.status],
+        fmtDate(i.dueDate),
+        BRANCH_LABELS[i.branch],
+      ]),
+    ];
+    const csv = csvRows.map(r => r.join(',')).join('\n');
+    const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = 'invoices.csv'; a.click();
+    URL.revokeObjectURL(url);
+    toast.success('تم تصدير الفواتير');
+  };
+
+  const resetForm = () => {
+    setForm({ type: 'STORAGE', clientName: '', clientEmail: '', clientId: '', branch: 'DXB', paymentTerms: 'NET_30', periodStart: '', periodEnd: '', notes: '' });
+    setLineItems([{ lineNumber: 1, description: '', quantity: 1, unit: 'DAY', unitPrice: 0, lineTotal: 0 }]);
+  };
+
+  const updateLineItem = (idx: number, field: keyof InvoiceItem, value: string | number) => {
+    setLineItems(prev => prev.map((l, i) => {
+      if (i !== idx) return l;
+      const updated = { ...l, [field]: value };
+      // Recalculate lineTotal
+      updated.lineTotal = Math.round((updated.quantity * updated.unitPrice) * 100) / 100;
+      return updated;
+    }));
+  };
+
+  const removeLineItem = (idx: number) => {
+    if (lineItems.length <= 1) return;
+    setLineItems(prev => prev.filter((_, i) => i !== idx));
+  };
+
+  const formSubtotal = lineItems.reduce((s, l) => s + (l.quantity * l.unitPrice), 0);
+  const formVat = Math.round(formSubtotal * 0.05 * 100) / 100;
+  const formTotal = Math.round((formSubtotal + formVat) * 100) / 100;
+
+  // Get display items from selected invoice
+  const selectedItems = selected?.items || selected?.lineItems || [];
+
+  // ─── Render ─────────────────────────────────────────────────────────────
+  return (
+    <div className="space-y-6">
+      {/* Header */}
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100">
+            {t('header.invoices') ?? 'الفواتير والفوترة'}
+          </h1>
+          <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
+            إدارة الفواتير والمدفوعات والمتابعة — الإمارات (د.إ)
+          </p>
+        </div>
+        <div className="flex gap-2">
+          <Button variant="outline" size="sm" onClick={handleExport} className="gap-2">
+            <Download className="h-4 w-4" /> تصدير
+          </Button>
+          <Button size="sm" onClick={() => setShowAdd(true)} className="gap-2">
+            <Plus className="h-4 w-4" /> إضافة فاتورة
+          </Button>
+        </div>
+      </div>
+
+      {/* KPI Cards */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        {[
+          { label: 'إجمالي المستحق', value: `${fmt(kpis.outstanding)} د.إ`, icon: DollarSign, color: 'text-blue-600 dark:text-blue-400', bg: 'bg-blue-500/10' },
+          { label: 'فواتير متأخرة', value: kpis.overdue, icon: AlertCircle, color: 'text-red-600 dark:text-red-400', bg: 'bg-red-500/10' },
+          { label: 'مسودات', value: kpis.draft, icon: FileEdit, color: 'text-slate-600 dark:text-slate-400', bg: 'bg-slate-500/10' },
+          { label: 'مدفوعة هذا الشهر', value: `${fmt(kpis.paidThisMonth)} د.إ`, icon: CheckCircle2, color: 'text-emerald-600 dark:text-emerald-400', bg: 'bg-emerald-500/10' },
+        ].map((kpi, i) => (
+          <Card key={i} className="border-slate-200 dark:border-slate-800">
+            <CardContent className="p-4 flex items-center gap-4">
+              <div className={`p-2.5 rounded-lg ${kpi.bg}`}>
+                <kpi.icon className={`h-5 w-5 ${kpi.color}`} />
+              </div>
+              <div>
+                <p className="text-xs text-slate-500 dark:text-slate-400">{kpi.label}</p>
+                <p className="text-lg font-semibold text-slate-900 dark:text-slate-100">{kpi.value}</p>
+              </div>
+            </CardContent>
+          </Card>
+        ))}
+      </div>
+
+      {/* Aging Buckets — responsive */}
+      <Card className="border-slate-200 dark:border-slate-800">
+        <CardContent className="p-4">
+          <h3 className="text-sm font-medium text-slate-700 dark:text-slate-300 mb-3">توزيع المستحقات حسب الأجل</h3>
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
+            {([
+              { key: 'current', label: 'حالي', color: 'bg-emerald-500' },
+              { key: '1-30', label: '1-30 يوم', color: 'bg-blue-500' },
+              { key: '31-60', label: '31-60 يوم', color: 'bg-amber-500' },
+              { key: '61-90', label: '61-90 يوم', color: 'bg-orange-500' },
+              { key: '90+', label: '90+ يوم', color: 'bg-red-500' },
+            ] as const).map(b => (
+              <div key={b.key} className="text-center">
+                <div className={`h-2 rounded-full ${b.color} mb-2`} style={{ opacity: aging[b.key] > 0 ? 1 : 0.2 }} />
+                <p className="text-xs text-slate-500 dark:text-slate-400">{b.label}</p>
+                <p className="text-sm font-semibold text-slate-900 dark:text-slate-100">{fmt(aging[b.key])} <span className="text-xs font-normal text-slate-400">د.إ</span></p>
+              </div>
+            ))}
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Filters — responsive */}
+      <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center">
+        <div className="relative flex-1 min-w-0 sm:min-w-[200px] sm:max-w-sm">
+          <Search className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+          <Input placeholder="بحث برقم الفاتورة أو العميل..." value={search} onChange={e => setSearch(e.target.value)} className="pr-9" />
+        </div>
+        <Select value={statusFilter} onValueChange={setStatusFilter}>
+          <SelectTrigger className="w-full sm:w-[160px]"><SelectValue placeholder="الحالة" /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value="ALL">جميع الحالات</SelectItem>
+            {Object.entries(STATUS_LABELS).map(([k, v]) => <SelectItem key={k} value={k}>{v}</SelectItem>)}
+          </SelectContent>
+        </Select>
+        <Select value={typeFilter} onValueChange={setTypeFilter}>
+          <SelectTrigger className="w-full sm:w-[180px]"><SelectValue placeholder="النوع" /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value="ALL">جميع الأنواع</SelectItem>
+            {Object.entries(INVOICE_TYPE_LABELS).map(([k, v]) => <SelectItem key={k} value={k}>{v}</SelectItem>)}
+          </SelectContent>
+        </Select>
+      </div>
+
+      {/* Table — responsive with overflow and hidden columns */}
+      <Card className="border-slate-200 dark:border-slate-800 overflow-hidden">
+        {loading ? (
+          <div className="p-6 space-y-3">
+            {Array.from({ length: 5 }).map((_, i) => <Skeleton key={i} className="h-12 w-full" />)}
+          </div>
+        ) : filtered.length === 0 ? (
+          <div className="p-12 text-center text-slate-500 dark:text-slate-400">
+            <FileText className="h-12 w-12 mx-auto mb-3 opacity-30" />
+            <p>لا توجد فواتير</p>
+          </div>
+        ) : (
+          <div className="overflow-x-auto">
+            <Table>
+              <TableHeader>
+                <TableRow className="bg-slate-50 dark:bg-slate-900/50 hover:bg-slate-50 dark:hover:bg-slate-900/50">
+                  <TableHead className="text-slate-600 dark:text-slate-300">رقم الفاتورة</TableHead>
+                  <TableHead className="text-slate-600 dark:text-slate-300 hidden sm:table-cell">النوع</TableHead>
+                  <TableHead className="text-slate-600 dark:text-slate-300">العميل</TableHead>
+                  <TableHead className="text-slate-600 dark:text-slate-300">الإجمالي (د.إ)</TableHead>
+                  <TableHead className="text-slate-600 dark:text-slate-300">المستحق (د.إ)</TableHead>
+                  <TableHead className="text-slate-600 dark:text-slate-300">الحالة</TableHead>
+                  <TableHead className="text-slate-600 dark:text-slate-300 hidden md:table-cell">تاريخ الاستحقاق</TableHead>
+                  <TableHead className="text-slate-600 dark:text-slate-300 hidden lg:table-cell">الفرع</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {filtered.map(inv => (
+                  <TableRow
+                    key={inv.id}
+                    className="cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-800/50"
+                    onClick={() => setSelected(inv)}
+                  >
+                    <TableCell className="font-medium text-slate-900 dark:text-slate-100">{inv.invoiceNumber}</TableCell>
+                    <TableCell className="text-slate-700 dark:text-slate-300 hidden sm:table-cell">{INVOICE_TYPE_LABELS[inv.type]}</TableCell>
+                    <TableCell className="text-slate-700 dark:text-slate-300">{inv.clientName}</TableCell>
+                    <TableCell className="font-mono text-slate-900 dark:text-slate-100">{fmt(inv.totalAmount || 0)}</TableCell>
+                    <TableCell className="font-mono text-slate-900 dark:text-slate-100">{fmt(inv.balanceDue || 0)}</TableCell>
+                    <TableCell>
+                      <Badge variant="outline" className={`${STATUS_VARIANT[inv.status]} text-xs`}>
+                        {STATUS_LABELS[inv.status]}
+                      </Badge>
+                    </TableCell>
+                    <TableCell className="text-slate-600 dark:text-slate-400 hidden md:table-cell">{fmtDate(inv.dueDate)}</TableCell>
+                    <TableCell className="text-slate-600 dark:text-slate-400 hidden lg:table-cell">{BRANCH_LABELS[inv.branch]}</TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
+        )}
+      </Card>
+
+      {/* Add Invoice Dialog — responsive */}
+      <Dialog open={showAdd} onOpenChange={setShowAdd}>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto" dir="rtl">
+          <DialogHeader>
+            <DialogTitle className="text-slate-900 dark:text-slate-100">إضافة فاتورة جديدة</DialogTitle>
+            <DialogDescription className="text-slate-500 dark:text-slate-400">أدخل بيانات الفاتورة — ضريبة القيمة المضافة 5% (الإمارات)</DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-4 py-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label className="text-slate-700 dark:text-slate-300">نوع الفاتورة</Label>
+                <Select value={form.type} onValueChange={v => setForm(p => ({ ...p, type: v as InvoiceType }))}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    {Object.entries(INVOICE_TYPE_LABELS).map(([k, v]) => <SelectItem key={k} value={k}>{v}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label className="text-slate-700 dark:text-slate-300">شروط الدفع</Label>
+                <Select value={form.paymentTerms} onValueChange={v => setForm(p => ({ ...p, paymentTerms: v as PaymentTerms }))}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    {Object.entries(PAYMENT_TERMS_LABELS).map(([k, v]) => <SelectItem key={k} value={k}>{v}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label className="text-slate-700 dark:text-slate-300">اسم العميل *</Label>
+                <Input value={form.clientName} onChange={e => setForm(p => ({ ...p, clientName: e.target.value }))} placeholder="اسم العميل" />
+              </div>
+              <div className="space-y-2">
+                <Label className="text-slate-700 dark:text-slate-300">بريد العميل</Label>
+                <Input value={form.clientEmail} onChange={e => setForm(p => ({ ...p, clientEmail: e.target.value }))} placeholder="email@example.com" type="email" />
+              </div>
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+              <div className="space-y-2">
+                <Label className="text-slate-700 dark:text-slate-300">الفرع</Label>
+                <Select value={form.branch} onValueChange={v => setForm(p => ({ ...p, branch: v as Branch }))}>
+                  <SelectTrigger><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    {Object.entries(BRANCH_LABELS).map(([k, v]) => <SelectItem key={k} value={k}>{v}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label className="text-slate-700 dark:text-slate-300">بداية الفترة *</Label>
+                <Input type="date" value={form.periodStart} onChange={e => setForm(p => ({ ...p, periodStart: e.target.value }))} />
+              </div>
+              <div className="space-y-2">
+                <Label className="text-slate-700 dark:text-slate-300">نهاية الفترة *</Label>
+                <Input type="date" value={form.periodEnd} onChange={e => setForm(p => ({ ...p, periodEnd: e.target.value }))} />
+              </div>
+            </div>
+
+            {/* Line Items — responsive layout */}
+            <div className="space-y-3">
+              <div className="flex items-center justify-between">
+                <Label className="text-slate-700 dark:text-slate-300">البنود</Label>
+                <Button variant="ghost" size="sm" onClick={() => setLineItems(p => [...p, { lineNumber: p.length + 1, description: '', quantity: 1, unit: 'DAY', unitPrice: 0, lineTotal: 0 }])} className="gap-1 text-xs">
+                  <Plus className="h-3 w-3" /> إضافة بند
+                </Button>
+              </div>
+              {lineItems.map((li, idx) => (
+                <div key={idx} className="grid grid-cols-1 sm:grid-cols-12 gap-2 items-end border-b border-slate-100 dark:border-slate-800 pb-3">
+                  <div className="sm:col-span-4">
+                    <Label className="text-xs text-slate-500 dark:text-slate-400">الوصف</Label>
+                    <Input value={li.description} onChange={e => updateLineItem(idx, 'description', e.target.value)} placeholder="وصف البند" className="mt-1" />
+                  </div>
+                  <div className="sm:col-span-2">
+                    <Label className="text-xs text-slate-500 dark:text-slate-400">الكمية</Label>
+                    <Input type="number" value={li.quantity} onChange={e => updateLineItem(idx, 'quantity', +e.target.value)} min={0} className="mt-1" />
+                  </div>
+                  <div className="sm:col-span-2">
+                    <Label className="text-xs text-slate-500 dark:text-slate-400">الوحدة</Label>
+                    <Select value={li.unit} onValueChange={v => updateLineItem(idx, 'unit', v)}>
+                      <SelectTrigger className="mt-1"><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="DAY">يوم</SelectItem>
+                        <SelectItem value="KG">كجم</SelectItem>
+                        <SelectItem value="ITEM">قطعة</SelectItem>
+                        <SelectItem value="LIFT">رفع</SelectItem>
+                        <SelectItem value="CONTAINER">حاوية</SelectItem>
+                        <SelectItem value="CBM">م³</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="sm:col-span-3">
+                    <Label className="text-xs text-slate-500 dark:text-slate-400">سعر الوحدة (د.إ)</Label>
+                    <Input type="number" value={li.unitPrice} onChange={e => updateLineItem(idx, 'unitPrice', +e.target.value)} min={0} step="0.01" className="mt-1" />
+                  </div>
+                  <div className="sm:col-span-1 flex justify-center">
+                    <Button variant="ghost" size="icon" onClick={() => removeLineItem(idx)} disabled={lineItems.length <= 1} className="mt-5 h-8 w-8">
+                      <Trash2 className="h-4 w-4 text-slate-400" />
+                    </Button>
+                  </div>
+                </div>
+              ))}
+              <div className="flex flex-col items-end pt-2 border-t border-slate-200 dark:border-slate-700 gap-1">
+                <div className="flex gap-4 text-sm">
+                  <span className="text-slate-600 dark:text-slate-400">المجموع الفرعي: </span>
+                  <span className="font-semibold text-slate-900 dark:text-slate-100">{fmt(formSubtotal)} د.إ</span>
+                </div>
+                <div className="flex gap-4 text-sm">
+                  <span className="text-slate-600 dark:text-slate-400">ضريبة القيمة المضافة (5%): </span>
+                  <span className="font-semibold text-slate-900 dark:text-slate-100">{fmt(formVat)} د.إ</span>
+                </div>
+                <div className="flex gap-4 text-sm font-bold">
+                  <span className="text-slate-700 dark:text-slate-300">الإجمالي: </span>
+                  <span className="text-slate-900 dark:text-slate-100">{fmt(formTotal)} د.إ</span>
+                </div>
+              </div>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => { setShowAdd(false); resetForm(); }}>إلغاء</Button>
+            <Button onClick={handleAdd} disabled={saving} className="gap-2">
+              {saving && <Loader2 className="h-4 w-4 animate-spin" />}
+              {saving ? 'جاري الإنشاء...' : 'إنشاء فاتورة'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Detail Side Sheet — responsive width */}
+      <Sheet open={!!selected} onOpenChange={open => !open && setSelected(null)}>
+        <SheetContent side="left" className="w-full sm:w-[480px] sm:max-w-[480px] overflow-y-auto" dir="rtl">
+          {selected && (
+            <>
+              <SheetHeader>
+                <SheetTitle className="text-slate-900 dark:text-slate-100 flex items-center gap-2">
+                  <FileText className="h-5 w-5" />
+                  {selected.invoiceNumber}
+                </SheetTitle>
+                <SheetDescription className="text-slate-500 dark:text-slate-400">
+                  {INVOICE_TYPE_LABELS[selected.type]} — {selected.clientName}
+                </SheetDescription>
+              </SheetHeader>
+
+              <div className="py-6 space-y-5">
+                {/* Status badge */}
+                <div className="flex items-center gap-3 flex-wrap">
+                  <Badge variant="outline" className={`${STATUS_VARIANT[selected.status]} text-sm px-3 py-1`}>
+                    {STATUS_LABELS[selected.status]}
+                  </Badge>
+                  <span className="text-sm text-slate-500 dark:text-slate-400">
+                    استحقاق: {fmtDate(selected.dueDate)}
+                  </span>
+                </div>
+
+                {/* Details grid — responsive */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
+                  {[
+                    ['العميل', selected.clientName],
+                    ['البريد', selected.clientEmail ?? '—'],
+                    ['الفرع', BRANCH_LABELS[selected.branch]],
+                    ['شروط الدفع', PAYMENT_TERMS_LABELS[selected.paymentTerms]],
+                    ['المجموع الفرعي', `${fmt(selected.subtotal || 0)} د.إ`],
+                    ['ضريبة القيمة المضافة (5%)', `${fmt(selected.taxAmount || 0)} د.إ`],
+                    ['الإجمالي', `${fmt(selected.totalAmount || 0)} د.إ`],
+                    ['المدفوع', `${fmt(selected.paidAmount || 0)} د.إ`],
+                    ['المستحق', `${fmt(selected.balanceDue || 0)} د.إ`],
+                    ['تاريخ الإصدار', fmtDate(selected.issueDate)],
+                    ['تاريخ الإنشاء', fmtDate(selected.createdAt)],
+                  ].map(([label, value], i) => (
+                    <div key={i}>
+                      <p className="text-slate-500 dark:text-slate-400">{label}</p>
+                      <p className="font-medium text-slate-900 dark:text-slate-100">{value}</p>
+                    </div>
+                  ))}
+                </div>
+
+                {/* Line Items */}
+                {selectedItems.length > 0 && (
+                  <div>
+                    <h4 className="text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">البنود</h4>
+                    <div className="rounded-lg border border-slate-200 dark:border-slate-700 overflow-hidden">
+                      <div className="overflow-x-auto">
+                        <Table>
+                          <TableHeader>
+                            <TableRow className="bg-slate-50 dark:bg-slate-900/50">
+                              <TableHead className="text-xs text-slate-500 dark:text-slate-400">الوصف</TableHead>
+                              <TableHead className="text-xs text-slate-500 dark:text-slate-400 text-center">الكمية</TableHead>
+                              <TableHead className="text-xs text-slate-500 dark:text-slate-400 text-center hidden sm:table-cell">الوحدة</TableHead>
+                              <TableHead className="text-xs text-slate-500 dark:text-slate-400 text-left">سعر الوحدة</TableHead>
+                              <TableHead className="text-xs text-slate-500 dark:text-slate-400 text-left">الإجمالي</TableHead>
+                            </TableRow>
+                          </TableHeader>
+                          <TableBody>
+                            {selectedItems.map((li: InvoiceItem, i: number) => (
+                              <TableRow key={i}>
+                                <TableCell className="text-sm text-slate-700 dark:text-slate-300">{li.description}</TableCell>
+                                <TableCell className="text-sm text-center text-slate-700 dark:text-slate-300">{li.quantity}</TableCell>
+                                <TableCell className="text-sm text-center text-slate-700 dark:text-slate-300 hidden sm:table-cell">{li.unit}</TableCell>
+                                <TableCell className="text-sm font-mono text-slate-900 dark:text-slate-100">{fmt(li.unitPrice)}</TableCell>
+                                <TableCell className="text-sm font-mono font-semibold text-slate-900 dark:text-slate-100">{fmt(li.lineTotal || (li.quantity * li.unitPrice))}</TableCell>
+                              </TableRow>
+                            ))}
+                          </TableBody>
+                        </Table>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* Payments */}
+                {selected.payments && selected.payments.length > 0 && (
+                  <div>
+                    <h4 className="text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">المدفوعات</h4>
+                    <div className="space-y-2">
+                      {selected.payments.map((p: InvoicePayment, i: number) => (
+                        <div key={i} className="flex items-center justify-between text-sm p-2 rounded-lg bg-slate-50 dark:bg-slate-800/50">
+                          <div>
+                            <span className="font-medium text-slate-900 dark:text-slate-100">{fmt(p.amount)} د.إ</span>
+                            <span className="text-slate-500 dark:text-slate-400 mx-2">—</span>
+                            <span className="text-slate-600 dark:text-slate-400">{PAYMENT_METHOD_LABELS[p.method] || p.method}</span>
+                            {p.reference && <span className="text-slate-500 dark:text-slate-400 mx-2">({p.reference})</span>}
+                          </div>
+                          <span className="text-xs text-slate-400">{fmtDate(p.paymentDate)}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Actions */}
+              <SheetFooter className="flex-col gap-2">
+                {selected.status === 'DRAFT' && (
+                  <Button className="w-full gap-2" onClick={() => handleIssue(selected)}>
+                    <Send className="h-4 w-4" /> إصدار الفاتورة
+                  </Button>
+                )}
+                {['ISSUED', 'PARTIAL', 'OVERDUE'].includes(selected.status) && (
+                  <Button variant="outline" className="w-full gap-2" onClick={() => {
+                    setPaymentAmount(String(selected.balanceDue || 0));
+                    setShowPayment(true);
+                  }}>
+                    <CreditCard className="h-4 w-4" /> تسجيل دفعة
+                  </Button>
+                )}
+                {selected.status === 'DRAFT' && (
+                  <Button variant="outline" className="w-full gap-2 text-red-600 hover:text-red-700" onClick={() => handleCancel(selected)}>
+                    <X className="h-4 w-4" /> إلغاء الفاتورة
+                  </Button>
+                )}
+                <Button variant="outline" className="w-full gap-2" onClick={() => handleDownloadPdf(selected)}>
+                  <Download className="h-4 w-4" /> تحميل PDF
+                </Button>
+              </SheetFooter>
+            </>
+          )}
+        </SheetContent>
+      </Sheet>
+
+      {/* Payment Dialog */}
+      <Dialog open={showPayment} onOpenChange={setShowPayment}>
+        <DialogContent dir="rtl" className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="text-slate-900 dark:text-slate-100">تسجيل دفعة</DialogTitle>
+            <DialogDescription className="text-slate-500 dark:text-slate-400">
+              الفاتورة: {selected?.invoiceNumber} — المستحق: {fmt(selected?.balanceDue || 0)} د.إ
+            </DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-4 py-4">
+            <div className="space-y-2">
+              <Label className="text-slate-700 dark:text-slate-300">مبلغ الدفعة (د.إ) *</Label>
+              <Input
+                type="number"
+                value={paymentAmount}
+                onChange={e => setPaymentAmount(e.target.value)}
+                min={0}
+                step="0.01"
+                max={selected?.balanceDue || 0}
+                placeholder="0.00"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label className="text-slate-700 dark:text-slate-300">طريقة الدفع</Label>
+              <Select value={paymentMethod} onValueChange={setPaymentMethod}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  {Object.entries(PAYMENT_METHOD_LABELS).map(([k, v]) => (
+                    <SelectItem key={k} value={k}>{v}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label className="text-slate-700 dark:text-slate-300">رقم المرجع</Label>
+              <Input value={paymentRef} onChange={e => setPaymentRef(e.target.value)} placeholder="رقم الشيك أو التحويل" />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowPayment(false)}>إلغاء</Button>
+            <Button onClick={handleRecordPayment} disabled={paying} className="gap-2">
+              {paying && <Loader2 className="h-4 w-4 animate-spin" />}
+              تسجيل الدفعة
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </div>
+  );
+}

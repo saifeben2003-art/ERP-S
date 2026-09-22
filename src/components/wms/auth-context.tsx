@@ -68,8 +68,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const refreshUser = useCallback(async () => { /* NextAuth JWT auto-refreshes */ }, []);
 
   const login = useCallback(async (email: string, password: string) => {
-    const result = await signIn('credentials', { email, password, redirect: false });
-    if (result?.error) throw new Error('Invalid email or password');
+    const result = await signIn('credentials', { email, password, redirect: false, callbackUrl: '/' });
+    if (result?.error) {
+      console.error('Login error:', result.error, result);
+      throw new Error('Invalid email or password');
+    }
   }, []);
 
   const register = useCallback(async (name: string, email: string, password: string, lang?: string) => {

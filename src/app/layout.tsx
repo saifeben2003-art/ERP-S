@@ -5,6 +5,7 @@ import "./globals.css";
 import { Toaster } from "@/components/ui/sonner";
 import { StoreInitializer } from "@/components/store-initializer";
 import { ErrorBoundary } from "@/components/error-boundary";
+import { Providers } from "@/components/providers";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -31,6 +32,13 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="ar" dir="rtl" suppressHydrationWarning>
+      <head>
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `try{var s=JSON.parse(localStorage.getItem('wms-app-store'));if(s&&s.state&&s.state.locale){document.documentElement.lang=s.state.locale;document.documentElement.dir=s.state.locale==='ar'?'rtl':'ltr'}}catch(e){}`,
+          }}
+        />
+      </head>
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased bg-background text-foreground`}
       >
@@ -42,7 +50,9 @@ export default function RootLayout({
         >
           <ErrorBoundary>
             <StoreInitializer />
-            {children}
+            <Providers>
+              {children}
+            </Providers>
             <Toaster richColors position="top-center" />
           </ErrorBoundary>
         </ThemeProvider>

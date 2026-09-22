@@ -165,10 +165,10 @@ function ShipmentCard({
           {item.weight && (
             <span className="font-medium dark:text-slate-300">{item.weight} kg</span>
           )}
-          {item.lastMovedAt && (
+          {item.dispatchedAt && (
             <span className="flex items-center gap-1 text-slate-400">
               <Clock className="h-3 w-3" />
-              {formatDateTime(item.lastMovedAt)}
+              {formatDateTime(item.dispatchedAt)}
             </span>
           )}
         </div>
@@ -217,27 +217,27 @@ function MovementTimeline({ movements }: { movements: Movement[] }) {
                 </span>
                 <span className="flex items-center gap-1 text-xs text-slate-400">
                   <Clock className="h-3 w-3" />
-                  {formatDateTime(m.timestamp ?? m.createdAt ?? '')}
+                  {formatDateTime(m.createdAt ?? '')}
                 </span>
               </div>
 
               {(m.fromLocation || m.toLocation) && (
                 <div className="mt-1.5 flex flex-wrap items-center gap-1.5 text-sm dark:text-slate-300">
-                  {m.fromLocation && <span>{m.fromLocation}</span>}
+                  {m.fromLocation && <span>{m.fromLocation.code}</span>}
                   {m.fromLocation && m.toLocation && (
                     <ArrowRight className="h-3.5 w-3.5 text-slate-400" />
                   )}
-                  {m.toLocation && <span>{m.toLocation}</span>}
+                  {m.toLocation && <span>{m.toLocation.code}</span>}
                 </div>
               )}
 
-              {m.operator && (
+              {m.operatorName && (
                 <p className="mt-1 text-xs text-slate-500 dark:text-slate-400">
-                  Operator: {m.operator}
+                  Operator: {m.operatorName}
                 </p>
               )}
-              {m.notes && (
-                <p className="mt-1 text-xs italic text-slate-400">{m.notes}</p>
+              {m.remarks && (
+                <p className="mt-1 text-xs italic text-slate-400">{m.remarks}</p>
               )}
             </div>
           </div>
@@ -529,8 +529,8 @@ export function TrackingPage() {
                     </p>
                   )}
                   {selectedCargo.weight && <p>Weight: {selectedCargo.weight} kg</p>}
-                  {selectedCargo.dimensions && (
-                    <p>Dimensions: {selectedCargo.dimensions}</p>
+                  {selectedCargo.length && selectedCargo.width && selectedCargo.height && (
+                    <p>Dimensions: {selectedCargo.length}×{selectedCargo.width}×{selectedCargo.height} m</p>
                   )}
                 </CardContent>
               </Card>
@@ -591,8 +591,8 @@ export function TrackingPage() {
                     </p>
                   )}
                   {selectedCargo.weight && <p>Weight: {selectedCargo.weight} kg</p>}
-                  {selectedCargo.dimensions && (
-                    <p>Dimensions: {selectedCargo.dimensions}</p>
+                  {selectedCargo.length && selectedCargo.width && selectedCargo.height && (
+                    <p>Dimensions: {selectedCargo.length}×{selectedCargo.width}×{selectedCargo.height} m</p>
                   )}
                 </CardContent>
               </Card>

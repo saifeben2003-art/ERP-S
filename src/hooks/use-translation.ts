@@ -1,5 +1,5 @@
 import { useI18nStore, type Language } from '@/lib/i18n-store';
-import { translations } from '@/lib/translations';
+import translations from '@/lib/translations';
 
 function getNestedValue(obj: unknown, path: string): string {
   if (!obj || typeof obj !== 'object') return path;

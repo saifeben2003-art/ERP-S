@@ -118,6 +118,20 @@ exports.Prisma.TransactionIsolationLevel = makeStrictEnum({
   Serializable: 'Serializable'
 });
 
+exports.Prisma.UserScalarFieldEnum = {
+  id: 'id',
+  email: 'email',
+  passwordHash: 'passwordHash',
+  name: 'name',
+  role: 'role',
+  avatar: 'avatar',
+  language: 'language',
+  isActive: 'isActive',
+  lastLogin: 'lastLogin',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
+};
+
 exports.Prisma.CargoItemScalarFieldEnum = {
   id: 'id',
   cargoCode: 'cargoCode',
@@ -278,6 +292,65 @@ exports.Prisma.SyncLogScalarFieldEnum = {
   updatedAt: 'updatedAt'
 };
 
+exports.Prisma.InvoiceScalarFieldEnum = {
+  id: 'id',
+  invoiceNumber: 'invoiceNumber',
+  type: 'type',
+  status: 'status',
+  clientId: 'clientId',
+  clientName: 'clientName',
+  clientEmail: 'clientEmail',
+  clientAddress: 'clientAddress',
+  periodStart: 'periodStart',
+  periodEnd: 'periodEnd',
+  issueDate: 'issueDate',
+  dueDate: 'dueDate',
+  subtotal: 'subtotal',
+  taxRate: 'taxRate',
+  taxAmount: 'taxAmount',
+  totalAmount: 'totalAmount',
+  paidAmount: 'paidAmount',
+  balanceDue: 'balanceDue',
+  currency: 'currency',
+  projectId: 'projectId',
+  poReference: 'poReference',
+  contractRef: 'contractRef',
+  paymentTerms: 'paymentTerms',
+  notes: 'notes',
+  branch: 'branch',
+  createdBy: 'createdBy',
+  approvedBy: 'approvedBy',
+  approvedAt: 'approvedAt',
+  createdAt: 'createdAt',
+  updatedAt: 'updatedAt'
+};
+
+exports.Prisma.InvoiceItemScalarFieldEnum = {
+  id: 'id',
+  invoiceId: 'invoiceId',
+  lineNumber: 'lineNumber',
+  description: 'description',
+  quantity: 'quantity',
+  unit: 'unit',
+  unitPrice: 'unitPrice',
+  discountPercent: 'discountPercent',
+  lineTotal: 'lineTotal',
+  cargoItemId: 'cargoItemId',
+  locationId: 'locationId',
+  equipmentId: 'equipmentId',
+  movementId: 'movementId'
+};
+
+exports.Prisma.InvoicePaymentScalarFieldEnum = {
+  id: 'id',
+  invoiceId: 'invoiceId',
+  amount: 'amount',
+  method: 'method',
+  reference: 'reference',
+  paymentDate: 'paymentDate',
+  notes: 'notes'
+};
+
 exports.Prisma.SortOrder = {
   asc: 'asc',
   desc: 'desc'
@@ -290,13 +363,17 @@ exports.Prisma.NullsOrder = {
 
 
 exports.Prisma.ModelName = {
+  User: 'User',
   CargoItem: 'CargoItem',
   Location: 'Location',
   Project: 'Project',
   Equipment: 'Equipment',
   Movement: 'Movement',
   SAPIntegration: 'SAPIntegration',
-  SyncLog: 'SyncLog'
+  SyncLog: 'SyncLog',
+  Invoice: 'Invoice',
+  InvoiceItem: 'InvoiceItem',
+  InvoicePayment: 'InvoicePayment'
 };
 
 /**

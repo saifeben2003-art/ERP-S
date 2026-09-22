@@ -1,7 +1,29 @@
 import { NextRequest, NextResponse } from 'next/server';
 import bcrypt from 'bcryptjs';
+import { SignJWT, jwtVerify } from 'jose';
 import { getServerSession } from 'next-auth';
 import { authOptions } from './nextauth';
+
+// ==================== JWT Token (jose) ====================
+const JWT_SECRET = new TextEncoder().encode(process.env.NEXTAUTH_SECRET || 'heavy-lift-wms-secret-key-change-in-production');
+const JWT_EXPIRES_IN = '24h';
+
+export async function generateToken(payload: Record<string, unknown>): Promise<string> {
+  return new SignJWT(payload)
+    .setProtectedHeader({ alg: 'HS256' })
+    .setIssuedAt()
+    .setExpirationTime(JWT_EXPIRES_IN)
+    .sign(JWT_SECRET);
+}
+
+export async function verifyToken(token: string): Promise<Record<string, unknown> | null> {
+  try {
+    const { payload } = await jwtVerify(token, JWT_SECRET);
+    return payload as Record<string, unknown>;
+  } catch {
+    return null;
+  }
+}
 
 // ==================== Password Hashing (bcryptjs) ====================
 const BCRYPT_ROUNDS = 12;

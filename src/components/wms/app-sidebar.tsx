@@ -1,6 +1,6 @@
 'use client';
 
-import { Box, LayoutDashboard, Package, FolderKanban, MapPin, Wrench, ArrowLeftRight, Plug, Menu, ChevronLeft, ChevronRight, BarChart3, ScanLine } from 'lucide-react';
+import { Box, LayoutDashboard, Package, FolderKanban, MapPin, Wrench, ArrowLeftRight, Plug, Menu, ChevronLeft, ChevronRight, BarChart3, ScanLine, FileText, Shield } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
@@ -27,13 +27,18 @@ const navItems: NavItem[] = [
   { page: 'locations', labelKey: 'nav.locations', icon: MapPin },
   { page: 'equipment', labelKey: 'nav.equipment', icon: Wrench },
   { page: 'movements', labelKey: 'nav.movements', icon: ArrowLeftRight },
+  { page: 'invoices', labelKey: 'nav.invoices', icon: FileText },
   { page: 'scanner', labelKey: 'nav.scanner', icon: ScanLine },
   { page: 'reports', labelKey: 'nav.reports', icon: BarChart3 },
+  { page: 'standards', labelKey: 'nav.standards', icon: Shield },
   { page: 'integration', labelKey: 'nav.sapIntegration', icon: Plug },
 ];
 
 function NavButton({ item, active, onClick, collapsed, t }: { item: NavItem; active: boolean; onClick: () => void; collapsed: boolean; t: (k: string) => string }) {
   const Icon = item.icon;
+  const locale = useAppStore((s) => s.locale);
+  // Sidebar is at inline-start; tooltip should appear on inline-end side
+  const tooltipSide = locale === 'ar' ? 'left' : 'right';
 
   if (collapsed) {
     return (
@@ -51,7 +56,7 @@ function NavButton({ item, active, onClick, collapsed, t }: { item: NavItem; act
             <Icon className="h-5 w-5" />
           </button>
         </TooltipTrigger>
-        <TooltipContent side="left" className="dark:border-slate-700 border-slate-200 dark:bg-slate-800 bg-white dark:text-slate-200 text-slate-700">
+        <TooltipContent side={tooltipSide} className="dark:border-slate-700 border-slate-200 dark:bg-slate-800 bg-white dark:text-slate-200 text-slate-700">
           {t(item.labelKey)}
         </TooltipContent>
       </Tooltip>
@@ -80,7 +85,10 @@ function NavButton({ item, active, onClick, collapsed, t }: { item: NavItem; act
 export function AppSidebar({ activePage, onPageChange }: SidebarProps) {
   const collapsed = useAppStore((s) => s.sidebarCollapsed);
   const setCollapsed = useAppStore((s) => s.setSidebarCollapsed);
+  const locale = useAppStore((s) => s.locale);
   const { t } = useTranslation();
+  // Sidebar is at inline-start; sheet should open from the same side
+  const sheetSide = locale === 'ar' ? 'right' : 'left';
 
   return (
     <>
@@ -92,9 +100,9 @@ export function AppSidebar({ activePage, onPageChange }: SidebarProps) {
               <Menu className="h-5 w-5" />
             </Button>
           </SheetTrigger>
-          <SheetContent side="right" className="w-72 dark:border-slate-800 border-slate-200 dark:bg-slate-900 bg-white p-0">
+          <SheetContent side={sheetSide} className="w-72 dark:border-slate-800 border-slate-200 dark:bg-slate-900 bg-white p-0">
             <SheetHeader className="dark:border-b-slate-800 border-b-slate-200 px-4 py-4">
-              <SheetTitle className="flex items-center gap-3 text-right">
+              <SheetTitle className={cn('flex items-center gap-3', locale === 'ar' ? 'text-right' : 'text-left')}>
                 <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-amber-500/15">
                   <Box className="h-5 w-5 text-amber-400" />
                 </div>
@@ -132,11 +140,11 @@ export function AppSidebar({ activePage, onPageChange }: SidebarProps) {
         </div>
       </div>
 
-      {/* Desktop sidebar - RIGHT side for RTL */}
+      {/* Desktop sidebar — uses logical props: start-0 = right in RTL, left in LTR */}
       <aside
         className={cn(
-          'fixed inset-y-0 right-0 z-30 hidden lg:flex flex-col transition-all duration-300',
-          'dark:border-l-slate-800 border-l-slate-200 dark:bg-slate-900 bg-white',
+          'fixed inset-y-0 start-0 z-30 hidden lg:flex flex-col transition-all duration-300',
+          'dark:border-e-slate-800 border-e-slate-200 dark:bg-slate-900 bg-white',
           collapsed ? 'w-[68px]' : 'w-64'
         )}
       >
@@ -175,8 +183,8 @@ export function AppSidebar({ activePage, onPageChange }: SidebarProps) {
             onClick={() => setCollapsed(!collapsed)}
             className="w-full justify-center dark:text-slate-500 text-slate-400 dark:hover:text-slate-300 hover:text-slate-600 dark:hover:bg-slate-800 hover:bg-slate-100"
           >
-            {collapsed ? <ChevronLeft className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
-            {!collapsed && <span className="mr-2 text-xs">{t('common.collapse')}</span>}
+            {collapsed ? <ChevronRight className="h-4 w-4 rtl:scale-x-[-1]" /> : <ChevronLeft className="h-4 w-4 rtl:scale-x-[-1]" />}
+            {!collapsed && <span className="me-2 text-xs">{t('common.collapse')}</span>}
           </Button>
         </div>
 

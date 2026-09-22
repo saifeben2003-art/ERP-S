@@ -703,7 +703,7 @@ export function CargoPage() {
                       </h3>
                       <span className="text-[10px] dark:text-slate-500 text-slate-400">4 files</span>
                     </div>
-                    <div className="grid grid-cols-2 gap-2.5">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
                       {[1, 2, 3].map((idx) => (
                         <div
                           key={idx}
@@ -776,7 +776,7 @@ export function CargoPage() {
                       <Sparkles className="h-3.5 w-3.5 dark:text-amber-400 text-amber-500" />
                       {t('detail.quickActions') || 'Quick Actions'}
                     </h3>
-                    <div className="grid grid-cols-3 gap-2">
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
                       <button
                         onClick={() => setShowTransfer(true)}
                         className="flex flex-col items-center gap-2 p-3 rounded-xl dark:bg-slate-800/60 bg-slate-50 dark:hover:bg-slate-800 hover:bg-slate-100 transition-all duration-200 group cursor-pointer border dark:border-transparent border-slate-200 dark:hover:border-amber-500/20 hover:border-amber-400/30"
@@ -893,7 +893,7 @@ export function CargoPage() {
                       <Tag className="h-3.5 w-3.5 dark:text-cyan-400 text-cyan-500" />
                       {t('detail.info.specifications')}
                     </h3>
-                    <div className="grid grid-cols-2 gap-3 text-sm">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
                       <div>
                         <span className="dark:text-slate-500 text-slate-400 text-xs">{t('cargo.details.weight')}</span>
                         <p className="dark:text-slate-100 text-slate-900 font-semibold mt-0.5">{detailCargo.weight.toLocaleString()} kg</p>
@@ -1011,7 +1011,7 @@ export function CargoPage() {
                         </div>
                       </div>
                       {/* Dimension values */}
-                      <div className="flex-1 grid grid-cols-3 gap-2">
+                      <div className="flex-1 grid grid-cols-1 sm:grid-cols-3 gap-2">
                         <div className="text-center p-2 rounded-lg dark:bg-slate-800/60 bg-slate-50">
                           <span className="text-[9px] uppercase font-semibold dark:text-amber-400 text-amber-600 tracking-wider">L</span>
                           <p className="text-sm font-bold dark:text-slate-100 text-slate-900 font-mono mt-0.5">{detailCargo.length}</p>
@@ -1080,7 +1080,7 @@ export function CargoPage() {
                       <Tags className="h-3.5 w-3.5 dark:text-slate-400 text-slate-500" />
                       {t('detail.info.references')}
                     </h3>
-                    <div className="grid grid-cols-2 gap-3 text-sm">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
                       <div>
                         <span className="dark:text-slate-500 text-slate-400 text-xs">{t('cargo.details.project')}</span>
                         <p className="dark:text-slate-100 text-slate-900 mt-0.5">{detailCargo.project?.name || t('cargo.details.unassigned')}</p>
@@ -1107,7 +1107,7 @@ export function CargoPage() {
                       <Ship className="h-3.5 w-3.5 dark:text-slate-400 text-slate-500" />
                       {portLabels.transportMode} / معلومات الميناء
                     </h3>
-                    <div className="grid grid-cols-2 gap-3 text-sm">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
                       {detailCargo.containerNumber && (
                         <div>
                           <span className="dark:text-slate-500 text-slate-400 text-xs">{portLabels.container}{detailCargo.containerType && detailCargo.containerType !== 'NONE' ? ` — ${detailCargo.containerType}` : ''}</span>
@@ -1334,7 +1334,7 @@ export function CargoPage() {
             </div>
             <div>
               <Label className="dark:text-slate-400 text-slate-600">{t('cargo.form.dimensions')}</Label>
-              <div className="grid grid-cols-3 gap-2 mt-1">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 mt-1">
                 <Input placeholder="L" type="number" value={form.length} onChange={(e) => setForm({ ...form, length: e.target.value })}
                   className="dark:border-slate-700 border-slate-300 dark:bg-slate-800 bg-white dark:text-slate-200 text-slate-900 text-center" />
                 <Input placeholder="W" type="number" value={form.width} onChange={(e) => setForm({ ...form, width: e.target.value })}

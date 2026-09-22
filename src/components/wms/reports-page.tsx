@@ -4,8 +4,9 @@ import { useEffect, useState, useCallback, useMemo } from 'react';
 import {
   BarChart3, TrendingUp, Clock, AlertTriangle, Package,
   ArrowDownToLine, ArrowUpFromLine, Users, Weight,
-  Download, Calendar, Filter, RotateCcw, Loader2, FileJson,
+  Download, Calendar, Filter, RotateCcw, Loader2,
   Activity, Warehouse, ArrowRightLeft,
+  FileText, FileSpreadsheet, FileType,
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -18,6 +19,9 @@ import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from '@/components/ui/table';
 import { toast } from 'sonner';
+import {
+  DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import { useTranslation, translateStatus, translateCategory, translateMovementType } from '@/lib/translations';
 import type { ReportData } from '@/types/wms';
 
@@ -280,19 +284,20 @@ export function ReportsPage() {
     setEndDate(todayISO());
   };
 
-  // Export as JSON
-  const handleExport = async () => {
+  // Export report in specified format and type
+  const handleExportReport = async (reportType: string, format: string) => {
     setExporting(true);
     try {
-      const params = new URLSearchParams({ period, startDate, endDate });
-      const res = await fetch(`/api/reports?${params}`);
+      const res = await fetch(`/api/reports/${reportType}?format=${format}`);
       if (!res.ok) throw new Error('Failed');
-      const data = await res.json();
-      const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+      const blob = await res.blob();
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = `wms-report-${startDate}-${endDate}.json`;
+
+      // Determine file extension
+      const ext = format === 'excel' ? 'xlsx' : format === 'word' ? 'docx' : 'pdf';
+      a.download = `${reportType}-report-${new Date().toISOString().split('T')[0]}.${ext}`;
       a.click();
       URL.revokeObjectURL(url);
       toast.success(lt('reports.exportSuccess'));
@@ -357,14 +362,115 @@ export function ReportsPage() {
           <h1 className="text-2xl font-bold dark:text-slate-100 text-slate-900">{lt('reports.title')}</h1>
           <p className="text-sm dark:text-slate-500 text-slate-400 mt-1">{lt('reports.subtitle')}</p>
         </div>
-        <Button
-          onClick={handleExport}
-          disabled={exporting || loading}
-          className="bg-gradient-to-l from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-slate-900 font-medium shadow-lg shadow-amber-500/20 transition-all duration-200 hover:shadow-xl hover:shadow-amber-500/30"
-        >
-          {exporting ? <Loader2 className="h-4 w-4 ml-2 animate-spin" /> : <FileJson className="h-4 w-4 ml-2" />}
-          {lt('reports.export')}
-        </Button>
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button
+              disabled={exporting || loading}
+              className="bg-gradient-to-l from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-slate-900 font-medium shadow-lg shadow-amber-500/20 transition-all duration-200 hover:shadow-xl hover:shadow-amber-500/30"
+            >
+              {exporting ? <Loader2 className="h-4 w-4 ml-2 animate-spin" /> : <Download className="h-4 w-4 ml-2" />}
+              {lt('reports.export')}
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" className="w-56">
+            <DropdownMenuItem
+              className="gap-2 cursor-pointer"
+              onClick={() => handleExportReport('inventory', 'pdf')}
+              disabled={exporting}
+            >
+              <FileText className="h-4 w-4 text-red-500" />
+              <span>Inventory — PDF</span>
+            </DropdownMenuItem>
+            <DropdownMenuItem
+              className="gap-2 cursor-pointer"
+              onClick={() => handleExportReport('inventory', 'excel')}
+              disabled={exporting}
+            >
+              <FileSpreadsheet className="h-4 w-4 text-emerald-500" />
+              <span>Inventory — Excel</span>
+            </DropdownMenuItem>
+            <DropdownMenuItem
+              className="gap-2 cursor-pointer"
+              onClick={() => handleExportReport('inventory', 'word')}
+              disabled={exporting}
+            >
+              <FileType className="h-4 w-4 text-blue-500" />
+              <span>Inventory — Word</span>
+            </DropdownMenuItem>
+            <DropdownMenuItem
+              className="gap-2 cursor-pointer"
+              onClick={() => handleExportReport('movements', 'pdf')}
+              disabled={exporting}
+            >
+              <FileText className="h-4 w-4 text-red-500" />
+              <span>Movements — PDF</span>
+            </DropdownMenuItem>
+            <DropdownMenuItem
+              className="gap-2 cursor-pointer"
+              onClick={() => handleExportReport('movements', 'excel')}
+              disabled={exporting}
+            >
+              <FileSpreadsheet className="h-4 w-4 text-emerald-500" />
+              <span>Movements — Excel</span>
+            </DropdownMenuItem>
+            <DropdownMenuItem
+              className="gap-2 cursor-pointer"
+              onClick={() => handleExportReport('movements', 'word')}
+              disabled={exporting}
+            >
+              <FileType className="h-4 w-4 text-blue-500" />
+              <span>Movements — Word</span>
+            </DropdownMenuItem>
+            <DropdownMenuItem
+              className="gap-2 cursor-pointer"
+              onClick={() => handleExportReport('invoices', 'pdf')}
+              disabled={exporting}
+            >
+              <FileText className="h-4 w-4 text-red-500" />
+              <span>Invoices — PDF</span>
+            </DropdownMenuItem>
+            <DropdownMenuItem
+              className="gap-2 cursor-pointer"
+              onClick={() => handleExportReport('invoices', 'excel')}
+              disabled={exporting}
+            >
+              <FileSpreadsheet className="h-4 w-4 text-emerald-500" />
+              <span>Invoices — Excel</span>
+            </DropdownMenuItem>
+            <DropdownMenuItem
+              className="gap-2 cursor-pointer"
+              onClick={() => handleExportReport('invoices', 'word')}
+              disabled={exporting}
+            >
+              <FileType className="h-4 w-4 text-blue-500" />
+              <span>Invoices — Word</span>
+            </DropdownMenuItem>
+            <DropdownMenuItem
+              className="gap-2 cursor-pointer"
+              onClick={() => handleExportReport('aging', 'pdf')}
+              disabled={exporting}
+            >
+              <FileText className="h-4 w-4 text-red-500" />
+              <span>Aging — PDF</span>
+            </DropdownMenuItem>
+            <DropdownMenuItem
+              className="gap-2 cursor-pointer"
+              onClick={() => handleExportReport('aging', 'excel')}
+              disabled={exporting}
+            >
+              <FileSpreadsheet className="h-4 w-4 text-emerald-500" />
+              <span>Aging — Excel</span>
+            </DropdownMenuItem>
+            <DropdownMenuItem
+              className="gap-2 cursor-pointer"
+              onClick={() => handleExportReport('aging', 'word')}
+              disabled={exporting}
+            >
+              <FileType className="h-4 w-4 text-blue-500" />
+              <span>Aging — Word</span>
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
       </div>
 
       {/* ===== FILTER BAR ===== */}
@@ -586,7 +692,7 @@ export function ReportsPage() {
                 </div>
 
                 {/* Legend */}
-                <div className="grid grid-cols-2 gap-x-6 gap-y-2 w-full max-w-xs">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-2 w-full max-w-xs">
                   {donutData.data.map((item) => (
                     <div key={item.status} className="flex items-center gap-2">
                       <div className="h-3 w-3 rounded-sm shrink-0" style={{ backgroundColor: item.color }} />
@@ -773,7 +879,7 @@ export function ReportsPage() {
             ) : (
               <>
                 {/* Summary stats */}
-                <div className="grid grid-cols-3 gap-3 mb-5">
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-5">
                   <div className="dark:bg-slate-800/40 bg-slate-50 rounded-xl p-3 text-center">
                     <p className="text-[10px] uppercase tracking-wider dark:text-slate-500 text-slate-400">{lt('reports.total')}</p>
                     <p className="text-lg font-bold dark:text-slate-100 text-slate-900 tabular-nums mt-0.5">

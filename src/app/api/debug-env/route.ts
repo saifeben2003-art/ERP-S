@@ -4,16 +4,17 @@ export async function GET() {
   // Direct Prisma + adapter test — no db.ts involved
   let result = { version: 'v5-direct-adapter', prismaOk: false, error: '' as string };
   try {
-    const { PrismaClient } = await import('@prisma/client');
+    const { PrismaClient } = await import('@/generated/client');
     const { createClient } = await import('@libsql/client');
-    const { PrismaLibSql } = await import('@prisma/adapter-libsql');
+    const { PrismaLibSQL } = await import('@/lib/custom-libsql-adapter');
 
-    const libsql = createClient({
+    const config = {
       url: process.env.DATABASE_URL!,
-      authToken: process.env.DATABASE_AUTH_TOKEN!,
-    });
-
-    const client = new PrismaClient({ adapter: new PrismaLibSql(libsql) });
+      authToken: process.env.TURSO_AUTH_TOKEN || '',
+    };
+    const libsql = createClient(config);
+    const adapter = new PrismaLibSQL(libsql, config);
+    const client = new PrismaClient({ adapter });
     const count = await client.cargoItem.count();
     result = { version: 'v5-direct-adapter', prismaOk: true, error: '' };
     await client.$disconnect();

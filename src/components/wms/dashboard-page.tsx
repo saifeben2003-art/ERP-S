@@ -564,7 +564,7 @@ export function DashboardPage({ onNavigate }: DashboardPageProps) {
         <div className="pointer-events-none absolute inset-0 dark:opacity-40 opacity-20">
           <div className="absolute inset-0 bg-gradient-to-br from-amber-500/20 via-orange-500/10 to-transparent dark:from-amber-500/10 dark:via-orange-500/5 dark:to-transparent animate-pulse" style={{ animationDuration: '4s' }} />
         </div>
-        <div className="relative grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
+        <div className="relative grid gap-4 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5">
           {welcomeSteps.map((step, idx) => {
             const StepIcon = iconMap[step.icon] || Package;
             return (
