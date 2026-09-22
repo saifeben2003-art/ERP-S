@@ -249,25 +249,45 @@ const ISO15489_REQUIREMENTS = [
 ];
 
 function ISOStandardsTab() {
-  // ISO 28000 compliance toggles
+  // ISO 28000 compliance toggles (persisted to localStorage)
   const [sc28000, setSc28000] = useState<Record<string, boolean>>(
-    () => Object.fromEntries(ISO28000_REQUIREMENTS.map((r) => [r.id, false]))
+    () => {
+      try {
+        const saved = localStorage.getItem('wms-iso-28000-compliance');
+        if (saved) return JSON.parse(saved);
+      } catch {}
+      return Object.fromEntries(ISO28000_REQUIREMENTS.map((r) => [r.id, false]));
+    }
   );
 
   const passCount28000 = Object.values(sc28000).filter(Boolean).length;
   const total28000 = ISO28000_REQUIREMENTS.length;
   const score28000 = Math.round((passCount28000 / total28000) * 100);
 
-  const toggle28000 = (id: string) => setSc28000((prev) => ({ ...prev, [id]: !prev[id] }));
+  const toggle28000 = (id: string) => setSc28000((prev) => {
+    const next = { ...prev, [id]: !prev[id] };
+    try { localStorage.setItem('wms-iso-28000-compliance', JSON.stringify(next)); } catch {}
+    return next;
+  });
 
-  // ISO 15489 compliance
+  // ISO 15489 compliance (persisted to localStorage)
   const [sc15489, setSc15489] = useState<Record<string, boolean>>(
-    () => Object.fromEntries(ISO15489_REQUIREMENTS.map((r) => [r.id, false]))
+    () => {
+      try {
+        const saved = localStorage.getItem('wms-iso-15489-compliance');
+        if (saved) return JSON.parse(saved);
+      } catch {}
+      return Object.fromEntries(ISO15489_REQUIREMENTS.map((r) => [r.id, false]));
+    }
   );
   const passCount15489 = Object.values(sc15489).filter(Boolean).length;
   const total15489 = ISO15489_REQUIREMENTS.length;
   const score15489 = Math.round((passCount15489 / total15489) * 100);
-  const toggle15489 = (id: string) => setSc15489((prev) => ({ ...prev, [id]: !prev[id] }));
+  const toggle15489 = (id: string) => setSc15489((prev) => {
+    const next = { ...prev, [id]: !prev[id] };
+    try { localStorage.setItem('wms-iso-15489-compliance', JSON.stringify(next)); } catch {}
+    return next;
+  });
 
   const overallScore = Math.round(((passCount28000 + passCount15489) / (total28000 + total15489)) * 100);
 
@@ -383,7 +403,7 @@ const UAE_EMIRATES = [
   { name: 'Ajman', nameAr: 'عجمان', code: 'AJM' },
   { name: 'Umm Al Quwain', nameAr: 'أم القيوين', code: 'UAQ' },
   { name: 'Ras Al Khaimah', nameAr: 'رأس الخيمة', code: 'RAK' },
-  // Fujairah is the 7th emirate but user requested 6
+  { name: 'Fujairah', nameAr: 'الفجيرة', code: 'FJR' },
 ];
 
 function UAERegulationsTab() {
@@ -488,10 +508,10 @@ function UAERegulationsTab() {
       {/* Branch Information */}
       <Card className="border-slate-800 bg-slate-900/50">
         <CardHeader className="pb-2">
-          <CardTitle className="text-sm text-slate-200">Branch Information — 6 Emirates</CardTitle>
+          <CardTitle className="text-sm text-slate-200">Branch Information — 7 Emirates</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-7 gap-3">
             {UAE_EMIRATES.map((em) => (
               <div key={em.code} className="flex flex-col items-center p-3 rounded-md bg-slate-800/40 hover:bg-slate-800/60 transition-colors">
                 <span className="text-sm font-mono font-bold text-amber-400">{em.code}</span>

@@ -18,6 +18,8 @@ export const en: Record<string, string> = {
   'header.scanner': 'Barcode Scanner',
   'header.reports': 'Reports & Analytics',
   'header.sapIntegration': 'SAP / ERP Integration',
+  'header.invoices': 'Invoices & Billing',
+  'header.standards': 'International Standards & Compliance',
   'common.add': 'Add', 'common.edit': 'Edit', 'common.delete': 'Delete', 'common.save': 'Save', 'common.cancel': 'Cancel',
   'common.search': 'Search', 'common.filter': 'Filter', 'common.clear': 'Clear', 'common.loading': 'Loading...',
   'common.noDataFound': 'No data found', 'common.systemOnline': 'System Online', 'common.saving': 'Saving...',

@@ -123,7 +123,7 @@ export async function GET(request: NextRequest) {
       const percentage = capacity > 0 ? Math.round((used / capacity) * 100) : 0;
       return {
         location: loc.code,
-        name: loc.name,
+        locationName: loc.name,
         capacity,
         used,
         percentage: Math.min(percentage, 100),

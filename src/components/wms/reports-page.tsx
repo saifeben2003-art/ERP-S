@@ -6,7 +6,7 @@ import {
   ArrowDownToLine, ArrowUpFromLine, Users, Weight,
   Download, Calendar, Filter, RotateCcw, Loader2,
   Activity, Warehouse, ArrowRightLeft,
-  FileText, FileSpreadsheet, FileType,
+  FileText, FileSpreadsheet, FileType, File,
 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -298,7 +298,7 @@ export function ReportsPage() {
       a.href = url;
 
       // Determine file extension
-      const ext = format === 'excel' ? 'xlsx' : format === 'word' ? 'docx' : 'pdf';
+      const ext = format === 'excel' ? 'xlsx' : format === 'word' ? 'docx' : format === 'csv' ? 'csv' : 'pdf';
       a.download = `${reportType}-report-${new Date().toISOString().split('T')[0]}.${ext}`;
       a.click();
       URL.revokeObjectURL(url);
@@ -401,6 +401,14 @@ export function ReportsPage() {
             </DropdownMenuItem>
             <DropdownMenuItem
               className="gap-2 cursor-pointer"
+              onClick={() => handleExportReport('inventory', 'csv')}
+              disabled={exporting}
+            >
+              <File className="h-4 w-4 text-orange-500" />
+              <span>Inventory — CSV</span>
+            </DropdownMenuItem>
+            <DropdownMenuItem
+              className="gap-2 cursor-pointer"
               onClick={() => handleExportReport('movements', 'pdf')}
               disabled={exporting}
             >
@@ -422,6 +430,14 @@ export function ReportsPage() {
             >
               <FileType className="h-4 w-4 text-blue-500" />
               <span>Movements — Word</span>
+            </DropdownMenuItem>
+            <DropdownMenuItem
+              className="gap-2 cursor-pointer"
+              onClick={() => handleExportReport('movements', 'csv')}
+              disabled={exporting}
+            >
+              <File className="h-4 w-4 text-orange-500" />
+              <span>Movements — CSV</span>
             </DropdownMenuItem>
             <DropdownMenuItem
               className="gap-2 cursor-pointer"
@@ -449,6 +465,14 @@ export function ReportsPage() {
             </DropdownMenuItem>
             <DropdownMenuItem
               className="gap-2 cursor-pointer"
+              onClick={() => handleExportReport('invoices', 'csv')}
+              disabled={exporting}
+            >
+              <File className="h-4 w-4 text-orange-500" />
+              <span>Invoices — CSV</span>
+            </DropdownMenuItem>
+            <DropdownMenuItem
+              className="gap-2 cursor-pointer"
               onClick={() => handleExportReport('aging', 'pdf')}
               disabled={exporting}
             >
@@ -470,6 +494,14 @@ export function ReportsPage() {
             >
               <FileType className="h-4 w-4 text-blue-500" />
               <span>Aging — Word</span>
+            </DropdownMenuItem>
+            <DropdownMenuItem
+              className="gap-2 cursor-pointer"
+              onClick={() => handleExportReport('aging', 'csv')}
+              disabled={exporting}
+            >
+              <File className="h-4 w-4 text-orange-500" />
+              <span>Aging — CSV</span>
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>

@@ -1,4 +1,36 @@
 ---
+Task ID: 1
+Agent: reports-standards-fix
+Task: Fix reports and standards bugs
+
+Work Log:
+- Bug 1: Added UTF-8 BOM (\uFEFF) prefix to csv-export.ts exportToCsv() function — ensures Arabic/UTF-8 content renders correctly in Excel and other tools
+- Bug 2: Persisted ISO compliance toggles to localStorage in standards-page.tsx:
+  - ISO 28000 toggles saved to key 'wms-iso-28000-compliance'
+  - ISO 15489 toggles saved to key 'wms-iso-15489-compliance'
+  - State initialized from localStorage on mount (with try/catch fallback)
+  - Toggle handlers write updated state to localStorage on each change
+- Bug 3: Added Fujairah (FJR, الفجيرة) as 7th emirate to UAE_EMIRATES array in standards-page.tsx
+  - Removed comment excluding Fujairah
+  - Updated card title from "6 Emirates" to "7 Emirates"
+  - Updated grid from lg:grid-cols-6 to lg:grid-cols-7
+- Bug 4: Added CSV as 4th export format in reports-page.tsx:
+  - Added File icon import from lucide-react
+  - Added CSV dropdown items for all 4 report types (Inventory, Movements, Invoices, Aging)
+  - Updated handleExportReport extension mapping to support 'csv' → '.csv'
+- Bug 5: Fixed locationName field mismatch in /api/reports route:
+  - API was returning `name` but frontend expected `locationName`
+  - Changed API to return `locationName` to match ReportData TypeScript type and reports-page.tsx usage
+
+Stage Summary:
+- 5 bugs fixed across 4 files
+- CSV exports now have BOM for proper Arabic/UTF-8 rendering
+- ISO compliance checkbox states survive page refresh via localStorage
+- All 7 UAE emirates now listed (including Fujairah)
+- CSV format available in export dropdown alongside PDF/Excel/Word
+- locationUtilization API response now matches frontend field name (locationName)
+
+---
 Task ID: 2
 Agent: status-update
 Task: Add SHIPPING and SHIPPED cargo statuses
