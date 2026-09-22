@@ -13,6 +13,8 @@ const VALID_STATUSES = [
   'RECEIVED',
   'IN_YARD',
   'IN_WAREHOUSE',
+  'SHIPPING',
+  'SHIPPED',
   'DISPATCHED',
   'DELIVERED',
 ];
@@ -82,6 +84,8 @@ export async function POST(request: NextRequest) {
     const movementTypeMap: Record<string, string> = {
       RECEIVED: 'RECEIVE',
       DISPATCHED: 'DISPATCH',
+      SHIPPING: 'DISPATCH',
+      SHIPPED: 'DISPATCH',
       DELIVERED: 'DISPATCH',
     };
     const movementType = movementTypeMap[status] || 'INSPECT';

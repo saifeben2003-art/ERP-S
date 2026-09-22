@@ -66,6 +66,8 @@ const CARGO_STATUS_COLORS: Record<string, { bg: string; text: string; border: st
   DISPATCHED: { bg: 'bg-slate-500/10 dark:bg-slate-400/10', text: 'text-slate-400 dark:text-slate-300', border: 'border-slate-500/20', donut: '#64748b' },
   RECEIVED: { bg: 'bg-cyan-500/10 dark:bg-cyan-400/10', text: 'text-cyan-400 dark:text-cyan-500', border: 'border-cyan-500/20', donut: '#06b6d4' },
   IN_WAREHOUSE: { bg: 'bg-teal-500/10 dark:bg-teal-400/10', text: 'text-teal-400 dark:text-teal-500', border: 'border-teal-500/20', donut: '#14b8a6' },
+  SHIPPING: { bg: 'bg-orange-500/10 dark:bg-orange-400/10', text: 'text-orange-400 dark:text-orange-500', border: 'border-orange-500/20', donut: '#f97316' },
+  SHIPPED: { bg: 'bg-cyan-500/10 dark:bg-cyan-400/10', text: 'text-cyan-400 dark:text-cyan-500', border: 'border-cyan-500/20', donut: '#06b6d4' },
   DELIVERED: { bg: 'bg-slate-400/10 dark:bg-slate-300/10', text: 'text-slate-500 dark:text-slate-400', border: 'border-slate-400/20', donut: '#94a3b8' },
   STAGING: { bg: 'bg-orange-500/10 dark:bg-orange-400/10', text: 'text-orange-400 dark:text-orange-500', border: 'border-orange-500/20', donut: '#f97316' },
 };

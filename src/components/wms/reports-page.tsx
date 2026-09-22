@@ -139,6 +139,8 @@ const STATUS_COLORS: Record<string, string> = {
   IN_WAREHOUSE: '#14b8a6',
   IN_TRANSIT: '#f59e0b',
   RECEIVED: '#06b6d4',
+  SHIPPING: '#f97316',
+  SHIPPED: '#06b6d4',
   DISPATCHED: '#64748b',
   DELIVERED: '#94a3b8',
   STAGING: '#f97316',

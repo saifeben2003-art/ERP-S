@@ -1,4 +1,30 @@
 ---
+Task ID: 2
+Agent: status-update
+Task: Add SHIPPING and SHIPPED cargo statuses
+
+Work Log:
+- Updated prisma/schema.prisma: Added SHIPPING and SHIPPED to CargoItem status comment
+- Updated src/types/wms.ts: Added 'SHIPPING' | 'SHIPPED' to CargoStatus type
+- Updated src/app/api/cargo/[id]/status/route.ts: New STATUS_WORKFLOW with SHIPPING→SHIPPED→DELIVERED flow, DISPATCHED→DELIVERED kept for backward compat, added movement type mappings for SHIPPING/SHIPPED
+- Updated src/components/wms/cargo-page.tsx: Updated STATUS_WORKFLOW, ALL_STATUSES, statusStyles (orange for SHIPPING, cyan for SHIPPED), statusIcons (Truck for SHIPPING, CheckCircle2 for SHIPPED)
+- Updated src/app/api/cargo/bulk-status/route.ts: Added SHIPPING and SHIPPED to VALID_STATUSES array, added to movementTypeMap
+- Updated src/lib/translations.ts: Added 'status.SHIPPING': 'قيد الشحن', updated 'status.SHIPPED' to 'تم الشحن', added SHIPPING/SHIPPED to statusMap
+- Updated src/lib/en.ts: Added 'status.SHIPPING': 'Shipping'
+- Updated src/components/wms/projects-page.tsx: Added SHIPPING and SHIPPED to CARGO_STATUS_COLORS
+- Updated src/components/wms/dashboard-page.tsx: Added SHIPPING (#f97316) and SHIPPED (#06b6d4) to statusColors
+- Updated src/components/wms/reports-page.tsx: Added SHIPPING (#f97316) and SHIPPED (#06b6d4) to STATUS_COLORS
+- Ran db:push successfully — database in sync
+- movements-page.tsx: No changes needed (no status color/style references)
+
+Stage Summary:
+- Two new cargo statuses SHIPPING (قيد الشحن) and SHIPPED (تم الشحن) added
+- New workflow: IN_YARD/IN_WAREHOUSE → SHIPPING → SHIPPED → DELIVERED
+- DISPATCHED → DELIVERED preserved for backward compatibility
+- All 8 files updated with styles, colors, translations, and workflow
+- App compiles and returns HTTP 200
+
+---
 Task ID: 4
 Agent: responsive-dialogs
 Task: Make all Dialog components responsive across all WMS pages
@@ -265,3 +291,41 @@ Stage Summary:
 - Invoice tables and indexes also ensured
 - All CRUD operations should work after migration
 - Report exports should work after migration
+
+---
+Task ID: 3+4
+Agent: quick-status-ui
+Task: Add one-click quick status change and bulk status change UI
+
+Work Log:
+- Updated src/lib/translations.ts: Added 8 new Arabic translation keys (cargo.quickStatus.next, cargo.quickStatus.changeTo, cargo.quickStatus.noNext, cargo.bulk.itemsSelected, cargo.bulk.changeStatus, cargo.bulk.clearSelection, cargo.bulk.selectStatus, cargo.bulk.updating, cargo.bulk.statusChanged, cargo.bulk.statusChangeFailed)
+- Updated src/lib/en.ts: Added 8 new English translation keys matching the Arabic ones
+- Updated src/components/wms/cargo-page.tsx:
+  - Added ArrowLeft, ChevronDown icons to lucide-react imports
+  - Added DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger imports from ui/dropdown-menu
+  - Added quickStatusLoading state for tracking which cargo item is having its status changed inline
+  - Added bulkStatus and bulkStatusLoading states for bulk status change
+  - Added handleQuickStatusChange async function that calls /api/cargo/${id}/status PATCH endpoint
+  - Added handleBulkStatusChange async function that calls /api/cargo/bulk-status POST endpoint
+  - Added bulkTargetStatuses useMemo that computes valid target statuses for selected items
+  - Feature A: Added quick status change button/dropdown in each table row's actions column:
+    - Single next status: shows a small button with ArrowLeft + status icon + translated status name (hidden on small screens, shown on xl)
+    - Multiple next statuses: shows a DropdownMenu with arrow + chevron trigger, items with status colors
+    - Loading state shows Loader2 spinner on the button
+    - DELIVERED items show no button (no next status)
+  - Feature B: Replaced the old inline bulk actions bar with a floating bar at the bottom of the Card:
+    - Shows when selectedRows.size > 0
+    - Displays selected count prominently with amber color
+    - Status dropdown filtered to valid target statuses only
+    - "Change Status" button with loading spinner
+    - "Clear Selection" button to deselect all
+    - Uses absolute positioning, backdrop-blur, shadow, and border styling
+  - Changed Card to relative positioning to support the floating bar
+
+Stage Summary:
+- One-click quick status change available in every table row (single button or dropdown based on workflow)
+- Bulk status change floating action bar replaces the old inline bar
+- Both features call existing API endpoints (/api/cargo/${id}/status and /api/cargo/bulk-status)
+- All UI uses translations and status style colors
+- RTL-compatible with ArrowLeft pointing in the correct direction
+- No existing functionality broken

@@ -119,6 +119,7 @@ const translations: Record<string, string> = {
   'status.RECEIVED': 'مستلم',
   'status.DISPATCHED': 'مرسل',
   'status.DELIVERED': 'تم التوصيل',
+  'status.SHIPPING': 'قيد الشحن',
 
   // ===== Project Statuses =====
   'status.PLANNED': 'مخطط',
@@ -126,7 +127,7 @@ const translations: Record<string, string> = {
   'status.IN_STORAGE': 'في التخزين',
   'status.STAGING': 'في منطقة التجهيز',
   'status.LOADED': 'محمل',
-  'status.SHIPPED': 'مشحون',
+  'status.SHIPPED': 'تم الشحن',
   'status.COMPLETED': 'مكتمل',
 
   // ===== Equipment Statuses =====
@@ -281,6 +282,16 @@ const translations: Record<string, string> = {
   'cargo.toast.deleteFailed': 'فشل في حذف البضاعة',
   'cargo.toast.saveFailed': 'فشل في الحفظ',
   'cargo.toast.exported': 'تم تصدير البضائع بنجاح',
+  'cargo.quickStatus.next': 'الحالة التالية',
+  'cargo.quickStatus.changeTo': 'تغيير إلى',
+  'cargo.quickStatus.noNext': 'لا توجد حالة تالية',
+  'cargo.bulk.itemsSelected': 'عناصر محددة',
+  'cargo.bulk.changeStatus': 'تغيير الحالة',
+  'cargo.bulk.clearSelection': 'إلغاء التحديد',
+  'cargo.bulk.selectStatus': 'اختر الحالة',
+  'cargo.bulk.updating': 'جاري التحديث...',
+  'cargo.bulk.statusChanged': 'تم تغيير حالة العناصر المحددة',
+  'cargo.bulk.statusChangeFailed': 'فشل تغيير الحالة',
   'cargo.airWaybill': 'رقم بول الشحن الجوي',
   'cargo.billOfLading': 'رقم بول الشحن البحري',
   'cargo.shippingLine': 'خط الشحن',
@@ -683,6 +694,8 @@ const statusMap: Record<string, string> = {
   IN_WAREHOUSE: 'status.IN_WAREHOUSE',
   IN_TRANSIT: 'status.IN_TRANSIT',
   RECEIVED: 'status.RECEIVED',
+  SHIPPING: 'status.SHIPPING',
+  SHIPPED: 'status.SHIPPED',
   DISPATCHED: 'status.DISPATCHED',
   DELIVERED: 'status.DELIVERED',
   PLANNED: 'status.PLANNED',

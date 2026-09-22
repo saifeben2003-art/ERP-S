@@ -2,7 +2,7 @@
 
 export type LiftCategory = 'STANDARD' | 'HEAVY_LIFT' | 'OVERSIZE' | 'PROJECT_CARGO';
 export type CommodityType = 'GENERAL' | 'MACHINERY' | 'STEEL' | 'EQUIPMENT' | 'MODULE';
-export type CargoStatus = 'IN_TRANSIT' | 'RECEIVED' | 'IN_YARD' | 'IN_WAREHOUSE' | 'DISPATCHED' | 'DELIVERED';
+export type CargoStatus = 'IN_TRANSIT' | 'RECEIVED' | 'IN_YARD' | 'IN_WAREHOUSE' | 'SHIPPING' | 'SHIPPED' | 'DISPATCHED' | 'DELIVERED';
 export type LocationType = 'YARD' | 'WAREHOUSE' | 'OPEN_AREA' | 'STAGING' | 'BERTH';
 export type LocationZoneType = 'GENERAL' | 'BONDED' | 'HAZMAT' | 'REEFER' | 'CUSTOMS_HOLD' | 'QUARANTINE' | 'OVERSIZE' | 'TEMPORARY';
 export type EquipmentType = 'CRANE' | 'FORKLIFT' | 'SPREADER_BAR' | 'SLING' | 'SHACKLE' | 'BEAM' | 'JACK' | 'ROLLER';

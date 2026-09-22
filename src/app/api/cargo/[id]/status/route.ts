@@ -4,10 +4,12 @@ import { db } from '@/lib/db';
 const STATUS_WORKFLOW: Record<string, string[]> = {
   IN_TRANSIT: ['RECEIVED'],
   RECEIVED: ['IN_YARD', 'IN_WAREHOUSE'],
-  IN_YARD: ['IN_WAREHOUSE', 'DISPATCHED', 'IN_TRANSIT'],
-  IN_WAREHOUSE: ['IN_YARD', 'DISPATCHED', 'STAGING'],
-  DISPATCHED: ['DELIVERED'],
+  IN_YARD: ['IN_WAREHOUSE', 'SHIPPING'],
+  IN_WAREHOUSE: ['IN_YARD', 'SHIPPING'],
+  SHIPPING: ['SHIPPED'],
+  SHIPPED: ['DELIVERED'],
   DELIVERED: [],
+  DISPATCHED: ['DELIVERED'], // backward compatibility
 };
 
 export async function PATCH(
@@ -45,6 +47,8 @@ export async function PATCH(
     if (status === 'RECEIVED' && existing.status === 'IN_TRANSIT') movementType = 'RECEIVE';
     else if (status === 'DISPATCHED') movementType = 'DISPATCH';
     else if (status === 'IN_WAREHOUSE' && existing.status === 'RECEIVED') movementType = 'RECEIVE';
+    else if (status === 'SHIPPING') movementType = 'DISPATCH';
+    else if (status === 'SHIPPED') movementType = 'DISPATCH';
 
     // Update cargo
     const updateData: Record<string, unknown> = {

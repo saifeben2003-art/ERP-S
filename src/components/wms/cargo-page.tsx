@@ -2,13 +2,13 @@
 
 import { useEffect, useState, useCallback, useMemo } from 'react';
 import {
-  Plus, Search, Pencil, Eye, Trash2, ArrowRight, MapPin, Package, Weight, Move,
+  Plus, Search, Pencil, Eye, Trash2, ArrowRight, ArrowLeft, MapPin, Package, Weight, Move,
   CheckCircle2, Clock, Truck, Warehouse, CircleDot, ChevronLeft, ChevronRight,
   Loader2, X, Camera, Image as ImageIcon, FileText, Download, Upload, Box,
   Printer, QrCode, ClipboardList, Ruler, AlertTriangle, PackageSearch,
   ArrowDown, Play, Check, MoreHorizontal, Tags, Tag, FileCheck, FileSpreadsheet,
   FileBadge, Sparkles, Award, Ship, Plane, ArrowRightLeft, RefreshCw,
-  ExternalLink, Globe, CalendarDays,
+  ExternalLink, Globe, CalendarDays, ChevronDown,
 } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -33,6 +33,9 @@ import {
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from '@/components/ui/select';
+import {
+  DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import { toast } from 'sonner';
 import {
   useTranslation, translateStatus, translateCategory, translateCommodity, translateMovementType,
@@ -54,6 +57,8 @@ const statusStyles: Record<CargoStatus, string> = {
   DISPATCHED: 'bg-slate-500/10 text-slate-600 dark:text-slate-400 border-slate-500/20',
   RECEIVED: 'bg-cyan-500/10 text-cyan-600 dark:text-cyan-400 border-cyan-500/20',
   IN_WAREHOUSE: 'bg-teal-500/10 text-teal-600 dark:text-teal-400 border-teal-500/20',
+  SHIPPING: 'bg-orange-500/10 text-orange-600 dark:text-orange-400 border-orange-500/20',
+  SHIPPED: 'bg-cyan-500/10 text-cyan-600 dark:text-cyan-400 border-cyan-500/20',
   DELIVERED: 'bg-slate-400/10 text-slate-500 dark:text-slate-500 border-slate-400/20',
 };
 
@@ -62,6 +67,8 @@ const statusIcons: Record<CargoStatus, React.ElementType> = {
   RECEIVED: CheckCircle2,
   IN_YARD: MapPin,
   IN_WAREHOUSE: Warehouse,
+  SHIPPING: Truck,
+  SHIPPED: CheckCircle2,
   DISPATCHED: CircleDot,
   DELIVERED: CheckCircle2,
 };
@@ -69,13 +76,15 @@ const statusIcons: Record<CargoStatus, React.ElementType> = {
 const STATUS_WORKFLOW: Record<CargoStatus, CargoStatus[]> = {
   IN_TRANSIT: ['RECEIVED'],
   RECEIVED: ['IN_YARD', 'IN_WAREHOUSE'],
-  IN_YARD: ['IN_WAREHOUSE', 'DISPATCHED'],
-  IN_WAREHOUSE: ['IN_YARD', 'DISPATCHED'],
-  DISPATCHED: ['DELIVERED'],
+  IN_YARD: ['IN_WAREHOUSE', 'SHIPPING'],
+  IN_WAREHOUSE: ['IN_YARD', 'SHIPPING'],
+  SHIPPING: ['SHIPPED'],
+  SHIPPED: ['DELIVERED'],
   DELIVERED: [],
+  DISPATCHED: ['DELIVERED'], // backward compatibility
 };
 
-const ALL_STATUSES: CargoStatus[] = ['IN_TRANSIT', 'RECEIVED', 'IN_YARD', 'IN_WAREHOUSE', 'DISPATCHED', 'DELIVERED'];
+const ALL_STATUSES: CargoStatus[] = ['IN_TRANSIT', 'RECEIVED', 'IN_YARD', 'IN_WAREHOUSE', 'SHIPPING', 'SHIPPED', 'DELIVERED'];
 
 const categoryStyles: Record<LiftCategory, string> = {
   HEAVY_LIFT: 'bg-red-500/10 text-red-600 dark:text-red-400 border-red-500/20',
@@ -179,6 +188,13 @@ export function CargoPage() {
   const [transferTo, setTransferTo] = useState('');
   const [transferRemarks, setTransferRemarks] = useState('');
   const [transferring, setTransferring] = useState(false);
+
+  // Quick status change state
+  const [quickStatusLoading, setQuickStatusLoading] = useState<string | null>(null); // cargo id being updated
+
+  // Bulk status change state
+  const [bulkStatus, setBulkStatus] = useState<CargoStatus | ''>('');
+  const [bulkStatusLoading, setBulkStatusLoading] = useState(false);
 
   const portLabels: Record<string, string> = {
     container: 'الحاوية',
@@ -398,6 +414,60 @@ export function CargoPage() {
     } finally { setTransferring(false); }
   };
 
+  // ==================== QUICK STATUS CHANGE ====================
+
+  const handleQuickStatusChange = async (cargoId: string, newStatus: CargoStatus) => {
+    setQuickStatusLoading(cargoId);
+    try {
+      const res = await fetch(`/api/cargo/${cargoId}/status`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: newStatus }),
+      });
+      if (!res.ok) { const err = await res.json(); throw new Error(err.error || 'Failed'); }
+      toast.success(t('detail.statusChanged'));
+      fetchCargo();
+    } catch (e: unknown) {
+      toast.error(e instanceof Error ? e.message : t('detail.statusChangeFailed'));
+    } finally { setQuickStatusLoading(null); }
+  };
+
+  // ==================== BULK STATUS CHANGE ====================
+
+  const handleBulkStatusChange = async () => {
+    if (!bulkStatus || selectedRows.size === 0) return;
+    setBulkStatusLoading(true);
+    try {
+      const res = await fetch('/api/cargo/bulk-status', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ids: Array.from(selectedRows), status: bulkStatus }),
+      });
+      if (!res.ok) { const err = await res.json(); throw new Error(err.error || 'Failed'); }
+      toast.success(t('cargo.bulk.statusChanged'));
+      setSelectedRows(new Set());
+      setBulkStatus('');
+      fetchCargo();
+    } catch (e: unknown) {
+      toast.error(e instanceof Error ? e.message : t('cargo.bulk.statusChangeFailed'));
+    } finally { setBulkStatusLoading(false); }
+  };
+
+  // Compute valid bulk target statuses (all statuses except those of ALL selected items, but really show all valid statuses)
+  const bulkTargetStatuses = useMemo(() => {
+    if (selectedRows.size === 0) return [];
+    // Collect current statuses of selected items
+    const selectedItems = cargo.filter(c => selectedRows.has(c.id));
+    const currentStatuses = new Set(selectedItems.map(c => c.status));
+    // Return all statuses that at least one selected item can transition to
+    const validTargets = new Set<CargoStatus>();
+    for (const item of selectedItems) {
+      const nextStatuses = STATUS_WORKFLOW[item.status as CargoStatus] || [];
+      nextStatuses.forEach(s => validTargets.add(s));
+    }
+    return ALL_STATUSES.filter(s => validTargets.has(s));
+  }, [selectedRows, cargo]);
+
   // ==================== SELECTION LOGIC ====================
 
   const toggleRow = (id: string) => {
@@ -520,22 +590,9 @@ export function CargoPage() {
       </Card>
 
       {/* ===== TABLE ===== */}
-      <Card className="dark:border-slate-800 border-slate-200 dark:bg-slate-900/50 bg-white shadow-sm">
+      <Card className="relative dark:border-slate-800 border-slate-200 dark:bg-slate-900/50 bg-white shadow-sm">
         <CardContent className="p-0">
-          {/* Bulk actions bar */}
-          {selectedRows.size > 0 && (
-            <div className="flex items-center gap-3 px-4 py-2.5 border-b dark:border-slate-800 border-slate-200 dark:bg-slate-800/50 bg-slate-50 dark:text-slate-300 text-slate-600 text-sm">
-              <span className="font-medium">{selectedRows.size} {t('common.selected')}</span>
-              <Button variant="ghost" size="sm" className="h-7 text-xs dark:text-slate-400 text-slate-500 dark:hover:text-slate-200 hover:text-slate-800 dark:hover:bg-slate-700 hover:bg-slate-100 transition-all duration-200">
-                <CheckCircle2 className="h-3.5 w-3.5 ml-1" />
-                {t('common.changeStatus')}
-              </Button>
-              <Button variant="ghost" size="sm" className="h-7 text-xs dark:text-slate-400 text-slate-500 dark:hover:text-red-400 hover:text-red-600 dark:hover:bg-slate-700 hover:bg-slate-100 transition-all duration-200">
-                <Trash2 className="h-3.5 w-3.5 ml-1" />
-                {t('common.delete')}
-              </Button>
-            </div>
-          )}
+
 
           <div className="overflow-x-auto">
             <Table>
@@ -611,6 +668,81 @@ export function CargoPage() {
                       <TableCell className="py-3 text-xs dark:text-slate-400 text-slate-500 hidden lg:table-cell">{item.location?.code || '—'}</TableCell>
                       <TableCell className="py-3 text-left" onClick={(e) => e.stopPropagation()}>
                         <div className="flex items-center justify-start gap-1">
+                          {/* Quick Status Change */}
+                          {(() => {
+                            const nextStatuses = STATUS_WORKFLOW[item.status as CargoStatus] || [];
+                            if (nextStatuses.length === 0) return null;
+                            const isLoading = quickStatusLoading === item.id;
+                            if (nextStatuses.length === 1) {
+                              const nextStatus = nextStatuses[0] as CargoStatus;
+                              const NextIcon = statusIcons[nextStatus];
+                              const nextStyle = safeStatusStyle(nextStatus);
+                              // Extract text color for button styling
+                              const textColorMatch = nextStyle.match(/text-(?:slate|emerald|amber|cyan|teal|orange|red|purple|pink|blue|green|yellow|indigo|lime|fuchsia|rose|sky|violet|mint|forest|sand|muted|primary|secondary|destructive|accent|card|popover|background|foreground)[^\s]*/g);
+                              const textColor = textColorMatch ? textColorMatch.find(c => !c.includes('bg-')) || '' : '';
+                              return (
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  disabled={isLoading}
+                                  className={`h-7 text-[10px] gap-1 px-2 ${nextStyle} hover:opacity-80 transition-all duration-200`}
+                                  onClick={() => handleQuickStatusChange(item.id, nextStatus)}
+                                  title={`${t('cargo.quickStatus.changeTo')} ${translateStatus(nextStatus)}`}
+                                >
+                                  {isLoading ? (
+                                    <Loader2 className="h-3 w-3 animate-spin" />
+                                  ) : (
+                                    <>
+                                      <ArrowLeft className="h-3 w-3" />
+                                      <NextIcon className="h-3 w-3" />
+                                    </>
+                                  )}
+                                  <span className="hidden xl:inline">{translateStatus(nextStatus)}</span>
+                                </Button>
+                              );
+                            }
+                            // Multiple next statuses: dropdown
+                            return (
+                              <DropdownMenu>
+                                <DropdownMenuTrigger asChild>
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    disabled={isLoading}
+                                    className="h-7 text-[10px] gap-1 px-2 bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20 hover:opacity-80 transition-all duration-200"
+                                    title={t('cargo.quickStatus.next')}
+                                  >
+                                    {isLoading ? (
+                                      <Loader2 className="h-3 w-3 animate-spin" />
+                                    ) : (
+                                      <>
+                                        <ArrowLeft className="h-3 w-3" />
+                                        <ChevronDown className="h-3 w-3" />
+                                      </>
+                                    )}
+                                    <span className="hidden xl:inline">{t('cargo.quickStatus.next')}</span>
+                                  </Button>
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent align="start" className="dark:border-slate-700 border-slate-200 dark:bg-slate-800 bg-white min-w-[140px]">
+                                  {nextStatuses.map((ns) => {
+                                    const nsStatus = ns as CargoStatus;
+                                    const NIcon = statusIcons[nsStatus];
+                                    return (
+                                      <DropdownMenuItem
+                                        key={ns}
+                                        className={`text-xs gap-2 cursor-pointer ${safeStatusStyle(nsStatus)} dark:focus:bg-slate-700 focus:bg-slate-100`}
+                                        onClick={() => handleQuickStatusChange(item.id, nsStatus)}
+                                      >
+                                        <ArrowLeft className="h-3 w-3" />
+                                        <NIcon className="h-3.5 w-3.5" />
+                                        {translateStatus(nsStatus)}
+                                      </DropdownMenuItem>
+                                    );
+                                  })}
+                                </DropdownMenuContent>
+                              </DropdownMenu>
+                            );
+                          })()}
                           {(item.airWaybillNumber || item.billOfLadingNumber) && (
                             <Button variant="ghost" size="icon" className="h-7 w-7 dark:text-cyan-400 text-cyan-600 dark:hover:text-cyan-300 hover:text-cyan-500 dark:hover:bg-slate-800 hover:bg-slate-100 transition-all duration-200" onClick={() => openDetail(item)} title={t('cargo.trackShipment')}>
                               <Globe className="h-3.5 w-3.5" />
@@ -634,6 +766,53 @@ export function CargoPage() {
             </Table>
           </div>
         </CardContent>
+
+        {/* ===== FLOATING BULK STATUS BAR ===== */}
+        {selectedRows.size > 0 && (
+          <div className="absolute bottom-0 inset-x-0 z-10 flex items-center gap-3 px-4 py-3 border-t dark:border-slate-700 border-slate-200 bg-white/95 dark:bg-slate-900/95 backdrop-blur-sm shadow-[0_-4px_12px_rgba(0,0,0,0.08)] dark:shadow-[0_-4px_12px_rgba(0,0,0,0.3)] rounded-b-lg">
+            <span className="text-sm font-bold dark:text-amber-400 text-amber-600 min-w-fit">
+              {selectedRows.size}
+            </span>
+            <span className="text-xs dark:text-slate-400 text-slate-500 min-w-fit">
+              {t('cargo.bulk.itemsSelected')}
+            </span>
+            <div className="flex-1" />
+            <Select value={bulkStatus} onValueChange={(v) => setBulkStatus(v as CargoStatus)}>
+              <SelectTrigger className="h-8 w-[160px] text-xs dark:border-slate-700 border-slate-300 dark:bg-slate-800 bg-white dark:text-slate-300 text-slate-700">
+                <SelectValue placeholder={t('cargo.bulk.selectStatus')} />
+              </SelectTrigger>
+              <SelectContent className="dark:border-slate-700 border-slate-200 dark:bg-slate-800 bg-white">
+                {bulkTargetStatuses.map((s) => (
+                  <SelectItem key={s} value={s} className="text-xs dark:text-slate-300 text-slate-700 dark:focus:bg-slate-700 focus:bg-slate-100">
+                    {translateStatus(s)}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <Button
+              size="sm"
+              disabled={!bulkStatus || bulkStatusLoading}
+              onClick={handleBulkStatusChange}
+              className="h-8 text-xs gap-1.5 bg-amber-500 hover:bg-amber-600 text-slate-900 font-medium transition-all duration-200 disabled:opacity-50"
+            >
+              {bulkStatusLoading ? (
+                <Loader2 className="h-3.5 w-3.5 animate-spin" />
+              ) : (
+                <CheckCircle2 className="h-3.5 w-3.5" />
+              )}
+              {t('cargo.bulk.changeStatus')}
+            </Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => { setSelectedRows(new Set()); setBulkStatus(''); }}
+              className="h-8 text-xs gap-1.5 dark:text-slate-400 text-slate-500 dark:hover:text-slate-200 hover:text-slate-800 dark:hover:bg-slate-700 hover:bg-slate-100 transition-all duration-200"
+            >
+              <X className="h-3.5 w-3.5" />
+              {t('cargo.bulk.clearSelection')}
+            </Button>
+          </div>
+        )}
       </Card>
 
       {/* ===== PAGINATION ===== */}
