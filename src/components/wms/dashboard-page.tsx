@@ -79,6 +79,36 @@ const barChartConfig = {
   weight: { label: 'الوزن', color: '#f59e0b' },
 };
 
+// ─── Locale-aware chart config builders ──────────────────────────────────
+function getMovementsChartConfig(locale: string) {
+  const l = locale as 'ar' | 'en';
+  return {
+    RECEIVE: { label: translateMovementType('RECEIVE', l), color: '#10b981' },
+    MOVE: { label: translateMovementType('MOVE', l), color: '#06b6d4' },
+    DISPATCH: { label: translateMovementType('DISPATCH', l), color: '#f97316' },
+  };
+}
+
+function getPieChartConfig(locale: string) {
+  const l = locale as 'ar' | 'en';
+  return {
+    IN_YARD: { label: translateStatus('IN_YARD', l), color: '#10b981' },
+    IN_WAREHOUSE: { label: translateStatus('IN_WAREHOUSE', l), color: '#14b8a6' },
+    IN_TRANSIT: { label: translateStatus('IN_TRANSIT', l), color: '#f59e0b' },
+    RECEIVED: { label: translateStatus('RECEIVED', l), color: '#06b6d4' },
+    SHIPPING: { label: translateStatus('SHIPPING', l), color: '#f97316' },
+    SHIPPED: { label: translateStatus('SHIPPED', l), color: '#06b6d4' },
+    DISPATCHED: { label: translateStatus('DISPATCHED', l), color: '#64748b' },
+    DELIVERED: { label: translateStatus('DELIVERED', l), color: '#94a3b8' },
+  };
+}
+
+function getBarChartConfig(t: (k: string) => string) {
+  return {
+    weight: { label: t('common.weight'), color: '#f59e0b' },
+  };
+}
+
 // ─── KPI definitions ─────────────────────────────────────────────────────
 interface KpiDefinition {
   key: string;
@@ -185,7 +215,7 @@ function MovementsTrendChart({ data, loading, t, locale }: {
         <CardTitle className="text-sm font-medium dark:text-slate-300 text-slate-700">{t('dashboard.movementsTrend')}</CardTitle>
       </CardHeader>
       <CardContent>
-        <ChartContainer config={movementsChartConfig} className="h-[260px] w-full">
+        <ChartContainer config={getMovementsChartConfig(locale)} className="h-[260px] w-full">
           <AreaChart data={data} margin={{ top: 5, right: 5, left: -20, bottom: 0 }}>
             <defs>
               <linearGradient id="fillRECEIVE" x1="0" y1="0" x2="0" y2="1">
@@ -263,7 +293,7 @@ function CargoStatusDonutChart({ data, loading, t, locale }: {
         <CardTitle className="text-sm font-medium dark:text-slate-300 text-slate-700">{t('dashboard.cargoStatusBreakdown')}</CardTitle>
       </CardHeader>
       <CardContent>
-        <ChartContainer config={pieChartConfig} className="h-[260px] w-full">
+        <ChartContainer config={getPieChartConfig(locale)} className="h-[260px] w-full">
           <PieChart>
             <ChartTooltip
               content={(
@@ -335,7 +365,7 @@ function WeightByCategoryChart({ data, loading, t, locale }: {
         <CardTitle className="text-sm font-medium dark:text-slate-300 text-slate-700">{t('dashboard.weightByCategory')}</CardTitle>
       </CardHeader>
       <CardContent>
-        <ChartContainer config={barChartConfig} className="h-[260px] w-full">
+        <ChartContainer config={getBarChartConfig(t)} className="h-[260px] w-full">
           <BarChart data={chartData} layout="vertical" margin={{ top: 5, right: 20, left: -20, bottom: 5 }}>
             <CartesianGrid strokeDasharray="3 3" className="stroke-slate-200 dark:stroke-slate-800" horizontal={false} />
             <XAxis type="number" tick={{ fontSize: 11, fill: '#94a3b8' }} axisLine={false} tickLine={false} />
@@ -548,14 +578,14 @@ export function DashboardPage({ onNavigate }: DashboardPageProps) {
         <div className="flex items-center gap-2">
           <Badge variant="outline" className="gap-1.5 py-1.5 px-3 text-xs font-medium dark:border-slate-700 border-slate-200 dark:bg-slate-900/50 bg-slate-50 dark:text-slate-400 text-slate-500">
             <Calendar className="h-3.5 w-3.5" />
-            {locale === 'ar' ? 'آخر 30 يوم' : 'Last 30 days'}
+            {t('dashboard.last30Days')}
           </Badge>
           <Button
             variant="outline" size="sm" className="gap-1.5 dark:border-slate-700 border-slate-200 dark:bg-slate-900/50 bg-slate-50 dark:text-slate-400 text-slate-500 dark:hover:bg-slate-800 hover:bg-slate-100 h-8"
             onClick={handleRefresh} disabled={refreshing}
           >
             <RefreshCw className={`h-3.5 w-3.5 ${refreshing ? 'animate-spin' : ''}`} />
-            <span className="hidden sm:inline">{locale === 'ar' ? 'تحديث' : 'Refresh'}</span>
+            <span className="hidden sm:inline">{t('dashboard.refresh')}</span>
           </Button>
         </div>
       </div>
@@ -601,7 +631,7 @@ export function DashboardPage({ onNavigate }: DashboardPageProps) {
       </div>
 
       {/* ─── KPI Cards ─── */}
-      <SectionHeader title={locale === 'ar' ? 'المؤشرات' : 'Key Metrics'} icon={TrendingUp} />
+      <SectionHeader title={t('dashboard.keyMetrics')} icon={TrendingUp} />
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 md:grid-cols-3 xl:grid-cols-6">
         {kpis.map((kpi) => (
           <KpiCard
@@ -621,18 +651,18 @@ export function DashboardPage({ onNavigate }: DashboardPageProps) {
       </div>
 
       {/* ─── Movements Trend Chart ─── */}
-      <SectionHeader title={locale === 'ar' ? 'الاتجاهات' : 'Trends'} icon={ArrowLeftRight} />
+      <SectionHeader title={t('dashboard.trends')} icon={ArrowLeftRight} />
       <MovementsTrendChart data={stats?.movementsByDay ?? []} loading={loading} t={t} locale={locale} />
 
       {/* ─── Status Donut + Weight Bar ─── */}
-      <SectionHeader title={locale === 'ar' ? 'التحليلات' : 'Analytics'} icon={Weight} />
+      <SectionHeader title={t('dashboard.analytics')} icon={Weight} />
       <div className="grid gap-6 lg:grid-cols-2">
         <CargoStatusDonutChart data={stats?.statusBreakdown ?? []} loading={loading} t={t} locale={locale} />
         <WeightByCategoryChart data={stats?.weightByCategory ?? []} loading={loading} t={t} locale={locale} />
       </div>
 
       {/* ─── Recent Movements + Project Progress ─── */}
-      <SectionHeader title={locale === 'ar' ? 'التفاصيل' : 'Details'} icon={TrendingUp} />
+      <SectionHeader title={t('dashboard.details')} icon={TrendingUp} />
       <div className="grid gap-6 lg:grid-cols-2">
         <RecentMovements movements={stats?.recentMovements ?? []} loading={loading} t={t} locale={locale} onNavigate={onNavigate} />
         <ProjectProgress projects={stats?.projectProgress ?? []} loading={loading} t={t} />

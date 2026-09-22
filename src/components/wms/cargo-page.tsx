@@ -196,28 +196,28 @@ export function CargoPage() {
   const [bulkStatus, setBulkStatus] = useState<CargoStatus | ''>('');
   const [bulkStatusLoading, setBulkStatusLoading] = useState(false);
 
-  const portLabels: Record<string, string> = {
-    container: 'الحاوية',
-    seal: 'الختم',
-    customs: 'الجمارك',
-    vessel: 'السفينة',
-    voyage: 'الرحلة',
-    flight: 'الرحلة الجوية',
-    transportMode: 'طريقة النقل',
-    arrival: 'تاريخ الوصول',
-    storageDays: 'أيام التخزين',
-    barcode: 'الباركود',
-    type: 'النوع',
-    'customs.NOT_SUBMITTED': 'لم يقدم',
-    'customs.PENDING': 'قيد المراجعة',
-    'customs.CLEARED': 'مخلص',
-    'customs.REJECTED': 'مرفوض',
-    'customs.ON_HOLD': 'معلق',
-  };
-
   const { t } = useTranslation();
   const globalSearch = useAppStore((s) => s.globalSearch);
   const effectiveSearch = search || globalSearch;
+
+  const portLabels: Record<string, string> = {
+    container: t('cargo.port.container'),
+    seal: t('cargo.port.seal'),
+    customs: t('cargo.port.customs'),
+    vessel: t('cargo.port.vessel'),
+    voyage: t('cargo.port.voyage'),
+    flight: t('cargo.port.flight'),
+    transportMode: t('cargo.port.transportMode'),
+    arrival: t('cargo.port.arrival'),
+    storageDays: t('cargo.port.storageDays'),
+    barcode: t('cargo.port.barcode'),
+    type: t('cargo.port.type'),
+    'customs.NOT_SUBMITTED': t('cargo.port.customsNotSubmitted'),
+    'customs.PENDING': t('cargo.port.customsPending'),
+    'customs.CLEARED': t('cargo.port.customsCleared'),
+    'customs.REJECTED': t('cargo.port.customsRejected'),
+    'customs.ON_HOLD': t('cargo.port.customsOnHold'),
+  };
 
   // ==================== API CALLS ====================
 
@@ -403,14 +403,14 @@ export function CargoPage() {
         const err = await res.json();
         throw new Error(err.error || 'Transfer failed');
       }
-      toast.success('تم نقل البضاعة بنجاح');
+      toast.success(t('cargo.transfer.success'));
       setShowTransfer(false);
       setTransferTo('');
       setTransferRemarks('');
       openDetail(detailCargo);
       fetchCargo();
     } catch (e: unknown) {
-      toast.error(e instanceof Error ? e.message : 'فشل النقل');
+      toast.error(e instanceof Error ? e.message : t('cargo.transfer.failed'));
     } finally { setTransferring(false); }
   };
 
@@ -921,7 +921,7 @@ export function CargoPage() {
                         >
                           <ImageIcon className="h-6 w-6 dark:text-slate-600 text-slate-400 group-hover:dark:text-amber-400/60 group-hover:text-amber-400/60 transition-colors" />
                           <span className="text-[10px] dark:text-slate-500 text-slate-400 group-hover:dark:text-slate-400 group-hover:text-slate-500 transition-colors">
-                            Photo {idx}
+                            {t('cargo.detail.photo')} {idx}
                           </span>
                           <div className="absolute inset-0 rounded-lg dark:bg-slate-900/60 bg-black/30 opacity-0 group-hover:opacity-100 transition-all duration-200 flex items-center justify-center">
                             <Eye className="h-5 w-5 text-white" />
@@ -964,7 +964,7 @@ export function CargoPage() {
                               </div>
                               <div>
                                 <p className="text-xs font-medium dark:text-slate-200 text-slate-700 group-hover:dark:text-slate-100 group-hover:text-slate-900 transition-colors">{doc.name}</p>
-                                <p className="text-[10px] dark:text-slate-500 text-slate-400">PDF • 2.4 MB</p>
+                                <p className="text-[10px] dark:text-slate-500 text-slate-400">{t('cargo.detail.document')}</p>
                               </div>
                             </div>
                             <Button
@@ -994,7 +994,7 @@ export function CargoPage() {
                         <div className="h-9 w-9 rounded-lg dark:bg-emerald-500/10 bg-emerald-50 flex items-center justify-center group-hover:dark:bg-emerald-500/20 group-hover:bg-emerald-100 transition-colors">
                           <ArrowRightLeft className="h-4 w-4 dark:text-emerald-400 text-emerald-600" />
                         </div>
-                        <span className="text-[10px] font-medium dark:text-slate-300 text-slate-600 text-center leading-tight">نقل الموقع</span>
+                        <span className="text-[10px] font-medium dark:text-slate-300 text-slate-600 text-center leading-tight">{t('cargo.detail.transferLocation')}</span>
                       </button>
                       <button
                         className="flex flex-col items-center gap-2 p-3 rounded-xl dark:bg-slate-800/60 bg-slate-50 dark:hover:bg-slate-800 hover:bg-slate-100 transition-all duration-200 group cursor-pointer border dark:border-transparent border-slate-200 dark:hover:border-amber-500/20 hover:border-amber-400/30"
@@ -1141,7 +1141,7 @@ export function CargoPage() {
                   <div className="rounded-xl border dark:border-slate-800 border-slate-200 dark:bg-slate-900/50 bg-white p-4 shadow-sm">
                     <h3 className="text-xs font-semibold dark:text-slate-300 text-slate-600 flex items-center gap-1.5 mb-3">
                       <Weight className="h-3.5 w-3.5 dark:text-red-400 text-red-500" />
-                      {t('common.weight')} Visualization
+                      {t('common.weight')} {t('cargo.detail.weightVisualization')}
                     </h3>
                     {weightCat && (
                       <div className="space-y-3">
@@ -1156,7 +1156,7 @@ export function CargoPage() {
                             {weightCat.label}
                           </Badge>
                           <span className="text-xs dark:text-slate-400 text-slate-500">
-                            {(detailCargo.weight / 1000).toFixed(1)} tonnes
+                            {(detailCargo.weight / 1000).toFixed(1)} {t('common.tonnes')}
                           </span>
                         </div>
 
@@ -1315,7 +1315,7 @@ export function CargoPage() {
                   <div className="rounded-xl border dark:border-slate-800 border-slate-200 dark:bg-slate-900/50 bg-white p-4 shadow-sm">
                     <h3 className="text-xs font-semibold dark:text-slate-300 text-slate-600 flex items-center gap-1.5 mb-3">
                       <Ship className="h-3.5 w-3.5 dark:text-slate-400 text-slate-500" />
-                      {portLabels.transportMode} / معلومات الميناء
+                      {portLabels.transportMode} / {t('cargo.detail.portInfo')}
                     </h3>
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
                       {detailCargo.containerNumber && (
@@ -1378,7 +1378,7 @@ export function CargoPage() {
                         <div>
                           <span className="dark:text-slate-500 text-slate-400 text-xs">{portLabels.storageDays}</span>
                           <p className={`mt-0.5 font-semibold ${detailCargo.storageDays > 15 ? 'text-red-600 dark:text-red-400' : 'dark:text-slate-200 text-slate-800'}`}>
-                            {detailCargo.storageDays} يوم
+                            {detailCargo.storageDays} {t('common.days')}
                             {detailCargo.storageDays > 15 && (
                               <span className="ml-1 text-[10px] font-normal dark:text-amber-400 text-amber-600">⚠</span>
                             )}
@@ -1587,20 +1587,20 @@ export function CargoPage() {
       }}>
         <DialogContent className="w-[95vw] max-w-md dark:border-slate-700 border-slate-200 dark:bg-slate-900 bg-white shadow-xl">
           <DialogHeader>
-            <DialogTitle className="dark:text-slate-100 text-slate-900">نقل البضاعة</DialogTitle>
+            <DialogTitle className="dark:text-slate-100 text-slate-900">{t('cargo.transfer.title')}</DialogTitle>
           </DialogHeader>
           <div className="space-y-4 py-2">
             {detailCargo?.location && (
               <div className="rounded-lg dark:bg-slate-800/50 bg-slate-50 p-3">
-                <span className="text-xs dark:text-slate-500 text-slate-400">الموقع الحالي</span>
+                <span className="text-xs dark:text-slate-500 text-slate-400">{t('cargo.transfer.currentLocation')}</span>
                 <p className="text-sm font-medium dark:text-slate-200 text-slate-800 mt-0.5">{detailCargo.location.code} — {detailCargo.location.name}</p>
               </div>
             )}
             <div>
-              <Label className="dark:text-slate-400 text-slate-600">الموقع الوجهة</Label>
+              <Label className="dark:text-slate-400 text-slate-600">{t('cargo.transfer.targetLocation')}</Label>
               <Select value={transferTo} onValueChange={setTransferTo}>
                 <SelectTrigger className="dark:border-slate-700 border-slate-300 dark:bg-slate-800 bg-white dark:text-slate-200 text-slate-900 mt-1">
-                  <SelectValue placeholder="اختر موقع..." />
+                  <SelectValue placeholder={t('cargo.transfer.selectLocation')} />
                 </SelectTrigger>
                 <SelectContent className="dark:border-slate-700 border-slate-200 dark:bg-slate-800 bg-white">
                   {locations.filter(l => l.id !== detailCargo?.locationId).map((l) => (
@@ -1610,16 +1610,16 @@ export function CargoPage() {
               </Select>
             </div>
             <div>
-              <Label className="dark:text-slate-400 text-slate-600">ملاحظات</Label>
+              <Label className="dark:text-slate-400 text-slate-600">{t('cargo.transfer.remarks')}</Label>
               <Textarea value={transferRemarks} onChange={(e) => setTransferRemarks(e.target.value)}
                 className="dark:border-slate-700 border-slate-300 dark:bg-slate-800 bg-white dark:text-slate-200 text-slate-900 mt-1"
-                placeholder="ملاحظات اختيارية..." />
+                placeholder={t('cargo.transfer.remarksPlaceholder')} />
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setShowTransfer(false)} className="dark:border-slate-700 border-slate-300 dark:text-slate-300 text-slate-700">إلغاء</Button>
+            <Button variant="outline" onClick={() => setShowTransfer(false)} className="dark:border-slate-700 border-slate-300 dark:text-slate-300 text-slate-700">{t('cargo.transfer.cancel')}</Button>
             <Button onClick={handleTransfer} disabled={!transferTo || transferring} className="bg-amber-500 hover:bg-amber-600 text-slate-900">
-              {transferring ? 'جاري النقل...' : 'تأكيد النقل'}
+              {transferring ? t('cargo.transfer.confirming') : t('cargo.transfer.confirm')}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -1786,13 +1786,13 @@ export function CargoPage() {
               <Label className="dark:text-slate-400 text-slate-600">{t('cargo.form.portOfLoading')}</Label>
               <Input value={form.portOfLoading} onChange={(e) => setForm({ ...form, portOfLoading: e.target.value })}
                 className="dark:border-slate-700 border-slate-300 dark:bg-slate-800 bg-white dark:text-slate-200 text-slate-900 mt-1"
-                placeholder="e.g., Jebel Ali, Dubai" />
+                placeholder={t('cargo.form.portOfLoadingPlaceholder')} />
             </div>
             <div>
               <Label className="dark:text-slate-400 text-slate-600">{t('cargo.form.portOfDischarge')}</Label>
               <Input value={form.portOfDischarge} onChange={(e) => setForm({ ...form, portOfDischarge: e.target.value })}
                 className="dark:border-slate-700 border-slate-300 dark:bg-slate-800 bg-white dark:text-slate-200 text-slate-900 mt-1"
-                placeholder="e.g., Rotterdam, Hamburg" />
+                placeholder={t('cargo.form.portOfDischargePlaceholder')} />
             </div>
           </div>
           <DialogFooter>

@@ -99,25 +99,6 @@ interface Invoice {
 }
 
 // ─── Constants ────────────────────────────────────────────────────────────
-const INVOICE_TYPE_LABELS: Record<InvoiceType, string> = {
-  STORAGE: 'فاتورة تخزين',
-  HANDLING: 'فاتورة مناولة',
-  CUSTOMS: 'فاتورة جمركية',
-  TRANSPORT: 'فاتورة نقل',
-  EQUIPMENT: 'فاتورة معدات',
-  CREDIT_NOTE: 'إشعار دائن',
-};
-
-const BRANCH_LABELS: Record<Branch, string> = {
-  AUH: 'أبوظبي', DXB: 'دبي', SHJ: 'الشارقة',
-  AJM: 'عجمان', RAK: 'رأس الخيمة', FJR: 'الفجيرة',
-};
-
-const PAYMENT_TERMS_LABELS: Record<PaymentTerms, string> = {
-  IMMEDIATE: 'فوري', NET_15: 'صاف 15 يوم', NET_30: 'صاف 30 يوم',
-  NET_60: 'صاف 60 يوم', NET_90: 'صاف 90 يوم',
-};
-
 const STATUS_VARIANT: Record<InvoiceStatus, string> = {
   DRAFT: 'bg-slate-500/15 text-slate-600 dark:text-slate-400 border-slate-500/20',
   ISSUED: 'bg-blue-500/15 text-blue-600 dark:text-blue-400 border-blue-500/20',
@@ -127,18 +108,12 @@ const STATUS_VARIANT: Record<InvoiceStatus, string> = {
   CANCELLED: 'bg-gray-500/15 text-gray-600 dark:text-gray-400 border-gray-500/20',
 };
 
-const STATUS_LABELS: Record<InvoiceStatus, string> = {
-  DRAFT: 'مسودة', ISSUED: 'صادرة', PAID: 'مدفوعة',
-  PARTIAL: 'مدفوعة جزئياً', OVERDUE: 'متأخرة', CANCELLED: 'ملغاة',
-};
-
-const PAYMENT_METHOD_LABELS: Record<string, string> = {
-  BANK_TRANSFER: 'تحويل بنكي',
-  CHECK: 'شيك',
-  CASH: 'نقدي',
-  CREDIT_CARD: 'بطاقة ائتمانية',
-  WIRE: 'تحويل سريع',
-};
+const INVOICE_TYPES: InvoiceType[] = ['STORAGE', 'HANDLING', 'CUSTOMS', 'TRANSPORT', 'EQUIPMENT', 'CREDIT_NOTE'];
+const BRANCHES: Branch[] = ['AUH', 'DXB', 'SHJ', 'AJM', 'RAK', 'FJR'];
+const PAYMENT_TERMS: PaymentTerms[] = ['IMMEDIATE', 'NET_15', 'NET_30', 'NET_60', 'NET_90'];
+const INVOICE_STATUSES: InvoiceStatus[] = ['DRAFT', 'ISSUED', 'PAID', 'PARTIAL', 'OVERDUE', 'CANCELLED'];
+const PAYMENT_METHODS = ['BANK_TRANSFER', 'CHECK', 'CASH', 'CREDIT_CARD', 'WIRE'];
+const UNITS = ['DAY', 'KG', 'ITEM', 'LIFT', 'CONTAINER', 'CBM'];
 
 // ─── Helpers ──────────────────────────────────────────────────────────────
 const fmt = (n: number) => n.toLocaleString('ar-AE', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
@@ -159,6 +134,15 @@ function agingBucket(days: number): string {
 // ─── Component ────────────────────────────────────────────────────────────
 export function InvoicesPage() {
   const { t } = useTranslation();
+
+  // ── Dynamic label getters (use translation keys) ──
+  const getTypeLabel = (type: string) => t(`invoices.type.${type}`);
+  const getStatusLabel = (status: string) => t(`invoices.status.${status}`);
+  const getBranchLabel = (branch: string) => t(`invoices.branch.${branch}`);
+  const getPaymentTermsLabel = (terms: string) => t(`invoices.paymentTerms.${terms}`);
+  const getPaymentMethodLabel = (method: string) => t(`invoices.paymentMethod.${method}`);
+  const getUnitLabel = (unit: string) => t(`invoices.unit.${unit}`);
+  const cur = t('invoices.currency');
   const globalSearch = useAppStore((s) => s.globalSearch);
   const [invoices, setInvoices] = useState<Invoice[]>([]);
   const [agingData, setAgingData] = useState<Record<string, number>>({ CURRENT: 0, '1-30': 0, '31-60': 0, '61-90': 0, '90+': 0 });
@@ -203,7 +187,7 @@ export function InvoicesPage() {
         setAgingData(data.aging);
       }
     } catch {
-      toast.error(t('invoices.fetchFailed') ?? 'فشل تحميل الفواتير');
+      toast.error(t('invoices.fetchFailed'));
     } finally {
       setLoading(false);
     }
@@ -255,10 +239,10 @@ export function InvoicesPage() {
 
   // Add invoice — FIXED: sends `items` not `lineItems`, includes `clientId`, calculates `lineTotal`
   const handleAdd = async () => {
-    if (!form.clientName.trim()) { toast.error('يرجى إدخال اسم العميل'); return; }
+    if (!form.clientName.trim()) { toast.error(t('invoices.validation.clientRequired')); return; }
     const validItems = lineItems.filter(l => l.description.trim());
-    if (validItems.length === 0) { toast.error('يرجى إضافة بند واحد على الأقل'); return; }
-    if (!form.periodStart || !form.periodEnd) { toast.error('يرجى تحديد فترة الفاتورة'); return; }
+    if (validItems.length === 0) { toast.error(t('invoices.validation.itemRequired')); return; }
+    if (!form.periodStart || !form.periodEnd) { toast.error(t('invoices.validation.periodRequired')); return; }
     setSaving(true);
     try {
       // Calculate lineTotal for each item
@@ -292,12 +276,12 @@ export function InvoicesPage() {
         const err = await res.json().catch(() => ({}));
         throw new Error(err.error || 'Failed');
       }
-      toast.success(t('invoices.addSuccess') ?? 'تم إنشاء الفاتورة بنجاح');
+      toast.success(t('invoices.addSuccess'));
       setShowAdd(false);
       resetForm();
       fetchInvoices();
     } catch (e) {
-      toast.error(t('invoices.addFailed') ?? 'فشل إنشاء الفاتورة');
+      toast.error(t('invoices.addFailed'));
     } finally {
       setSaving(false);
     }
@@ -312,7 +296,7 @@ export function InvoicesPage() {
         body: JSON.stringify({ action: 'issue' }),
       });
       if (!res.ok) throw new Error();
-      toast.success('تم إصدار الفاتورة');
+      toast.success(t('invoices.issueSuccess'));
       // Refresh the selected invoice
       const detailRes = await fetch(`/api/invoices/${inv.id}`);
       if (detailRes.ok) {
@@ -323,14 +307,14 @@ export function InvoicesPage() {
       }
       fetchInvoices();
     } catch {
-      toast.error('فشل إصدار الفاتورة');
+      toast.error(t('invoices.issueFailed'));
     }
   };
 
   // Record payment — FIXED: uses PATCH with action: 'payment'
   const handleRecordPayment = async () => {
     if (!selected || !paymentAmount || +paymentAmount <= 0) {
-      toast.error('يرجى إدخال مبلغ صحيح');
+      toast.error(t('invoices.validation.validAmount'));
       return;
     }
     setPaying(true);
@@ -346,7 +330,7 @@ export function InvoicesPage() {
         }),
       });
       if (!res.ok) throw new Error();
-      toast.success('تم تسجيل الدفعة بنجاح');
+      toast.success(t('invoices.paymentSuccess'));
       setShowPayment(false);
       setPaymentAmount('');
       setPaymentRef('');
@@ -358,7 +342,7 @@ export function InvoicesPage() {
       }
       fetchInvoices();
     } catch {
-      toast.error('فشل تسجيل الدفعة');
+      toast.error(t('invoices.paymentFailed'));
     } finally {
       setPaying(false);
     }
@@ -373,11 +357,11 @@ export function InvoicesPage() {
         body: JSON.stringify({ action: 'cancel' }),
       });
       if (!res.ok) throw new Error();
-      toast.success('تم إلغاء الفاتورة');
+      toast.success(t('invoices.cancelSuccess'));
       setSelected({ ...inv, status: 'CANCELLED' });
       fetchInvoices();
     } catch {
-      toast.error('فشل إلغاء الفاتورة');
+      toast.error(t('invoices.cancelFailed'));
     }
   };
 
@@ -393,26 +377,26 @@ export function InvoicesPage() {
       a.download = `${inv.invoiceNumber}.pdf`;
       a.click();
       URL.revokeObjectURL(url);
-      toast.success('تم تحميل PDF');
+      toast.success(t('invoices.pdfSuccess'));
     } catch {
-      toast.error('فشل تحميل PDF');
+      toast.error(t('invoices.pdfFailed'));
     }
   };
 
   // Export Excel
   const handleExport = () => {
     const csvRows = [
-      ['رقم الفاتورة', 'النوع', 'العميل', 'الإجمالي', 'المدفوع', 'المستحق', 'الحالة', 'تاريخ الاستحقاق', 'الفرع'],
+      [t('invoices.csv.invoiceNumber'), t('invoices.csv.type'), t('invoices.csv.client'), t('invoices.csv.total'), t('invoices.csv.paid'), t('invoices.csv.balanceDue'), t('invoices.csv.status'), t('invoices.csv.dueDate'), t('invoices.csv.branch')],
       ...filtered.map(i => [
         i.invoiceNumber,
-        INVOICE_TYPE_LABELS[i.type],
+        getTypeLabel(i.type),
         i.clientName,
         fmt(i.totalAmount || 0),
         fmt(i.paidAmount || 0),
         fmt(i.balanceDue || 0),
-        STATUS_LABELS[i.status],
+        getStatusLabel(i.status),
         fmtDate(i.dueDate),
-        BRANCH_LABELS[i.branch],
+        getBranchLabel(i.branch),
       ]),
     ];
     const csv = csvRows.map(r => r.join(',')).join('\n');
@@ -421,7 +405,7 @@ export function InvoicesPage() {
     const a = document.createElement('a');
     a.href = url; a.download = 'invoices.csv'; a.click();
     URL.revokeObjectURL(url);
-    toast.success('تم تصدير الفواتير');
+    toast.success(t('invoices.exportSuccess'));
   };
 
   const resetForm = () => {
@@ -458,18 +442,18 @@ export function InvoicesPage() {
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h1 className="text-xl md:text-2xl font-bold text-slate-900 dark:text-slate-100">
-            {t('header.invoices') ?? 'الفواتير والفوترة'}
+            {t('header.invoices')}
           </h1>
           <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
-            إدارة الفواتير والمدفوعات والمتابعة — الإمارات (د.إ)
+            {t('invoices.subtitle')}
           </p>
         </div>
         <div className="flex flex-wrap gap-2">
           <Button variant="outline" size="sm" onClick={handleExport} className="gap-2">
-            <Download className="h-4 w-4" /> تصدير
+            <Download className="h-4 w-4" /> {t('invoices.export')}
           </Button>
           <Button size="sm" onClick={() => setShowAdd(true)} className="gap-2">
-            <Plus className="h-4 w-4" /> إضافة فاتورة
+            <Plus className="h-4 w-4" /> {t('invoices.addInvoice')}
           </Button>
         </div>
       </div>
@@ -477,10 +461,10 @@ export function InvoicesPage() {
       {/* KPI Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {[
-          { label: 'إجمالي المستحق', value: `${fmt(kpis.outstanding)} د.إ`, icon: DollarSign, color: 'text-blue-600 dark:text-blue-400', bg: 'bg-blue-500/10' },
-          { label: 'فواتير متأخرة', value: kpis.overdue, icon: AlertCircle, color: 'text-red-600 dark:text-red-400', bg: 'bg-red-500/10' },
-          { label: 'مسودات', value: kpis.draft, icon: FileEdit, color: 'text-slate-600 dark:text-slate-400', bg: 'bg-slate-500/10' },
-          { label: 'مدفوعة هذا الشهر', value: `${fmt(kpis.paidThisMonth)} د.إ`, icon: CheckCircle2, color: 'text-emerald-600 dark:text-emerald-400', bg: 'bg-emerald-500/10' },
+          { label: t('invoices.kpi.outstanding'), value: `${fmt(kpis.outstanding)} ${cur}`, icon: DollarSign, color: 'text-blue-600 dark:text-blue-400', bg: 'bg-blue-500/10' },
+          { label: t('invoices.kpi.overdue'), value: kpis.overdue, icon: AlertCircle, color: 'text-red-600 dark:text-red-400', bg: 'bg-red-500/10' },
+          { label: t('invoices.kpi.draft'), value: kpis.draft, icon: FileEdit, color: 'text-slate-600 dark:text-slate-400', bg: 'bg-slate-500/10' },
+          { label: t('invoices.kpi.paidThisMonth'), value: `${fmt(kpis.paidThisMonth)} ${cur}`, icon: CheckCircle2, color: 'text-emerald-600 dark:text-emerald-400', bg: 'bg-emerald-500/10' },
         ].map((kpi, i) => (
           <Card key={i} className="border-slate-200 dark:border-slate-800">
             <CardContent className="p-4 flex items-center gap-4">
@@ -499,19 +483,19 @@ export function InvoicesPage() {
       {/* Aging Buckets — responsive */}
       <Card className="border-slate-200 dark:border-slate-800">
         <CardContent className="p-4">
-          <h3 className="text-sm font-medium text-slate-700 dark:text-slate-300 mb-3">توزيع المستحقات حسب الأجل</h3>
+          <h3 className="text-sm font-medium text-slate-700 dark:text-slate-300 mb-3">{t('invoices.aging.title')}</h3>
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
             {([
-              { key: 'current', label: 'حالي', color: 'bg-emerald-500' },
-              { key: '1-30', label: '1-30 يوم', color: 'bg-blue-500' },
-              { key: '31-60', label: '31-60 يوم', color: 'bg-amber-500' },
-              { key: '61-90', label: '61-90 يوم', color: 'bg-orange-500' },
-              { key: '90+', label: '90+ يوم', color: 'bg-red-500' },
+              { key: 'current', label: t('invoices.aging.current'), color: 'bg-emerald-500' },
+              { key: '1-30', label: t('invoices.aging.1-30'), color: 'bg-blue-500' },
+              { key: '31-60', label: t('invoices.aging.31-60'), color: 'bg-amber-500' },
+              { key: '61-90', label: t('invoices.aging.61-90'), color: 'bg-orange-500' },
+              { key: '90+', label: t('invoices.aging.90+'), color: 'bg-red-500' },
             ] as const).map(b => (
               <div key={b.key} className="text-center">
                 <div className={`h-2 rounded-full ${b.color} mb-2`} style={{ opacity: aging[b.key] > 0 ? 1 : 0.2 }} />
                 <p className="text-xs text-slate-500 dark:text-slate-400">{b.label}</p>
-                <p className="text-sm font-semibold text-slate-900 dark:text-slate-100">{fmt(aging[b.key])} <span className="text-xs font-normal text-slate-400">د.إ</span></p>
+                <p className="text-sm font-semibold text-slate-900 dark:text-slate-100">{fmt(aging[b.key])} <span className="text-xs font-normal text-slate-400">{cur}</span></p>
               </div>
             ))}
           </div>
@@ -528,14 +512,14 @@ export function InvoicesPage() {
           <SelectTrigger className="w-full sm:w-[160px] dark:border-slate-700 border-slate-300 dark:bg-slate-800 bg-white"><SelectValue placeholder={t('common.allStatuses')} /></SelectTrigger>
           <SelectContent className="dark:border-slate-700 border-slate-200 dark:bg-slate-800 bg-white">
             <SelectItem value="ALL">{t('common.allStatuses')}</SelectItem>
-            {Object.entries(STATUS_LABELS).map(([k, v]) => <SelectItem key={k} value={k}>{v}</SelectItem>)}
+            {INVOICE_STATUSES.map(k => <SelectItem key={k} value={k}>{getStatusLabel(k)}</SelectItem>)}
           </SelectContent>
         </Select>
         <Select value={typeFilter} onValueChange={setTypeFilter}>
           <SelectTrigger className="w-full sm:w-[180px] dark:border-slate-700 border-slate-300 dark:bg-slate-800 bg-white"><SelectValue placeholder={t('common.allTypes')} /></SelectTrigger>
           <SelectContent className="dark:border-slate-700 border-slate-200 dark:bg-slate-800 bg-white">
             <SelectItem value="ALL">{t('common.allTypes')}</SelectItem>
-            {Object.entries(INVOICE_TYPE_LABELS).map(([k, v]) => <SelectItem key={k} value={k}>{v}</SelectItem>)}
+            {INVOICE_TYPES.map(k => <SelectItem key={k} value={k}>{getTypeLabel(k)}</SelectItem>)}
           </SelectContent>
         </Select>
       </div>
@@ -549,21 +533,21 @@ export function InvoicesPage() {
         ) : filtered.length === 0 ? (
           <div className="p-12 text-center text-slate-500 dark:text-slate-400">
             <FileText className="h-12 w-12 mx-auto mb-3 opacity-30" />
-            <p>لا توجد فواتير</p>
+            <p>{t('invoices.noInvoices')}</p>
           </div>
         ) : (
           <div className="overflow-x-auto">
             <Table>
               <TableHeader>
                 <TableRow className="bg-slate-50 dark:bg-slate-900/50 hover:bg-slate-50 dark:hover:bg-slate-900/50">
-                  <TableHead className="text-slate-600 dark:text-slate-300">رقم الفاتورة</TableHead>
-                  <TableHead className="text-slate-600 dark:text-slate-300 hidden sm:table-cell">النوع</TableHead>
-                  <TableHead className="text-slate-600 dark:text-slate-300">العميل</TableHead>
-                  <TableHead className="text-slate-600 dark:text-slate-300">الإجمالي (د.إ)</TableHead>
-                  <TableHead className="text-slate-600 dark:text-slate-300">المستحق (د.إ)</TableHead>
-                  <TableHead className="text-slate-600 dark:text-slate-300">الحالة</TableHead>
-                  <TableHead className="text-slate-600 dark:text-slate-300 hidden md:table-cell">تاريخ الاستحقاق</TableHead>
-                  <TableHead className="text-slate-600 dark:text-slate-300 hidden lg:table-cell">الفرع</TableHead>
+                  <TableHead className="text-slate-600 dark:text-slate-300">{t('invoices.table.invoiceNumber')}</TableHead>
+                  <TableHead className="text-slate-600 dark:text-slate-300 hidden sm:table-cell">{t('invoices.table.type')}</TableHead>
+                  <TableHead className="text-slate-600 dark:text-slate-300">{t('invoices.table.client')}</TableHead>
+                  <TableHead className="text-slate-600 dark:text-slate-300">{t('invoices.table.totalAed')}</TableHead>
+                  <TableHead className="text-slate-600 dark:text-slate-300">{t('invoices.table.balanceDueAed')}</TableHead>
+                  <TableHead className="text-slate-600 dark:text-slate-300">{t('invoices.table.status')}</TableHead>
+                  <TableHead className="text-slate-600 dark:text-slate-300 hidden md:table-cell">{t('invoices.table.dueDate')}</TableHead>
+                  <TableHead className="text-slate-600 dark:text-slate-300 hidden lg:table-cell">{t('invoices.table.branch')}</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -574,17 +558,17 @@ export function InvoicesPage() {
                     onClick={() => setSelected(inv)}
                   >
                     <TableCell className="font-medium text-slate-900 dark:text-slate-100">{inv.invoiceNumber}</TableCell>
-                    <TableCell className="text-slate-700 dark:text-slate-300 hidden sm:table-cell">{INVOICE_TYPE_LABELS[inv.type]}</TableCell>
+                    <TableCell className="text-slate-700 dark:text-slate-300 hidden sm:table-cell">{getTypeLabel(inv.type)}</TableCell>
                     <TableCell className="text-slate-700 dark:text-slate-300">{inv.clientName}</TableCell>
                     <TableCell className="font-mono text-slate-900 dark:text-slate-100">{fmt(inv.totalAmount || 0)}</TableCell>
                     <TableCell className="font-mono text-slate-900 dark:text-slate-100">{fmt(inv.balanceDue || 0)}</TableCell>
                     <TableCell>
                       <Badge variant="outline" className={`${STATUS_VARIANT[inv.status]} text-xs`}>
-                        {STATUS_LABELS[inv.status]}
+                        {getStatusLabel(inv.status)}
                       </Badge>
                     </TableCell>
                     <TableCell className="text-slate-600 dark:text-slate-400 hidden md:table-cell">{fmtDate(inv.dueDate)}</TableCell>
-                    <TableCell className="text-slate-600 dark:text-slate-400 hidden lg:table-cell">{BRANCH_LABELS[inv.branch]}</TableCell>
+                    <TableCell className="text-slate-600 dark:text-slate-400 hidden lg:table-cell">{getBranchLabel(inv.branch)}</TableCell>
                   </TableRow>
                 ))}
               </TableBody>
@@ -597,56 +581,56 @@ export function InvoicesPage() {
       <Dialog open={showAdd} onOpenChange={setShowAdd}>
         <DialogContent className="w-[95vw] max-w-2xl max-h-[90vh] overflow-y-auto" dir="rtl">
           <DialogHeader>
-            <DialogTitle className="text-slate-900 dark:text-slate-100">إضافة فاتورة جديدة</DialogTitle>
-            <DialogDescription className="text-slate-500 dark:text-slate-400">أدخل بيانات الفاتورة — ضريبة القيمة المضافة 5% (الإمارات)</DialogDescription>
+            <DialogTitle className="text-slate-900 dark:text-slate-100">{t('invoices.addDialog.title')}</DialogTitle>
+            <DialogDescription className="text-slate-500 dark:text-slate-400">{t('invoices.addDialog.description')}</DialogDescription>
           </DialogHeader>
           <div className="grid gap-4 py-4">
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label className="text-slate-700 dark:text-slate-300">نوع الفاتورة</Label>
+                <Label className="text-slate-700 dark:text-slate-300">{t('invoices.addDialog.invoiceType')}</Label>
                 <Select value={form.type} onValueChange={v => setForm(p => ({ ...p, type: v as InvoiceType }))}>
                   <SelectTrigger><SelectValue /></SelectTrigger>
                   <SelectContent>
-                    {Object.entries(INVOICE_TYPE_LABELS).map(([k, v]) => <SelectItem key={k} value={k}>{v}</SelectItem>)}
+                    {INVOICE_TYPES.map(k => <SelectItem key={k} value={k}>{getTypeLabel(k)}</SelectItem>)}
                   </SelectContent>
                 </Select>
               </div>
               <div className="space-y-2">
-                <Label className="text-slate-700 dark:text-slate-300">شروط الدفع</Label>
+                <Label className="text-slate-700 dark:text-slate-300">{t('invoices.addDialog.paymentTerms')}</Label>
                 <Select value={form.paymentTerms} onValueChange={v => setForm(p => ({ ...p, paymentTerms: v as PaymentTerms }))}>
                   <SelectTrigger><SelectValue /></SelectTrigger>
                   <SelectContent>
-                    {Object.entries(PAYMENT_TERMS_LABELS).map(([k, v]) => <SelectItem key={k} value={k}>{v}</SelectItem>)}
+                    {PAYMENT_TERMS.map(k => <SelectItem key={k} value={k}>{getPaymentTermsLabel(k)}</SelectItem>)}
                   </SelectContent>
                 </Select>
               </div>
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label className="text-slate-700 dark:text-slate-300">اسم العميل *</Label>
-                <Input value={form.clientName} onChange={e => setForm(p => ({ ...p, clientName: e.target.value }))} placeholder="اسم العميل" />
+                <Label className="text-slate-700 dark:text-slate-300">{t('invoices.addDialog.clientName')}</Label>
+                <Input value={form.clientName} onChange={e => setForm(p => ({ ...p, clientName: e.target.value }))} placeholder={t('invoices.addDialog.clientNamePlaceholder')} />
               </div>
               <div className="space-y-2">
-                <Label className="text-slate-700 dark:text-slate-300">بريد العميل</Label>
+                <Label className="text-slate-700 dark:text-slate-300">{t('invoices.addDialog.clientEmail')}</Label>
                 <Input value={form.clientEmail} onChange={e => setForm(p => ({ ...p, clientEmail: e.target.value }))} placeholder="email@example.com" type="email" />
               </div>
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
               <div className="space-y-2">
-                <Label className="text-slate-700 dark:text-slate-300">الفرع</Label>
+                <Label className="text-slate-700 dark:text-slate-300">{t('invoices.addDialog.branch')}</Label>
                 <Select value={form.branch} onValueChange={v => setForm(p => ({ ...p, branch: v as Branch }))}>
                   <SelectTrigger><SelectValue /></SelectTrigger>
                   <SelectContent>
-                    {Object.entries(BRANCH_LABELS).map(([k, v]) => <SelectItem key={k} value={k}>{v}</SelectItem>)}
+                    {BRANCHES.map(k => <SelectItem key={k} value={k}>{getBranchLabel(k)}</SelectItem>)}
                   </SelectContent>
                 </Select>
               </div>
               <div className="space-y-2">
-                <Label className="text-slate-700 dark:text-slate-300">بداية الفترة *</Label>
+                <Label className="text-slate-700 dark:text-slate-300">{t('invoices.addDialog.periodStart')}</Label>
                 <Input type="date" value={form.periodStart} onChange={e => setForm(p => ({ ...p, periodStart: e.target.value }))} />
               </div>
               <div className="space-y-2">
-                <Label className="text-slate-700 dark:text-slate-300">نهاية الفترة *</Label>
+                <Label className="text-slate-700 dark:text-slate-300">{t('invoices.addDialog.periodEnd')}</Label>
                 <Input type="date" value={form.periodEnd} onChange={e => setForm(p => ({ ...p, periodEnd: e.target.value }))} />
               </div>
             </div>
@@ -654,37 +638,37 @@ export function InvoicesPage() {
             {/* Line Items — responsive layout */}
             <div className="space-y-3">
               <div className="flex items-center justify-between">
-                <Label className="text-slate-700 dark:text-slate-300">البنود</Label>
+                <Label className="text-slate-700 dark:text-slate-300">{t('invoices.addDialog.lineItems')}</Label>
                 <Button variant="ghost" size="sm" onClick={() => setLineItems(p => [...p, { lineNumber: p.length + 1, description: '', quantity: 1, unit: 'DAY', unitPrice: 0, lineTotal: 0 }])} className="gap-1 text-xs">
-                  <Plus className="h-3 w-3" /> إضافة بند
+                  <Plus className="h-3 w-3" /> {t('invoices.addDialog.addLineItem')}
                 </Button>
               </div>
               {lineItems.map((li, idx) => (
                 <div key={idx} className="grid grid-cols-1 sm:grid-cols-12 gap-2 items-end border-b border-slate-100 dark:border-slate-800 pb-3">
                   <div className="sm:col-span-4">
-                    <Label className="text-xs text-slate-500 dark:text-slate-400">الوصف</Label>
-                    <Input value={li.description} onChange={e => updateLineItem(idx, 'description', e.target.value)} placeholder="وصف البند" className="mt-1" />
+                    <Label className="text-xs text-slate-500 dark:text-slate-400">{t('invoices.addDialog.lineItemDescription')}</Label>
+                    <Input value={li.description} onChange={e => updateLineItem(idx, 'description', e.target.value)} placeholder={t('invoices.addDialog.descriptionPlaceholder')} className="mt-1" />
                   </div>
                   <div className="sm:col-span-2">
-                    <Label className="text-xs text-slate-500 dark:text-slate-400">الكمية</Label>
+                    <Label className="text-xs text-slate-500 dark:text-slate-400">{t('invoices.addDialog.quantity')}</Label>
                     <Input type="number" value={li.quantity} onChange={e => updateLineItem(idx, 'quantity', +e.target.value)} min={0} className="mt-1" />
                   </div>
                   <div className="sm:col-span-2">
-                    <Label className="text-xs text-slate-500 dark:text-slate-400">الوحدة</Label>
+                    <Label className="text-xs text-slate-500 dark:text-slate-400">{t('invoices.addDialog.unit')}</Label>
                     <Select value={li.unit} onValueChange={v => updateLineItem(idx, 'unit', v)}>
                       <SelectTrigger className="mt-1"><SelectValue /></SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="DAY">يوم</SelectItem>
-                        <SelectItem value="KG">كجم</SelectItem>
-                        <SelectItem value="ITEM">قطعة</SelectItem>
-                        <SelectItem value="LIFT">رفع</SelectItem>
-                        <SelectItem value="CONTAINER">حاوية</SelectItem>
-                        <SelectItem value="CBM">م³</SelectItem>
+                        <SelectItem value="DAY">{getUnitLabel('DAY')}</SelectItem>
+                        <SelectItem value="KG">{getUnitLabel('KG')}</SelectItem>
+                        <SelectItem value="ITEM">{getUnitLabel('ITEM')}</SelectItem>
+                        <SelectItem value="LIFT">{getUnitLabel('LIFT')}</SelectItem>
+                        <SelectItem value="CONTAINER">{getUnitLabel('CONTAINER')}</SelectItem>
+                        <SelectItem value="CBM">{getUnitLabel('CBM')}</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
                   <div className="sm:col-span-3">
-                    <Label className="text-xs text-slate-500 dark:text-slate-400">سعر الوحدة (د.إ)</Label>
+                    <Label className="text-xs text-slate-500 dark:text-slate-400">{t('invoices.addDialog.unitPrice')}</Label>
                     <Input type="number" value={li.unitPrice} onChange={e => updateLineItem(idx, 'unitPrice', +e.target.value)} min={0} step="0.01" className="mt-1" />
                   </div>
                   <div className="sm:col-span-1 flex justify-center">
@@ -696,25 +680,25 @@ export function InvoicesPage() {
               ))}
               <div className="flex flex-col items-end pt-2 border-t border-slate-200 dark:border-slate-700 gap-1">
                 <div className="flex gap-4 text-sm">
-                  <span className="text-slate-600 dark:text-slate-400">المجموع الفرعي: </span>
-                  <span className="font-semibold text-slate-900 dark:text-slate-100">{fmt(formSubtotal)} د.إ</span>
+                  <span className="text-slate-600 dark:text-slate-400">{t('invoices.addDialog.subtotal')} </span>
+                  <span className="font-semibold text-slate-900 dark:text-slate-100">{fmt(formSubtotal)} {cur}</span>
                 </div>
                 <div className="flex gap-4 text-sm">
-                  <span className="text-slate-600 dark:text-slate-400">ضريبة القيمة المضافة (5%): </span>
-                  <span className="font-semibold text-slate-900 dark:text-slate-100">{fmt(formVat)} د.إ</span>
+                  <span className="text-slate-600 dark:text-slate-400">{t('invoices.addDialog.vat')} </span>
+                  <span className="font-semibold text-slate-900 dark:text-slate-100">{fmt(formVat)} {cur}</span>
                 </div>
                 <div className="flex gap-4 text-sm font-bold">
-                  <span className="text-slate-700 dark:text-slate-300">الإجمالي: </span>
-                  <span className="text-slate-900 dark:text-slate-100">{fmt(formTotal)} د.إ</span>
+                  <span className="text-slate-700 dark:text-slate-300">{t('invoices.addDialog.total')} </span>
+                  <span className="text-slate-900 dark:text-slate-100">{fmt(formTotal)} {cur}</span>
                 </div>
               </div>
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => { setShowAdd(false); resetForm(); }}>إلغاء</Button>
+            <Button variant="outline" onClick={() => { setShowAdd(false); resetForm(); }}>{t('common.cancel')}</Button>
             <Button onClick={handleAdd} disabled={saving} className="gap-2">
               {saving && <Loader2 className="h-4 w-4 animate-spin" />}
-              {saving ? 'جاري الإنشاء...' : 'إنشاء فاتورة'}
+              {saving ? t('common.creating') : t('invoices.addDialog.createInvoice')}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -731,7 +715,7 @@ export function InvoicesPage() {
                   {selected.invoiceNumber}
                 </SheetTitle>
                 <SheetDescription className="text-slate-500 dark:text-slate-400">
-                  {INVOICE_TYPE_LABELS[selected.type]} — {selected.clientName}
+                  {getTypeLabel(selected.type)} — {selected.clientName}
                 </SheetDescription>
               </SheetHeader>
 
@@ -739,27 +723,27 @@ export function InvoicesPage() {
                 {/* Status badge */}
                 <div className="flex items-center gap-3 flex-wrap">
                   <Badge variant="outline" className={`${STATUS_VARIANT[selected.status]} text-sm px-3 py-1`}>
-                    {STATUS_LABELS[selected.status]}
+                    {getStatusLabel(selected.status)}
                   </Badge>
                   <span className="text-sm text-slate-500 dark:text-slate-400">
-                    استحقاق: {fmtDate(selected.dueDate)}
+                    {t('invoices.detail.dueDate')} {fmtDate(selected.dueDate)}
                   </span>
                 </div>
 
                 {/* Details grid — responsive */}
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
                   {[
-                    ['العميل', selected.clientName],
-                    ['البريد', selected.clientEmail ?? '—'],
-                    ['الفرع', BRANCH_LABELS[selected.branch]],
-                    ['شروط الدفع', PAYMENT_TERMS_LABELS[selected.paymentTerms]],
-                    ['المجموع الفرعي', `${fmt(selected.subtotal || 0)} د.إ`],
-                    ['ضريبة القيمة المضافة (5%)', `${fmt(selected.taxAmount || 0)} د.إ`],
-                    ['الإجمالي', `${fmt(selected.totalAmount || 0)} د.إ`],
-                    ['المدفوع', `${fmt(selected.paidAmount || 0)} د.إ`],
-                    ['المستحق', `${fmt(selected.balanceDue || 0)} د.إ`],
-                    ['تاريخ الإصدار', fmtDate(selected.issueDate)],
-                    ['تاريخ الإنشاء', fmtDate(selected.createdAt)],
+                    [t('invoices.detail.client'), selected.clientName],
+                    [t('invoices.detail.email'), selected.clientEmail ?? '—'],
+                    [t('invoices.detail.branch'), getBranchLabel(selected.branch)],
+                    [t('invoices.detail.paymentTerms'), getPaymentTermsLabel(selected.paymentTerms)],
+                    [t('invoices.detail.subtotal'), `${fmt(selected.subtotal || 0)} ${cur}`],
+                    [t('invoices.detail.vat'), `${fmt(selected.taxAmount || 0)} ${cur}`],
+                    [t('invoices.detail.total'), `${fmt(selected.totalAmount || 0)} ${cur}`],
+                    [t('invoices.detail.paid'), `${fmt(selected.paidAmount || 0)} ${cur}`],
+                    [t('invoices.detail.balanceDue'), `${fmt(selected.balanceDue || 0)} ${cur}`],
+                    [t('invoices.detail.issueDate'), fmtDate(selected.issueDate)],
+                    [t('invoices.detail.createdAt'), fmtDate(selected.createdAt)],
                   ].map(([label, value], i) => (
                     <div key={i}>
                       <p className="text-slate-500 dark:text-slate-400">{label}</p>
@@ -771,17 +755,17 @@ export function InvoicesPage() {
                 {/* Line Items */}
                 {selectedItems.length > 0 && (
                   <div>
-                    <h4 className="text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">البنود</h4>
+                    <h4 className="text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">{t('invoices.detail.lineItems')}</h4>
                     <div className="rounded-lg border border-slate-200 dark:border-slate-700 overflow-hidden">
                       <div className="overflow-x-auto">
                         <Table>
                           <TableHeader>
                             <TableRow className="bg-slate-50 dark:bg-slate-900/50">
-                              <TableHead className="text-xs text-slate-500 dark:text-slate-400">الوصف</TableHead>
-                              <TableHead className="text-xs text-slate-500 dark:text-slate-400 text-center">الكمية</TableHead>
-                              <TableHead className="text-xs text-slate-500 dark:text-slate-400 text-center hidden sm:table-cell">الوحدة</TableHead>
-                              <TableHead className="text-xs text-slate-500 dark:text-slate-400 text-left">سعر الوحدة</TableHead>
-                              <TableHead className="text-xs text-slate-500 dark:text-slate-400 text-left">الإجمالي</TableHead>
+                              <TableHead className="text-xs text-slate-500 dark:text-slate-400">{t('invoices.detail.description')}</TableHead>
+                              <TableHead className="text-xs text-slate-500 dark:text-slate-400 text-center">{t('invoices.detail.quantity')}</TableHead>
+                              <TableHead className="text-xs text-slate-500 dark:text-slate-400 text-center hidden sm:table-cell">{t('invoices.detail.unit')}</TableHead>
+                              <TableHead className="text-xs text-slate-500 dark:text-slate-400 text-left">{t('invoices.detail.unitPrice')}</TableHead>
+                              <TableHead className="text-xs text-slate-500 dark:text-slate-400 text-left">{t('invoices.detail.tableTotal')}</TableHead>
                             </TableRow>
                           </TableHeader>
                           <TableBody>
@@ -804,14 +788,14 @@ export function InvoicesPage() {
                 {/* Payments */}
                 {selected.payments && selected.payments.length > 0 && (
                   <div>
-                    <h4 className="text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">المدفوعات</h4>
+                    <h4 className="text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">{t('invoices.detail.payments')}</h4>
                     <div className="space-y-2">
                       {selected.payments.map((p: InvoicePayment, i: number) => (
                         <div key={i} className="flex items-center justify-between flex-wrap text-sm p-2 rounded-lg bg-slate-50 dark:bg-slate-800/50 gap-1">
                           <div>
-                            <span className="font-medium text-slate-900 dark:text-slate-100">{fmt(p.amount)} د.إ</span>
+                            <span className="font-medium text-slate-900 dark:text-slate-100">{fmt(p.amount)} {cur}</span>
                             <span className="text-slate-500 dark:text-slate-400 mx-2">—</span>
-                            <span className="text-slate-600 dark:text-slate-400">{PAYMENT_METHOD_LABELS[p.method] || p.method}</span>
+                            <span className="text-slate-600 dark:text-slate-400">{getPaymentMethodLabel(p.method) || p.method}</span>
                             {p.reference && <span className="text-slate-500 dark:text-slate-400 mx-2">({p.reference})</span>}
                           </div>
                           <span className="text-xs text-slate-400">{fmtDate(p.paymentDate)}</span>
@@ -826,7 +810,7 @@ export function InvoicesPage() {
               <SheetFooter className="flex-col gap-2">
                 {selected.status === 'DRAFT' && (
                   <Button className="w-full gap-2" onClick={() => handleIssue(selected)}>
-                    <Send className="h-4 w-4" /> إصدار الفاتورة
+                    <Send className="h-4 w-4" /> {t('invoices.detail.issueInvoice')}
                   </Button>
                 )}
                 {['ISSUED', 'PARTIAL', 'OVERDUE'].includes(selected.status) && (
@@ -834,16 +818,16 @@ export function InvoicesPage() {
                     setPaymentAmount(String(selected.balanceDue || 0));
                     setShowPayment(true);
                   }}>
-                    <CreditCard className="h-4 w-4" /> تسجيل دفعة
+                    <CreditCard className="h-4 w-4" /> {t('invoices.detail.recordPayment')}
                   </Button>
                 )}
                 {selected.status === 'DRAFT' && (
                   <Button variant="outline" className="w-full gap-2 text-red-600 hover:text-red-700" onClick={() => handleCancel(selected)}>
-                    <X className="h-4 w-4" /> إلغاء الفاتورة
+                    <X className="h-4 w-4" /> {t('invoices.detail.cancelInvoice')}
                   </Button>
                 )}
                 <Button variant="outline" className="w-full gap-2" onClick={() => handleDownloadPdf(selected)}>
-                  <Download className="h-4 w-4" /> تحميل PDF
+                  <Download className="h-4 w-4" /> {t('invoices.detail.downloadPdf')}
                 </Button>
               </SheetFooter>
             </>
@@ -855,14 +839,14 @@ export function InvoicesPage() {
       <Dialog open={showPayment} onOpenChange={setShowPayment}>
         <DialogContent dir="rtl" className="w-[95vw] max-w-md">
           <DialogHeader>
-            <DialogTitle className="text-slate-900 dark:text-slate-100">تسجيل دفعة</DialogTitle>
+            <DialogTitle className="text-slate-900 dark:text-slate-100">{t('invoices.paymentDialog.title')}</DialogTitle>
             <DialogDescription className="text-slate-500 dark:text-slate-400">
-              الفاتورة: {selected?.invoiceNumber} — المستحق: {fmt(selected?.balanceDue || 0)} د.إ
+              {t('invoices.paymentDialog.invoice')}: {selected?.invoiceNumber} — {t('invoices.paymentDialog.balanceDue')}: {fmt(selected?.balanceDue || 0)} {cur}
             </DialogDescription>
           </DialogHeader>
           <div className="grid gap-4 py-4">
             <div className="space-y-2">
-              <Label className="text-slate-700 dark:text-slate-300">مبلغ الدفعة (د.إ) *</Label>
+              <Label className="text-slate-700 dark:text-slate-300">{t('invoices.paymentDialog.amount')}</Label>
               <Input
                 type="number"
                 value={paymentAmount}
@@ -874,26 +858,26 @@ export function InvoicesPage() {
               />
             </div>
             <div className="space-y-2">
-              <Label className="text-slate-700 dark:text-slate-300">طريقة الدفع</Label>
+              <Label className="text-slate-700 dark:text-slate-300">{t('invoices.paymentDialog.method')}</Label>
               <Select value={paymentMethod} onValueChange={setPaymentMethod}>
                 <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>
-                  {Object.entries(PAYMENT_METHOD_LABELS).map(([k, v]) => (
-                    <SelectItem key={k} value={k}>{v}</SelectItem>
+                  {PAYMENT_METHODS.map(k => (
+                    <SelectItem key={k} value={k}>{getPaymentMethodLabel(k)}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>
             </div>
             <div className="space-y-2">
-              <Label className="text-slate-700 dark:text-slate-300">رقم المرجع</Label>
-              <Input value={paymentRef} onChange={e => setPaymentRef(e.target.value)} placeholder="رقم الشيك أو التحويل" />
+              <Label className="text-slate-700 dark:text-slate-300">{t('invoices.paymentDialog.reference')}</Label>
+              <Input value={paymentRef} onChange={e => setPaymentRef(e.target.value)} placeholder={t('invoices.paymentDialog.referencePlaceholder')} />
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setShowPayment(false)}>إلغاء</Button>
+            <Button variant="outline" onClick={() => setShowPayment(false)}>{t('common.cancel')}</Button>
             <Button onClick={handleRecordPayment} disabled={paying} className="gap-2">
               {paying && <Loader2 className="h-4 w-4 animate-spin" />}
-              تسجيل الدفعة
+              {t('invoices.paymentDialog.submit')}
             </Button>
           </DialogFooter>
         </DialogContent>

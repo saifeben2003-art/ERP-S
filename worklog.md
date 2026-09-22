@@ -361,3 +361,153 @@ Stage Summary:
 - All UI uses translations and status style colors
 - RTL-compatible with ArrowLeft pointing in the correct direction
 - No existing functionality broken
+
+---
+Task ID: fix-critical
+Agent: fix-critical
+Task: Fix CRITICAL bugs C1-C3
+
+Work Log:
+- C1: Replaced ALL hardcoded Arabic strings in invoices-page.tsx with t() calls
+  - Removed 5 hardcoded label maps (INVOICE_TYPE_LABELS, BRANCH_LABELS, PAYMENT_TERMS_LABELS, STATUS_LABELS, PAYMENT_METHOD_LABELS)
+  - Added 6 dynamic getter functions inside component (getTypeLabel, getStatusLabel, getBranchLabel, getPaymentTermsLabel, getPaymentMethodLabel, getUnitLabel) using t(`invoices.XXX.${value}`) pattern
+  - Added `cur` variable for currency symbol via t('invoices.currency')
+  - Replaced all validation toasts, action toasts, KPI labels, table headers, form labels, dialog titles, detail sheet labels, payment dialog labels, aging labels, export CSV headers, buttons
+  - All `د.إ` hardcoded currency replaced with `{cur}` variable
+  - Added ~130 invoice translation keys to both translations.ts (Arabic) and en.ts (English)
+  - Categories: type, status, branch, paymentTerms, paymentMethod, unit, kpi, aging, validation, toast actions, page content, table headers, addDialog, detail, paymentDialog, csv headers, currency
+
+- C2: Added SHIPPING and SHIPPED status styles to scanner-page.tsx statusStyles
+  - SHIPPING: bg-orange-500/10 text-orange-600 dark:text-orange-400 border-orange-500/20
+  - SHIPPED: bg-cyan-500/10 text-cyan-600 dark:text-cyan-400 border-cyan-500/20
+
+- C3: Added nav.invoices and nav.standards to en.ts
+  - nav.invoices: 'Invoices'
+  - nav.standards: 'Standards'
+
+Stage Summary:
+- C1: 0 hardcoded Arabic strings remain in invoices-page.tsx — all UI now translatable
+- C2: Scanner page renders SHIPPING/SHIPPED status badges with correct colors
+- C3: English nav sidebar shows 'Invoices' and 'Standards' instead of missing keys
+- 4 files modified: invoices-page.tsx, scanner-page.tsx, translations.ts, en.ts
+
+---
+Task ID: fix-high
+Agent: fix-high
+Task: Fix HIGH bugs H1-H7 — Replace hardcoded strings with proper translation keys
+
+Work Log:
+- H1: Cargo Page — Transfer Dialog Hardcoded Arabic
+  - Replaced 10 hardcoded Arabic strings in Transfer dialog with t() calls
+  - Changed: نقل البضاعة→t('cargo.transfer.title'), الموقع الحالي→t('cargo.transfer.currentLocation'), الموقع الوجهة→t('cargo.transfer.targetLocation'), اختر موقع→t('cargo.transfer.selectLocation'), ملاحظات→t('cargo.transfer.remarks'), ملاحظات اختيارية→t('cargo.transfer.remarksPlaceholder'), إلغاء→t('cargo.transfer.cancel'), جاري النقل→t('cargo.transfer.confirming'), تأكيد النقل→t('cargo.transfer.confirm')
+  - Replaced toast messages: تم نقل البضاعة بنجاح→t('cargo.transfer.success'), فشل النقل→t('cargo.transfer.failed')
+
+- H2: Cargo Page — Multiple Hardcoded Strings in Detail View
+  - Photo {idx} → {t('cargo.detail.photo')} {idx}
+  - PDF • 2.4 MB → {t('cargo.detail.document')}
+  - نقل الموقع → {t('cargo.detail.transferLocation')}
+  - {t('common.weight')} Visualization → {t('common.weight')} {t('cargo.detail.weightVisualization')}
+  - tonnes → {t('common.tonnes')}
+  - معلومات الميناء → {t('cargo.detail.portInfo')}
+  - يوم → {t('common.days')}
+  - portLabels object: replaced all 16 hardcoded Arabic values with t() calls (cargo.port.container, .seal, .customs, .vessel, .voyage, .flight, .transportMode, .arrival, .storageDays, .barcode, .type, .customsNotSubmitted, .customsPending, .customsCleared, .customsRejected, .customsOnHold)
+  - Moved useTranslation() call before portLabels definition (was using t() before it was defined)
+  - placeholder="e.g., Jebel Ali, Dubai" → placeholder={t('cargo.form.portOfLoadingPlaceholder')}
+  - placeholder="e.g., Rotterdam, Hamburg" → placeholder={t('cargo.form.portOfDischargePlaceholder')}
+
+- H3: Movements Page — relativeTime() Returns Hardcoded English
+  - Changed relativeTime signature from (dateStr: string) to (dateStr: string, t, locale)
+  - 'just now' → t('common.justNow')
+  - `${diffMin}m ago` → t('common.minutesAgo').replace('{count}', String(diffMin))
+  - `${diffHr}h ago` → t('common.hoursAgo').replace('{count}', String(diffHr))
+  - `${diffDay}d ago` → t('common.daysAgo').replace('{count}', String(diffDay))
+  - Fallback date: .toLocaleDateString() → .toLocaleDateString(locale === 'ar' ? 'ar-SA' : 'en-US')
+  - Added locale to useTranslation() destructuring in MovementsPage
+  - Updated all 3 call sites to pass t and locale
+
+- H4: Dashboard Page — Chart Config Labels Hardcoded in Arabic
+  - Added 3 locale-aware chart config builder functions: getMovementsChartConfig(locale), getPieChartConfig(locale), getBarChartConfig(t)
+  - getMovementsChartConfig uses translateMovementType() for RECEIVE/MOVE/DISPATCH labels
+  - getPieChartConfig uses translateStatus() for all status labels + added SHIPPING and SHIPPED entries
+  - getBarChartConfig uses t('common.weight') for weight label
+  - Updated all 3 ChartContainer usages to call the builder functions
+
+- H5: Dashboard Page — Section Headers Use Inline locale checks
+  - Replaced 6 `locale === 'ar' ? '...' : '...'` patterns with t() calls
+  - 'آخر 30 يوم'/'Last 30 days' → t('dashboard.last30Days')
+  - 'تحديث'/'Refresh' → t('dashboard.refresh')
+  - 'المؤشرات'/'Key Metrics' → t('dashboard.keyMetrics')
+  - 'الاتجاهات'/'Trends' → t('dashboard.trends')
+  - 'التحليلات'/'Analytics' → t('dashboard.analytics')
+  - 'التفاصيل'/'Details' → t('dashboard.details')
+
+- H6: Reports Page — Export Dropdown Labels Hardcoded in English
+  - Added 8 keys to localTranslations (ar + en): reports.type.inventory/movements/invoices/aging, reports.format.pdf/excel/word/csv
+  - Replaced all 16 hardcoded "Type — Format" strings with `${lt('reports.type.X')} — ${lt('reports.format.Y')}` pattern
+
+- H7: Reports Page — Date Format Hardcoded to Arabic Locale
+  - formatDate() and formatDateShort() now accept optional locale parameter (default: 'ar')
+  - Uses locale === 'ar' ? 'ar-SA' : 'en-US' for toLocaleDateString
+  - Updated both call sites to pass locale from useTranslation()
+
+- Translation keys added to translations.ts (Arabic): 47 new keys
+  - cargo.transfer.* (11), cargo.detail.* (5), cargo.form.* (2), cargo.port.* (16)
+  - common.justNow, common.minutesAgo, common.hoursAgo, common.daysAgo, common.days (5)
+  - dashboard.last30Days, dashboard.refresh, dashboard.keyMetrics, dashboard.trends, dashboard.analytics, dashboard.details (6)
+
+- Translation keys added to en.ts (English): 47 matching keys
+
+- Build: Next.js build compiles successfully
+
+Stage Summary:
+- All 7 HIGH severity bugs fixed
+- 5 component files modified: cargo-page.tsx, movements-page.tsx, dashboard-page.tsx, reports-page.tsx
+- 2 translation files modified: translations.ts, en.ts
+- 94 new translation keys added total (47 ar + 47 en)
+- All hardcoded Arabic/English strings replaced with t()/lt() calls
+- Chart configs now locale-aware via builder functions
+- Date formatting respects current app locale
+- relativeTime() now fully translatable
+
+---
+Task ID: fix-medium
+Agent: fix-medium
+Task: Fix MEDIUM bugs M1-M3
+
+Work Log:
+- M1: Standards Page — Many Hardcoded English Strings
+  - Changed import from '@/hooks/use-translation' to '@/lib/translations' (correct working hook)
+  - Added useTranslation() to IMDGTab and ISOStandardsTab (sub-components didn't have it)
+  - Replaced 14 hardcoded English strings with t() calls:
+    - Page subtitle: "GS1 barcoding, IMDG dangerous goods, ISO compliance & UAE regulations" → t('standards.subtitle')
+    - 4 tab names: "GS1 Barcoding" → t('standards.tabGs1'), "IMDG" → t('standards.tabImdg'), "ISO Standards" → t('standards.tabIso'), "UAE Regulations" → t('standards.tabUae')
+    - "Segregation Summary" → t('standards.segregationSummary')
+    - 3 segregation descriptions: AWAY/SEGREGATE/ISOLATE → t('standards.segregationAway'), t('standards.segregationSegregate'), t('standards.segregationIsolate')
+    - Key restrictions text → t('standards.segregationKeyRestrictions')
+    - "Overall Compliance Score" → t('standards.overallComplianceScore')
+    - "ISO 28000 + ISO 15489 combined" → t('standards.isoCombined')
+    - "ISO 28000 — Supply Chain Security" → t('standards.iso28000Title')
+    - "ISO 9001 — Quality Management Principles" → t('standards.iso9001Title')
+    - "ISO 15489 — Records Management" → t('standards.iso15489Title')
+  - Added 16 translation keys to translations.ts (Arabic)
+  - Added 16 translation keys to en.ts (English)
+
+- M2: Invoices Page — CSV Export Hardcoded Arabic Headers
+  - Already fixed in prior fix-critical task (Task ID: fix-critical, C1)
+  - CSV export at line 389 uses t('invoices.csv.invoiceNumber'), etc.
+  - All 9 invoice CSV keys exist in both translations.ts and en.ts
+  - No hardcoded Arabic headers remain — verified with grep
+
+- M3: Scanner/Reports Pages — Local Translations Completeness
+  - scanner-page.tsx: scannerLocal (ar) has 30 keys, scannerLocalEn (en) has 30 matching keys — complete
+  - reports-page.tsx: localTranslations.ar has 58 keys, localTranslations.en has 58 matching keys — complete
+  - No missing keys in either direction (ar→en or en→ar)
+  - No changes needed — already complete
+
+Stage Summary:
+- M1: 14 hardcoded English strings replaced with t() calls in standards-page.tsx
+- M2: No changes needed — already fixed in prior task
+- M3: No changes needed — local translations already complete with matching ar+en entries
+- 16 new translation keys added to both translations.ts and en.ts
+- 3 files modified: standards-page.tsx, translations.ts, en.ts
+- Build compiles successfully

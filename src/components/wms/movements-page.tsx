@@ -70,18 +70,18 @@ function LocationTypeIcon({ type, className = 'h-5 w-5' }: { type: string; class
 
 // ==================== RELATIVE TIME ====================
 
-function relativeTime(dateStr: string): string {
+function relativeTime(dateStr: string, t: (key: string) => string, locale: string): string {
   const now = Date.now();
   const then = new Date(dateStr).getTime();
   const diffMs = now - then;
   const diffMin = Math.floor(diffMs / 60000);
   const diffHr = Math.floor(diffMs / 3600000);
   const diffDay = Math.floor(diffMs / 86400000);
-  if (diffMin < 1) return 'just now';
-  if (diffMin < 60) return `${diffMin}m ago`;
-  if (diffHr < 24) return `${diffHr}h ago`;
-  if (diffDay < 7) return `${diffDay}d ago`;
-  return new Date(dateStr).toLocaleDateString();
+  if (diffMin < 1) return t('common.justNow');
+  if (diffMin < 60) return t('common.minutesAgo').replace('{count}', String(diffMin));
+  if (diffHr < 24) return t('common.hoursAgo').replace('{count}', String(diffHr));
+  if (diffDay < 7) return t('common.daysAgo').replace('{count}', String(diffDay));
+  return new Date(dateStr).toLocaleDateString(locale === 'ar' ? 'ar-SA' : 'en-US');
 }
 
 // ==================== STAT CARD ====================
@@ -107,7 +107,7 @@ function StatCard({ icon: Icon, label, value, accent }: {
 // ==================== MAIN COMPONENT ====================
 
 export function MovementsPage() {
-  const { t } = useTranslation();
+  const { t, locale } = useTranslation();
   const globalSearch = useAppStore((s) => s.globalSearch);
 
   // State
@@ -504,7 +504,7 @@ export function MovementsPage() {
                       <TypeIcon type={tm.type} className="h-3 w-3 mr-1" />
                       {translateMovementType(tm.type)}
                     </Badge>
-                    <span className="text-[10px] dark:text-slate-500 text-slate-400">{relativeTime(tm.createdAt)}</span>
+                    <span className="text-[10px] dark:text-slate-500 text-slate-400">{relativeTime(tm.createdAt, t, locale)}</span>
                   </div>
                   <div className="flex items-center gap-1.5 mt-1 text-xs dark:text-slate-400 text-slate-500">
                     {tm.fromLocation && <span className="font-mono">{tm.fromLocation.code}</span>}
@@ -542,7 +542,7 @@ export function MovementsPage() {
                     {translateMovementType(m.type)}
                   </Badge>
                   <span className="text-xs dark:text-slate-500 text-slate-400 flex items-center gap-1">
-                    <Clock className="h-3 w-3" />{relativeTime(m.createdAt)}
+                    <Clock className="h-3 w-3" />{relativeTime(m.createdAt, t, locale)}
                   </span>
                 </div>
               </div>
@@ -588,7 +588,7 @@ export function MovementsPage() {
       >
         <TableCell className={`${tc} font-mono text-amber-500/80 dark:text-amber-400 group-hover:text-amber-500 transition-colors`}>{m.movementRef}</TableCell>
         <TableCell className={`${tc} dark:text-slate-400 text-slate-500 hidden sm:table-cell whitespace-nowrap`}>
-          <span title={new Date(m.createdAt).toLocaleString()}>{relativeTime(m.createdAt)}</span>
+          <span title={new Date(m.createdAt).toLocaleString()}>{relativeTime(m.createdAt, t, locale)}</span>
         </TableCell>
         <TableCell className={`${tc} font-mono dark:text-slate-300 text-slate-700 group-hover:text-amber-500 transition-colors`}>{m.cargoCode}</TableCell>
         <TableCell className={tc}>

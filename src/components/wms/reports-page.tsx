@@ -78,6 +78,14 @@ const localTranslations: Record<string, Record<string, string>> = {
     'reports.avgWeight': 'متوسط الوزن',
     'reports.maxWeight': 'أقصى وزن',
     'reports.storagePct': 'نسبة التخزين',
+    'reports.type.inventory': 'المخزون',
+    'reports.type.movements': 'الحركات',
+    'reports.type.invoices': 'الفواتير',
+    'reports.type.aging': 'التقادم',
+    'reports.format.pdf': 'PDF',
+    'reports.format.excel': 'إكسل',
+    'reports.format.word': 'وورد',
+    'reports.format.csv': 'CSV',
   },
   en: {
     'reports.title': 'Reports & Analytics',
@@ -130,6 +138,14 @@ const localTranslations: Record<string, Record<string, string>> = {
     'reports.avgWeight': 'Avg Weight',
     'reports.maxWeight': 'Max Weight',
     'reports.storagePct': 'Storage %',
+    'reports.type.inventory': 'Inventory',
+    'reports.type.movements': 'Movements',
+    'reports.type.invoices': 'Invoices',
+    'reports.type.aging': 'Aging',
+    'reports.format.pdf': 'PDF',
+    'reports.format.excel': 'Excel',
+    'reports.format.word': 'Word',
+    'reports.format.csv': 'CSV',
   },
 };
 
@@ -162,14 +178,14 @@ const CATEGORY_COLORS: Record<string, string> = {
 };
 
 // ==================== HELPERS ====================
-function formatDate(dateStr: string): string {
+function formatDate(dateStr: string, locale: string = 'ar'): string {
   const d = new Date(dateStr);
-  return d.toLocaleDateString('ar-SA', { year: 'numeric', month: 'short', day: 'numeric' });
+  return d.toLocaleDateString(locale === 'ar' ? 'ar-SA' : 'en-US', { year: 'numeric', month: 'short', day: 'numeric' });
 }
 
-function formatDateShort(dateStr: string): string {
+function formatDateShort(dateStr: string, locale: string = 'ar'): string {
   const d = new Date(dateStr);
-  return d.toLocaleDateString('ar-SA', { month: 'short', day: 'numeric' });
+  return d.toLocaleDateString(locale === 'ar' ? 'ar-SA' : 'en-US', { month: 'short', day: 'numeric' });
 }
 
 function todayISO(): string {
@@ -381,7 +397,7 @@ export function ReportsPage() {
               disabled={exporting}
             >
               <FileText className="h-4 w-4 text-red-500" />
-              <span>Inventory — PDF</span>
+              <span>{lt('reports.type.inventory')} — {lt('reports.format.pdf')}</span>
             </DropdownMenuItem>
             <DropdownMenuItem
               className="gap-2 cursor-pointer"
@@ -389,7 +405,7 @@ export function ReportsPage() {
               disabled={exporting}
             >
               <FileSpreadsheet className="h-4 w-4 text-emerald-500" />
-              <span>Inventory — Excel</span>
+              <span>{lt('reports.type.inventory')} — {lt('reports.format.excel')}</span>
             </DropdownMenuItem>
             <DropdownMenuItem
               className="gap-2 cursor-pointer"
@@ -397,7 +413,7 @@ export function ReportsPage() {
               disabled={exporting}
             >
               <FileType className="h-4 w-4 text-blue-500" />
-              <span>Inventory — Word</span>
+              <span>{lt('reports.type.inventory')} — {lt('reports.format.word')}</span>
             </DropdownMenuItem>
             <DropdownMenuItem
               className="gap-2 cursor-pointer"
@@ -405,7 +421,7 @@ export function ReportsPage() {
               disabled={exporting}
             >
               <File className="h-4 w-4 text-orange-500" />
-              <span>Inventory — CSV</span>
+              <span>{lt('reports.type.inventory')} — {lt('reports.format.csv')}</span>
             </DropdownMenuItem>
             <DropdownMenuItem
               className="gap-2 cursor-pointer"
@@ -413,7 +429,7 @@ export function ReportsPage() {
               disabled={exporting}
             >
               <FileText className="h-4 w-4 text-red-500" />
-              <span>Movements — PDF</span>
+              <span>{lt('reports.type.movements')} — {lt('reports.format.pdf')}</span>
             </DropdownMenuItem>
             <DropdownMenuItem
               className="gap-2 cursor-pointer"
@@ -421,7 +437,7 @@ export function ReportsPage() {
               disabled={exporting}
             >
               <FileSpreadsheet className="h-4 w-4 text-emerald-500" />
-              <span>Movements — Excel</span>
+              <span>{lt('reports.type.movements')} — {lt('reports.format.excel')}</span>
             </DropdownMenuItem>
             <DropdownMenuItem
               className="gap-2 cursor-pointer"
@@ -429,7 +445,7 @@ export function ReportsPage() {
               disabled={exporting}
             >
               <FileType className="h-4 w-4 text-blue-500" />
-              <span>Movements — Word</span>
+              <span>{lt('reports.type.movements')} — {lt('reports.format.word')}</span>
             </DropdownMenuItem>
             <DropdownMenuItem
               className="gap-2 cursor-pointer"
@@ -437,7 +453,7 @@ export function ReportsPage() {
               disabled={exporting}
             >
               <File className="h-4 w-4 text-orange-500" />
-              <span>Movements — CSV</span>
+              <span>{lt('reports.type.movements')} — {lt('reports.format.csv')}</span>
             </DropdownMenuItem>
             <DropdownMenuItem
               className="gap-2 cursor-pointer"
@@ -445,7 +461,7 @@ export function ReportsPage() {
               disabled={exporting}
             >
               <FileText className="h-4 w-4 text-red-500" />
-              <span>Invoices — PDF</span>
+              <span>{lt('reports.type.invoices')} — {lt('reports.format.pdf')}</span>
             </DropdownMenuItem>
             <DropdownMenuItem
               className="gap-2 cursor-pointer"
@@ -453,7 +469,7 @@ export function ReportsPage() {
               disabled={exporting}
             >
               <FileSpreadsheet className="h-4 w-4 text-emerald-500" />
-              <span>Invoices — Excel</span>
+              <span>{lt('reports.type.invoices')} — {lt('reports.format.excel')}</span>
             </DropdownMenuItem>
             <DropdownMenuItem
               className="gap-2 cursor-pointer"
@@ -461,7 +477,7 @@ export function ReportsPage() {
               disabled={exporting}
             >
               <FileType className="h-4 w-4 text-blue-500" />
-              <span>Invoices — Word</span>
+              <span>{lt('reports.type.invoices')} — {lt('reports.format.word')}</span>
             </DropdownMenuItem>
             <DropdownMenuItem
               className="gap-2 cursor-pointer"
@@ -469,7 +485,7 @@ export function ReportsPage() {
               disabled={exporting}
             >
               <File className="h-4 w-4 text-orange-500" />
-              <span>Invoices — CSV</span>
+              <span>{lt('reports.type.invoices')} — {lt('reports.format.csv')}</span>
             </DropdownMenuItem>
             <DropdownMenuItem
               className="gap-2 cursor-pointer"
@@ -477,7 +493,7 @@ export function ReportsPage() {
               disabled={exporting}
             >
               <FileText className="h-4 w-4 text-red-500" />
-              <span>Aging — PDF</span>
+              <span>{lt('reports.type.aging')} — {lt('reports.format.pdf')}</span>
             </DropdownMenuItem>
             <DropdownMenuItem
               className="gap-2 cursor-pointer"
@@ -485,7 +501,7 @@ export function ReportsPage() {
               disabled={exporting}
             >
               <FileSpreadsheet className="h-4 w-4 text-emerald-500" />
-              <span>Aging — Excel</span>
+              <span>{lt('reports.type.aging')} — {lt('reports.format.excel')}</span>
             </DropdownMenuItem>
             <DropdownMenuItem
               className="gap-2 cursor-pointer"
@@ -493,7 +509,7 @@ export function ReportsPage() {
               disabled={exporting}
             >
               <FileType className="h-4 w-4 text-blue-500" />
-              <span>Aging — Word</span>
+              <span>{lt('reports.type.aging')} — {lt('reports.format.word')}</span>
             </DropdownMenuItem>
             <DropdownMenuItem
               className="gap-2 cursor-pointer"
@@ -501,7 +517,7 @@ export function ReportsPage() {
               disabled={exporting}
             >
               <File className="h-4 w-4 text-orange-500" />
-              <span>Aging — CSV</span>
+              <span>{lt('reports.type.aging')} — {lt('reports.format.csv')}</span>
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
@@ -655,7 +671,7 @@ export function ReportsPage() {
                   return (
                     <div key={item.date} className="flex items-center gap-2 min-h-[28px]">
                       <span className="text-[10px] font-mono dark:text-slate-500 text-slate-400 w-16 shrink-0 text-left">
-                        {formatDateShort(item.date)}
+                        {formatDateShort(item.date, locale)}
                       </span>
                       <div className="flex-1 flex gap-1 h-7 items-end">
                         {/* Inbound bar */}
@@ -1082,7 +1098,7 @@ export function ReportsPage() {
                     .map((row) => (
                       <TableRow key={row.date} className="dark:border-slate-800/50 border-slate-100 dark:hover:bg-slate-800/30 hover:bg-slate-50 transition-colors">
                         <TableCell className="dark:text-slate-300 text-slate-700 text-xs font-mono">
-                          {formatDate(row.date)}
+                          {formatDate(row.date, locale)}
                         </TableCell>
                         <TableCell className="text-center">
                           <div className="inline-flex items-center gap-1">

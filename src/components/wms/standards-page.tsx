@@ -12,7 +12,7 @@ import {
   IMDG_CLASSES, ISO28000_REQUIREMENTS, ISO9001_PRINCIPLES, GS1_APPLICATION_IDENTIFIERS,
   encodeGS1_128, generateSSCC, calculateMod10CheckDigit,
 } from '@/lib/standards';
-import { useTranslation } from '@/hooks/use-translation';
+import { useTranslation } from '@/lib/translations';
 
 // ─── Tab 1: GS1 Barcoding ─────────────────────────────────────────────────
 
@@ -160,6 +160,7 @@ const CLASS_COLORS: Record<number, { bg: string; border: string; text: string }>
 };
 
 function IMDGTab() {
+  const { t } = useTranslation();
   return (
     <div className="space-y-4">
       {/* 9 Hazard Classes */}
@@ -207,27 +208,27 @@ function IMDGTab() {
       <Card className="border-slate-800 bg-slate-900/50">
         <CardHeader className="pb-2">
           <CardTitle className="flex items-center gap-2 text-sm text-slate-200">
-            <AlertTriangle className="h-4 w-4 text-amber-400" /> Segregation Summary
+            <AlertTriangle className="h-4 w-4 text-amber-400" /> {t('standards.segregationSummary')}
           </CardTitle>
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs">
             <div className="flex items-center gap-2">
               <div className="w-3 h-3 rounded-sm bg-amber-500/40" />
-              <span className="text-slate-300">AWAY — Separate by at least 3m vertically</span>
+              <span className="text-slate-300">{t('standards.segregationAway')}</span>
             </div>
             <div className="flex items-center gap-2">
               <div className="w-3 h-3 rounded-sm bg-orange-500/40" />
-              <span className="text-slate-300">SEGREGATE — Separate by at least 12m</span>
+              <span className="text-slate-300">{t('standards.segregationSegregate')}</span>
             </div>
             <div className="flex items-center gap-2">
               <div className="w-3 h-3 rounded-sm bg-red-500/40" />
-              <span className="text-slate-300">ISOLATE — Separate by intervening cargo</span>
+              <span className="text-slate-300">{t('standards.segregationIsolate')}</span>
             </div>
           </div>
           <Separator className="bg-slate-800 my-3" />
           <div className="text-xs text-slate-500 space-y-1">
-            <p>Key restrictions: Class 1 away from all other classes · Class 7 isolated from 2.1, 3, 5.1 · Class 6.2 isolated from 2.1, 3, 4.1, 5.1, 8</p>
+            <p>{t('standards.segregationKeyRestrictions')}</p>
             <p dir="rtl" className="text-slate-600">قيود الفصل: الصنف 1 بعيد عن جميع الأصناف الأخرى · الصنف 7 معزول</p>
           </div>
         </CardContent>
@@ -249,6 +250,7 @@ const ISO15489_REQUIREMENTS = [
 ];
 
 function ISOStandardsTab() {
+  const { t } = useTranslation();
   // ISO 28000 compliance toggles (persisted to localStorage)
   const [sc28000, setSc28000] = useState<Record<string, boolean>>(
     () => {
@@ -300,8 +302,8 @@ function ISOStandardsTab() {
             <div className="flex items-center gap-3">
               <ShieldCheck className="h-5 w-5 text-amber-400" />
               <div>
-                <p className="text-sm font-medium text-slate-200">Overall Compliance Score</p>
-                <p className="text-xs text-slate-500">ISO 28000 + ISO 15489 combined</p>
+                <p className="text-sm font-medium text-slate-200">{t('standards.overallComplianceScore')}</p>
+                <p className="text-xs text-slate-500">{t('standards.isoCombined')}</p>
               </div>
             </div>
             <div className="flex items-center gap-2">
@@ -321,7 +323,7 @@ function ISOStandardsTab() {
       <Card className="border-slate-800 bg-slate-900/50">
         <CardHeader className="pb-2">
           <div className="flex items-center justify-between">
-            <CardTitle className="text-sm text-slate-200">ISO 28000 — Supply Chain Security</CardTitle>
+            <CardTitle className="text-sm text-slate-200">{t('standards.iso28000Title')}</CardTitle>
             <Badge variant="outline" className={`text-[10px] ${score28000 >= 80 ? 'border-emerald-500/30 text-emerald-400' : score28000 >= 50 ? 'border-amber-500/30 text-amber-400' : 'border-red-500/30 text-red-400'}`}>
               {score28000}% ({passCount28000}/{total28000})
             </Badge>
@@ -347,7 +349,7 @@ function ISOStandardsTab() {
       {/* ISO 9001 */}
       <Card className="border-slate-800 bg-slate-900/50">
         <CardHeader className="pb-2">
-          <CardTitle className="text-sm text-slate-200">ISO 9001 — Quality Management Principles</CardTitle>
+          <CardTitle className="text-sm text-slate-200">{t('standards.iso9001Title')}</CardTitle>
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
@@ -368,7 +370,7 @@ function ISOStandardsTab() {
       <Card className="border-slate-800 bg-slate-900/50">
         <CardHeader className="pb-2">
           <div className="flex items-center justify-between">
-            <CardTitle className="text-sm text-slate-200">ISO 15489 — Records Management</CardTitle>
+            <CardTitle className="text-sm text-slate-200">{t('standards.iso15489Title')}</CardTitle>
             <Badge variant="outline" className={`text-[10px] ${score15489 >= 80 ? 'border-emerald-500/30 text-emerald-400' : score15489 >= 50 ? 'border-amber-500/30 text-amber-400' : 'border-red-500/30 text-red-400'}`}>
               {score15489}% ({passCount15489}/{total15489})
             </Badge>
@@ -538,22 +540,22 @@ export function StandardsPage() {
           {t('header.standards')}
         </h1>
         <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
-          GS1 barcoding, IMDG dangerous goods, ISO compliance & UAE regulations
+          {t('standards.subtitle')}
         </p>
       </div>
       <Tabs defaultValue="gs1">
         <TabsList className="bg-slate-900/80 border border-slate-800">
           <TabsTrigger value="gs1" className="gap-1.5 text-xs data-[state=active]:bg-slate-800 data-[state=active]:text-amber-400">
-            <Barcode className="h-3.5 w-3.5" /> GS1 Barcoding
+            <Barcode className="h-3.5 w-3.5" /> {t('standards.tabGs1')}
           </TabsTrigger>
           <TabsTrigger value="imdg" className="gap-1.5 text-xs data-[state=active]:bg-slate-800 data-[state=active]:text-amber-400">
-            <AlertTriangle className="h-3.5 w-3.5" /> IMDG
+            <AlertTriangle className="h-3.5 w-3.5" /> {t('standards.tabImdg')}
           </TabsTrigger>
           <TabsTrigger value="iso" className="gap-1.5 text-xs data-[state=active]:bg-slate-800 data-[state=active]:text-amber-400">
-            <ShieldCheck className="h-3.5 w-3.5" /> ISO Standards
+            <ShieldCheck className="h-3.5 w-3.5" /> {t('standards.tabIso')}
           </TabsTrigger>
           <TabsTrigger value="uae" className="gap-1.5 text-xs data-[state=active]:bg-slate-800 data-[state=active]:text-amber-400">
-            <Landmark className="h-3.5 w-3.5" /> UAE Regulations
+            <Landmark className="h-3.5 w-3.5" /> {t('standards.tabUae')}
           </TabsTrigger>
         </TabsList>
         <TabsContent value="gs1" className="mt-4"><GS1BarcodingTab /></TabsContent>
