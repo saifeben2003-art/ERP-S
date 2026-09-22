@@ -139,7 +139,7 @@ function getWeightPercentage(weightKg: number): number {
 
 const emptyForm = {
   description: '', weight: '', length: '', width: '', height: '',
-  liftCategory: '' as string, commodityType: '' as string,
+  liftCategory: 'STANDARD' as string, commodityType: 'GENERAL' as string,
   specialHandling: '', clientName: '', poReference: '', blReference: '',
   centerOfGravity: '', liftingPoints: '', projectId: '',
   // Shipment tracking fields
