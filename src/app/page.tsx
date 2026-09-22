@@ -142,6 +142,10 @@ function WmsApp() {
     let m = true;
     fetch('/api/seed', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ force: true }) })
       .then(() => {
+        // Run database migration after seed to ensure Turso has all columns
+        return fetch('/api/migrate', { method: 'POST' });
+      })
+      .then(() => {
         if (m) {
           sessionStorage.setItem('wms-seeded', '1');
           setSeeded(true);

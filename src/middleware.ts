@@ -9,6 +9,7 @@ export async function middleware(request: NextRequest) {
     pathname.startsWith('/api/auth/') ||
     pathname.startsWith('/api/track/') ||
     pathname.startsWith('/api/seed') ||
+    pathname.startsWith('/api/migrate') ||
     pathname.startsWith('/api/reports/') ||
     pathname.match(/^\/api\/invoices\/[^/]+\/pdf$/)
   ) {
