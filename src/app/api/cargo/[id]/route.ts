@@ -57,6 +57,8 @@ export async function PUT(
       'hazardClass', 'commodityType', 'status', 'locationId', 'projectId',
       'clientName', 'poReference', 'blReference', 'transportWeight',
       'transportLength', 'transportWidth', 'transportHeight',
+      'airWaybillNumber', 'billOfLadingNumber', 'shippingLine',
+      'portOfLoading', 'portOfDischarge',
     ];
 
     for (const field of allowedFields) {
@@ -77,6 +79,12 @@ export async function PUT(
     }
     if (body.dispatchedAt !== undefined) {
       updateData.dispatchedAt = body.dispatchedAt ? new Date(body.dispatchedAt) : null;
+    }
+    if (body.eta !== undefined) {
+      updateData.eta = body.eta ? new Date(body.eta) : null;
+    }
+    if (body.etd !== undefined) {
+      updateData.etd = body.etd ? new Date(body.etd) : null;
     }
 
     const cargo = await db.cargoItem.update({

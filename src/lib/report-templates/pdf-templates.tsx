@@ -1,6 +1,21 @@
 // ==================== PDF Report Templates (using @react-pdf/renderer) ====================
 import React from 'react';
-import { Document, Page, Text, View, StyleSheet } from '@react-pdf/renderer';
+import { Document, Page, Text, View, StyleSheet, Font } from '@react-pdf/renderer';
+
+// Register Cairo font for Arabic + bilingual support
+Font.register({
+  family: 'Cairo',
+  fonts: [
+    {
+      src: '/fonts/Cairo-Regular.ttf',
+      fontWeight: 'normal',
+    },
+    {
+      src: '/fonts/Cairo-Regular.ttf',
+      fontWeight: 'bold',
+    },
+  ],
+});
 
 // Dynamic footer component with page numbers
 function ReportFooter() {
@@ -12,8 +27,7 @@ function ReportFooter() {
   );
 }
 
-// Register a professional English font (using built-in Helvetica for simplicity)
-// In production, you'd register a custom font like Inter or Roboto
+// Cairo font registered above — supports both Arabic and Latin characters
 
 const COLORS = {
   primary: '#0F172A',
@@ -31,7 +45,7 @@ const COLORS = {
 const styles = StyleSheet.create({
   page: {
     padding: 40,
-    fontFamily: 'Helvetica',
+    fontFamily: 'Cairo',
     fontSize: 10,
     color: COLORS.text,
   },

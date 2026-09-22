@@ -1,217 +1,224 @@
 ---
-Task ID: 1
-Agent: Main Coordinator
-Task: Fix expired GitHub token, push code to ERP-S, deploy to Vercel with Turso Cloud DB
-
-Work Log:
-- Tested new GitHub fine-grained PAT (github_pat_11CLARSLY0...) - returned 200 OK
-- Updated erp-origin remote URL with new token
-- Pushed 6 commits to ERP-S.git (TypeScript fixes, build script fix, Turso adapter, seed improvements)
-- Fixed critical Vercel build error: removed `cp -r .next/standalone/...` from build script (standalone output not configured)
-- Added Turso adapter to db.ts for production (uses @libsql/client + custom-libsql-adapter when DATABASE_URL starts with libsql://)
-- Installed async-mutex dependency for the adapter
-- Updated Vercel env vars: DATABASE_URL to new Turso URL (new-1-wms-luminous-libra-tjgequ.aws-ap-northeast-1.turso.io)
-- Updated Vercel env vars: TURSO_AUTH_TOKEN with fresh token from user
-- Pushed Prisma schema to new Turso database using `prisma migrate diff --from-empty --script` + libsql executeMultiple
-- 7 tables created: CargoItem, Equipment, Location, Movement, Project, SAPIntegration, SyncLog
-- Triggered redeployment via empty git commit push
-- Vercel deployment: READY state
-- Seeded Turso database via POST /api/seed - 18 cargo, 5 projects, 8 locations, 10 equipment, 20 movements
-- Browser verification: Dashboard loads with Arabic RTL, all KPIs show real data
-- Browser verification: Cargo page works, Add Cargo dialog works (previous "length undefined" bug FIXED)
-- Browser verification: Language toggle English/Arabic works
-- Browser verification: All API endpoints return correct data
-
-Stage Summary:
-- Vercel deployment URL: https://my-project-nana-d430.vercel.app
-- All APIs functional: dashboard, cargo, projects, locations, equipment, movements, seed
-- Arabic/English i18n with RTL support working
-- Turso Cloud DB connected with fresh token
-- Critical "Cannot read properties of undefined (reading 'length')" bug confirmed FIXED
-- Production build succeeds, deployment in READY state
-
----
-Task ID: 3
-Agent: Report Export System Builder
-Task: Build comprehensive report export system supporting PDF, Excel, and Word formats
-
-Work Log:
-- Created `/src/lib/report-templates/word-utils.ts` — DOCX generation using `docx` package (v9.7.1)
-  - Professional template: company header, title, subtitle+date, data table, summary rows, footer with page numbers
-  - Same interface as excel-utils: `generateWordReport(title, subtitle, columns, rows, summaryRows?)`
-  - Styling: Calibri font, bold headers with dark bg (#0F172A), alternating row colors (#F8FAFC), summary rows with green tint
-  - Dynamic page numbering via PageNumber.CURRENT / PageNumber.TOTAL_PAGES in footer
-  - Returns Buffer
-
-- Fixed PDF generation in `/src/app/api/reports/inventory/route.ts`:
-  - Replaced JSON return with actual PDF using `renderToBuffer` from @react-pdf/renderer
-  - Imports InventoryReportPDF from pdf-templates.tsx
-  - Returns PDF buffer with proper Content-Type: application/pdf
-
-- Fixed PDF generation in `/src/app/api/reports/movements/route.ts`:
-  - Same fix: `renderToBuffer` + MovementsReportPDF → actual PDF binary response
-
-- Added Word format support to both inventory and movements routes:
-  - format=word → generateWordReport → .docx binary with proper Content-Type
-
-- Created `/src/app/api/reports/invoices/route.ts`:
-  - GET endpoint with format=pdf|excel|word
-  - Fetches invoices from DB with items and payments
-  - Maps invoice data: invoice#, client, type, status, subtotal, VAT 5%, total AED, paid, balance, due date
-  - Summary row with totals
-  - Uses GenericReportPDF for PDF format
-  - Supports all 3 formats
-
-- Created `/src/app/api/reports/aging/route.ts`:
-  - GET endpoint with format=pdf|excel|word
-  - Fetches outstanding invoices (status: ISSUED, OVERDUE, PARTIAL)
-  - Calculates aging buckets: Current, 31-60, 61-90, 91-120, 120+ days past due
-  - Detail table: invoice#, client, type, original, paid, balance, due date, days past due, bucket
-  - Summary rows: bucket totals with count and amount
-  - Uses GenericReportPDF for PDF format
-  - Supports all 3 formats
-
-- Updated `/src/components/wms/reports-page.tsx`:
-  - Replaced single JSON "Export" button with DropdownMenu (shadcn/ui)
-  - Added FileText, FileSpreadsheet, FileType icons from lucide-react
-  - 12 dropdown items: 4 report types (Inventory, Movements, Invoices, Aging) × 3 formats (PDF, Excel, Word)
-  - Each item calls handleExportReport(reportType, format) which fetches from /api/reports/{type}?format={format}
-  - Downloads blob with correct file extension (.pdf, .xlsx, .docx)
-  - Replaced handleExport (JSON) with handleExportReport (format-aware)
-
-- Fixed PDF page numbering in `/src/lib/report-templates/pdf-templates.tsx`:
-  - Created ReportFooter component using `render` prop: `({ pageNumber, totalPages }) => Page X of Y`
-  - Added `fixed` prop to footer View so it repeats on every page
-  - Replaced all 3 hardcoded "Page 1 of 1" instances (InventoryReportPDF, MovementsReportPDF, GenericReportPDF)
-
-- TypeScript compilation: all new/modified files pass type checking (no errors in our files)
-
-Stage Summary:
-- 4 report types: Inventory, Movements, Invoices, Aging — each supporting PDF, Excel, Word
-- PDF generation fixed: actual binary PDF via @react-pdf/renderer renderToBuffer (was returning JSON)
-- Word generation: new word-utils.ts using docx package with professional Calibri-based template
-- UI: DropdownMenu export with 12 options, icon-coded by format (red PDF, green Excel, blue Word)
-- PDF page numbering: dynamic via render prop instead of hardcoded "Page 1 of 1"
-- UAE-specific: AED currency, VAT 5%, English font (Calibri for Word, Helvetica for PDF)
-
----
-Task ID: 1 (Responsive Design Fix)
-Agent: General Purpose
-Task: Fix responsive design issues across all WMS pages
-
-Work Log:
-- dashboard-page.tsx: Added `md:grid-cols-3` to 5-column KPI grid (sm:2 → md:3 → lg:5)
-- movements-page.tsx:
-  - Added `md:grid-cols-3` to 5-column filter grid (sm:2 → md:3 → lg:5)
-  - Added `md:grid-cols-3` to stats bar grid (2 → md:3 → lg:4)
-  - Changed 3 dialog form grids from `grid-cols-2` → `grid-cols-1 sm:grid-cols-2`
-- projects-page.tsx:
-  - Changed 3 dialog form grids from `grid-cols-2` → `grid-cols-1 sm:grid-cols-2`
-  - Added `sm:grid-cols-2` to cargo table/chart grid (was only lg:grid-cols-3)
-- locations-page.tsx:
-  - Changed 2 dialog form grids from `grid-cols-2` → `grid-cols-1 sm:grid-cols-2`
-  - Changed dialog dimensions grid from `grid-cols-3` → `grid-cols-1 sm:grid-cols-2 lg:grid-cols-3`
-  - Changed Quick Actions grid from `grid-cols-3` → `grid-cols-1 sm:grid-cols-3`
-- equipment-page.tsx:
-  - Changed detail profile grid from `grid-cols-2` → `grid-cols-1 sm:grid-cols-2`
-  - Changed Quick Actions grid from `grid-cols-3` → `grid-cols-1 sm:grid-cols-3`
-  - Changed 4 dialog/sheet form grids from `grid-cols-2` → `grid-cols-1 sm:grid-cols-2`
-- cargo-page.tsx:
-  - Changed detail files grid from `grid-cols-2` → `grid-cols-1 sm:grid-cols-2`
-  - Changed Quick Actions grid from `grid-cols-3` → `grid-cols-1 sm:grid-cols-3`
-  - Changed 3 info grids from `grid-cols-2` → `grid-cols-1 sm:grid-cols-2`
-  - Changed dimension values grid from `grid-cols-3` → `grid-cols-1 sm:grid-cols-3`
-  - Changed dialog dimensions grid from `grid-cols-3` → `grid-cols-2 sm:grid-cols-3`
-  - Table already had `overflow-x-auto` wrapper ✓
-- reports-page.tsx:
-  - Changed donut legend grid from `grid-cols-2` → `grid-cols-1 sm:grid-cols-2`
-  - Changed summary stats grid from `grid-cols-3` → `grid-cols-1 sm:grid-cols-3`
-- app/page.tsx: Layout already responsive ✓ (sidebar uses Sheet on mobile, main uses flex-1 with lg: margin offsets)
-
-Stage Summary:
-- 8 files reviewed, 7 files modified with targeted grid-cols responsive fixes
-- All grids now have mobile-first responsive breakpoints (grid-cols-1 base, sm/md/lg for larger)
-- No functionality changes — only Tailwind grid class modifications
-- Pre-existing build error in invoices/[id]/pdf/route.ts (unrelated JSX parsing issue) — not introduced by these changes
-- All other TypeScript compilation passes cleanly
-
----
 Task ID: 4
-Agent: Comprehensive Review & Fixes
-Task: Comprehensive review of the project and fix ALL remaining issues
+Agent: responsive-dialogs
+Task: Make all Dialog components responsive across all WMS pages
 
 Work Log:
-- **4.1 Dynamic RTL/LTR**: layout.tsx had hardcoded `lang="ar" dir="rtl"`. Added blocking `<script>` in `<head>` that reads persisted zustand store from localStorage and sets `document.documentElement.lang` and `document.documentElement.dir` before React hydrates — prevents flash for non-Arabic users. StoreInitializer still handles runtime updates.
+- Checked cargo-page.tsx: fixed 4 issues
+  - DialogContent (Transfer): added `w-[95vw]` to `max-w-md`
+  - DialogContent (Add/Edit): added `w-[95vw]` to `max-w-2xl`
+  - DialogContent (Delete): added `w-[95vw]` to `max-w-md`
+  - Title h1: `text-2xl` → `text-xl md:text-2xl`
+  - SheetContent: already responsive (`w-full sm:max-w-[560px]`) — no change needed
+  - Grids: already responsive — no change needed
 
-- **4.2 Invoice API**: Verified end-to-end field matching between frontend invoices-page.tsx and API routes:
-  - POST /api/invoices: frontend sends type, clientId, clientName, clientEmail, branch, paymentTerms, periodStart, periodEnd, notes, items — all match API handler
-  - PATCH /api/invoices/[id]: frontend sends action:'issue'|'cancel'|'payment' with paymentAmount, paymentMethod, paymentReference — all match
-  - GET /api/invoices/[id]/pdf: frontend fetches and downloads blob — matches
+- Checked movements-page.tsx: fixed 5 issues
+  - DialogContent (Add Movement): added `w-[95vw]` to `max-w-lg`
+  - Stats bar grid: `grid-cols-2` → `grid-cols-1 sm:grid-cols-2`
+  - Cargo detail grid: `grid-cols-2` → `grid-cols-1 sm:grid-cols-2`
+  - SheetTitle: `text-2xl` → `text-xl md:text-2xl`
+  - Title h1: `text-2xl` → `text-xl md:text-2xl`
+  - SheetContent: already responsive (`w-full sm:max-w-lg`) — no change needed
+  - Dialog form grids: already responsive — no change needed
 
-- **4.3 Reports Page**: Verified DropdownMenu with 12 export options (4 types × 3 formats) exists in reports-page.tsx. handleExportReport correctly calls /api/reports/{type}?format={format} and downloads with correct extension. All 4 API routes verified (inventory, movements, invoices, aging).
+- Checked projects-page.tsx: fixed 3 issues
+  - DialogContent (Add Project): added `w-[95vw]` to `max-w-lg`
+  - Title h1: `text-2xl` → `text-xl md:text-2xl`
+  - Client/Vessel grid: `grid-cols-2` → `grid-cols-1 sm:grid-cols-2`
+  - Dialog form grids: already responsive — no change needed
 
-- **4.4 Auth**: Verified login flow: frontend uses signIn('credentials') from next-auth/react → goes through /api/auth/[...nextauth] → credentials provider in nextauth.ts → verifyPassword. Middleware uses getToken from next-auth/jwt — consistent with next-auth session. Custom /api/auth/login route is redundant but harmless.
+- Checked locations-page.tsx: fixed 6 issues
+  - DialogContent (Add/Edit): added `w-[95vw]` to `max-w-lg`
+  - DialogContent (Delete): added `w-[95vw]` to `max-w-md`
+  - Title h1: `text-2xl` → `text-xl md:text-2xl`
+  - Location card details grid: `grid-cols-2` → `grid-cols-1 sm:grid-cols-2`
+  - Skeleton loading grid: `grid-cols-2` → `grid-cols-1 sm:grid-cols-2`
+  - Cargo list grid: `grid-cols-2` → `grid-cols-1 sm:grid-cols-2`
+  - SheetContent: already responsive (`w-full sm:max-w-lg`) — no change needed
+  - Dialog form grids: already responsive — no change needed
 
-- **4.5 Word utils**: Removed unused `NumberType` import from word-utils.ts
+- Checked reports-page.tsx: fixed 1 issue
+  - Title h1: `text-2xl` → `text-xl md:text-2xl`
+  - No Dialog/Sheet components — no changes needed
+  - All grids already responsive — no change needed
+  - Tables already have `overflow-x-auto` — no change needed
 
-- **4.6 PDF templates**: Removed unused `Font` and `Link` imports from pdf-templates.tsx. Fixed `colWidths` function return type from `StyleSheet` to `Record<string, { width: number }>` — the previous type caused TS2740/TS2339 errors for all dynamic column references.
+- Checked scanner-page.tsx: fixed 2 issues
+  - Cargo details grid: `grid-cols-2` → `grid-cols-1 sm:grid-cols-2`
+  - Location details grid: `grid-cols-2` → `grid-cols-1 sm:grid-cols-2`
+  - No Dialog/Sheet components — no changes needed
 
-- **4.7 Middleware**: Added `/api/reports/` and `/api/invoices/*/pdf` to public routes list so report downloads and invoice PDFs work without auth blocking.
+- Checked dashboard-page.tsx: fixed 3 issues
+  - Title h1: `text-2xl` → `text-xl md:text-2xl`
+  - KPI value: `text-3xl` → `text-2xl md:text-3xl`
+  - KPI cards grid: `grid-cols-2` → `grid-cols-1 sm:grid-cols-2`
+  - No Dialog/Sheet components — no changes needed
 
-- **4.8 Additional fixes found during deep scan**:
-  - **CRITICAL: invoices/[id]/pdf/route.ts → .tsx**: File contained JSX but had .ts extension, causing 80+ TS parse errors. Renamed to route.tsx.
-  - **CRITICAL: Buffer type in all report routes**: `new NextResponse(buffer)` failed because Node.js Buffer ≠ BodyInit. Fixed by wrapping with `new Uint8Array(buffer)` in all 12 NextResponse calls across: inventory/route.ts, movements/route.ts, invoices/route.ts, aging/route.ts, and invoices/[id]/pdf/route.tsx.
-  - **Removed unused `Font` import** from invoices/[id]/pdf/route.tsx
-  - **Removed unused `FileJson` import** from reports-page.tsx
-  - **Fixed tracking-page.tsx** type errors:
-    - `item.lastMovedAt` → `item.dispatchedAt` (lastMovedAt doesn't exist on CargoItem)
-    - `m.timestamp` → `m.createdAt` (timestamp doesn't exist on Movement)
-    - `m.fromLocation`/`m.toLocation` rendered as objects → now use `.code` property
-    - `m.operator` → `m.operatorName` (operator doesn't exist on Movement)
-    - `m.notes` → `m.remarks` (notes doesn't exist on Movement)
-    - `item.dimensions` → computed from `item.length × item.width × item.height`
-  - **Fixed excel-utils.ts**: `cell.value = row[col.key] ?? ''` type error → `cell.value = String(row[col.key] ?? '')` (unknown not assignable to CellValue)
-  - **Fixed debug-env/route.ts**: `PrismaLibSql` → `PrismaLibSQL` (wrong capitalization), switched to custom-libsql-adapter matching db.ts pattern
+- Checked users-page.tsx: fixed 3 issues
+  - DialogContent (Add): added `w-[95vw] max-w-md`
+  - DialogContent (Edit): added `w-[95vw] max-w-md`
+  - DialogContent (Delete): added `w-[95vw] max-w-md`
+
+- Checked standards-page.tsx: fixed 3 issues
+  - IMDG segregation grid: `grid-cols-3` → `grid-cols-1 sm:grid-cols-3`
+  - UAE VAT grid: `grid-cols-2` → `grid-cols-1 sm:grid-cols-2`
+  - Title h1: `text-2xl` → `text-xl md:text-2xl`
+  - No Dialog/Sheet components — no changes needed
+
+- Checked integration-page.tsx: fixed 3 issues
+  - Title h1: `text-2xl` → `text-xl md:text-2xl`
+  - Auth/Protocol grid: `grid-cols-2` → `grid-cols-1 sm:grid-cols-2`
+  - SAP System/Client grid: `grid-cols-2` → `grid-cols-1 sm:grid-cols-2`
+  - No Dialog/Sheet components — no changes needed
+  - Outer grids already responsive — no change needed
 
 Stage Summary:
-- **0 TypeScript errors** in src/ (down from 80+ errors before this task)
-- 12 files modified across layout, API routes, components, middleware, and utilities
-- Critical fixes: JSX file extension, Buffer type compatibility, type mismatches in tracking page
-- All report exports (PDF/Excel/Word × 4 types) now compile and return correct binary responses
-- Invoice API end-to-end verified: create, issue, cancel, payment, PDF download
-- Auth flow verified: next-auth credentials → JWT → middleware token check
-- RTL/LTR now dynamically set before hydration to prevent flash
-- Middleware allows public access to report and invoice PDF download routes
+- All Dialog/Sheet components now responsive (7 dialogs fixed with `w-[95vw]`)
+- All form grids now responsive (9 grids changed from `grid-cols-2/3` to `grid-cols-1 sm:grid-cols-2/3`)
+- All page titles now responsive (7 titles changed from `text-2xl` to `text-xl md:text-2xl`)
+- Dashboard KPI value scaled from `text-3xl` to `text-2xl md:text-3xl`
+- Mobile/tablet layouts work properly across all 10 pages
+- Dev server compiles successfully with no new errors
 
 ---
-Task ID: 5 (Final)
-Agent: Main Coordinator
-Task: Generate comprehensive final report for all five points
+Task ID: 5
+Agent: search-feature
+Task: Add global search functionality to WMS header and all pages
 
 Work Log:
-- Created FIVE_POINTS_BLUEPRINT.md — detailed blueprint for all 5 points
-- Created COMPREHENSIVE_REPORT.md — final comprehensive report
-- Implemented Point 1 (Responsive Design): Fixed 8 pages, all grids now mobile-first
-- Implemented Point 2 (Invoice System): Fixed 15 bugs, invoices now fully functional (create, issue, pay, cancel, PDF)
-- Implemented Point 3 (Reports): 4 report types × 3 formats (PDF/Excel/Word) = 12 export options
-- Implemented Point 4 (Comprehensive Review): Fixed 15+ additional issues across 12 files
-- Implemented Point 5 (Final Report): Documented all changes, coverage, and recommendations
-- Installed docx package (v9.7.1) for Word export
-- Created invoice PDF endpoint: /api/invoices/[id]/pdf
-- Created invoices report endpoint: /api/reports/invoices
-- Created aging report endpoint: /api/reports/aging
-- Created word-utils.ts for DOCX generation
-- Fixed PDF generation to return actual binary (was returning JSON)
-- Fixed dynamic RTL/LTR before hydration
-- Fixed middleware to allow public report downloads
-- Fixed Buffer type compatibility across all report routes
-- Server tested: Home page 200 OK (31KB), APIs functional
+- Added globalSearch and setGlobalSearch to Zustand store (lib/store.ts)
+- Added global search bar in main header (page.tsx):
+  - Search input between page title and action buttons
+  - RTL-safe positioning with start-3/end-3 and ps-9
+  - Focus animation: expands width, amber accent on icon and border
+  - Clear button (X) when search has value
+  - Global search clears on page change
+
+- Fixed RTL-compatibility in cargo-page.tsx:
+  - Changed icon from right-2.5 to start-3, pr-9 to ps-9
+  - Added globalSearch integration via effectiveSearch
+  - Updated fetchCargo and useEffect deps
+
+- Fixed RTL-compatibility in equipment-page.tsx:
+  - Changed icon from right-3 to start-3, pl-3 pr-9 to pe-3 ps-9
+  - Changed placeholder from equipment.subtitle to common.search
+  - Added globalSearch integration via effectiveSearch
+  - Updated filteredEquipment useMemo
+
+- Fixed RTL-compatibility in movements-page.tsx:
+  - Changed icon from right-2.5 to start-3, pr-9 to ps-9
+  - Added globalSearch integration via effectiveSearch
+  - Updated fetchMovements and useCallback deps
+
+- Fixed RTL-compatibility and hardcoded text in invoices-page.tsx:
+  - Changed icon from right-3 to start-3, pr-9 to ps-9
+  - Replaced hardcoded Arabic placeholder with t('common.search')
+  - Replaced hardcoded Arabic select labels with translation keys
+  - Added proper dark mode styling to select components
+  - Added globalSearch integration via effectiveSearch
+  - Updated filtered useMemo
+
+- Added search to projects-page.tsx (was missing):
+  - Added searchQuery state and Search icon import
+  - Added search input next to status filter tabs
+  - RTL-safe with start-3 and ps-9
+  - Added globalSearch integration via effectiveSearch
+  - Added search param to API fetch call
+
+- Updated locations-page.tsx with globalSearch:
+  - Already had RTL-safe search (start-2.5, ps-8)
+  - Added globalSearch integration via effectiveSearch
+  - Updated filteredLocations filter logic
+
+- Added translation keys:
+  - invoices.searchPlaceholder (ar + en)
+  - invoices.fetchFailed (ar + en)
 
 Stage Summary:
-- All 5 points fully implemented and verified
-- 4 new files created, 15+ files modified, 25+ bugs fixed
-- Invoice system: fully functional end-to-end
-- Reports: 4 types × 3 formats with international standards
-- Responsive: mobile-first design on all pages
-- UAE compliance: VAT 5%, AED, GS1 prefix 629
-- Project status: Production-ready
+- Global search bar available in WMS header (clears on page change)
+- Search functionality available in all data pages: cargo, equipment, movements, invoices, projects, locations
+- All search inputs are RTL-compatible using logical CSS properties (start-, end-, ps-, pe-)
+- Global search integrates with each page's filtering via Zustand store
+- Mobile-friendly search inputs with responsive widths
+- No search needed on reports page (charts/analytics)
+- Dev server compiles successfully with no new errors
+
+---
+Task ID: 6
+Agent: performance
+Task: Optimize performance and make app lighter
+
+Work Log:
+- Lazy-loaded all non-dashboard pages using React.lazy() with named-export re-mapping
+  - CargoPage, ProjectsPage, LocationsPage, EquipmentPage, MovementsPage
+  - InvoicesPage, StandardsPage, ReportsPage, ScannerPage, IntegrationPage
+  - DashboardPage kept as static import (first page shown, needs to be available immediately)
+
+- Added Suspense boundary wrapping the page renderer with PageSkeleton fallback
+  - PageSkeleton uses animate-pulse with dark/light theme-aware colors (bg-slate-200 / dark:bg-slate-700)
+  - Shows title placeholder, 4 stat card placeholders, and main content area placeholder
+  - Prevents flash of empty content during lazy chunk loading
+
+- Added useCallback to pg() function (was previously an inline closure)
+  - Memoized with [activePage, pageKey, handlePageChange] deps
+  - pageKey itself is useMemo'd from [activePage, rk]
+
+- Debounced global search input (300ms)
+  - Added globalSearchInput (immediate, for input display) and globalSearch (debounced, for filtering)
+  - setGlobalSearchInput updates display instantly and schedules debounced update to globalSearch
+  - Pages continue reading globalSearch for filtering — no changes needed in any page component
+  - Clear button and page-change handler clear both values immediately
+
+- Optimized seed API call to run only once per browser session
+  - Uses sessionStorage('wms-seeded') flag — skips /api/seed POST on subsequent mounts/HMR
+  - Previously called on every component mount
+
+Stage Summary:
+- Initial bundle lighter: 10 pages lazy-loaded instead of eagerly imported
+- First meaningful paint faster: only DashboardPage + core in initial chunk
+- Search re-renders reduced: typing no longer triggers expensive list filtering on every keystroke
+- Seed API eliminated on re-mounts: sessionStorage guard prevents redundant POST
+- Page transitions show skeleton instead of blank content
+- No functionality broken — all existing behavior preserved
+
+---
+Task ID: 8
+Agent: tracking-fields
+Task: Add AWB/B/L tracking fields and links
+
+Work Log:
+- Added 7 tracking fields to CargoItem in Prisma schema (airWaybillNumber, billOfLadingNumber, shippingLine, eta, etd, portOfLoading, portOfDischarge)
+- Ran db:push successfully — database in sync
+- Created /src/lib/tracking-links.ts utility with:
+  - Carrier URL patterns for 16 carriers (air, sea, courier)
+  - UAE-specific carriers (Emirates SkyCargo, Etihad Cargo, DP World, Abu Dhabi Ports)
+  - getAirTrackingUrl() — AWB prefix-based carrier detection
+  - getSeaTrackingUrl() — shipping line-based carrier detection
+  - getGenericTrackingLink() — fallback to track-trace.com
+- Updated CargoItem TypeScript type with tracking fields
+- Updated API routes:
+  - POST /api/cargo — includes all tracking fields in create
+  - PUT /api/cargo/[id] — added tracking fields to allowedFields + eta/etd date handling
+- Updated cargo-page.tsx UI:
+  - Added tracking fields to emptyForm and openEdit
+  - Added "Shipment Tracking" section to create/edit dialog with:
+    - AWB number input with placeholder
+    - B/L number input with placeholder
+    - Shipping line selector (13 carriers including UAE-specific)
+    - Vessel/flight name input
+    - ETD/ETA date pickers
+    - Port of loading/discharge inputs
+  - Added "Shipment Tracking" section to detail view with:
+    - AWB number with Plane icon + carrier tracking link + generic tracking link
+    - B/L number with Ship icon + carrier tracking link + generic tracking link
+    - Shipping line, ETA/ETD dates, ports display
+  - Added Globe icon in table actions column for items with AWB/B/L
+- Added 16 Arabic translation keys for tracking fields
+- Added 16 English translation keys for tracking fields
+
+Stage Summary:
+- AWB and B/L tracking fields available on cargo items
+- Public tracking links for major carriers (Emirates SkyCargo, Etihad, Maersk, MSC, etc.)
+- No Dnata API integration (requires commercial contract) — infrastructure ready
+- All tracking fields are optional — no breaking changes to existing cargo
+- Ready for future API integration when commercial contracts are obtained

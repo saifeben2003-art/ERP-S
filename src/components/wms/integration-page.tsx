@@ -62,7 +62,7 @@ export function IntegrationPage() {
     <div className="space-y-6">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="text-2xl font-bold dark:text-slate-100 text-slate-900">{t('integration.title')}</h1>
+          <h1 className="text-xl md:text-2xl font-bold dark:text-slate-100 text-slate-900">{t('integration.title')}</h1>
           <p className="text-sm dark:text-slate-500 text-slate-400 mt-1">{t('integration.subtitle')}</p>
         </div>
         <Button onClick={() => toast.success(t('integration.toast.configSaved'))} className="bg-amber-500 hover:bg-amber-600 text-slate-900 font-medium">
@@ -108,14 +108,14 @@ export function IntegrationPage() {
         <CardContent className="space-y-4">
           <div className="grid gap-4 sm:grid-cols-2">
             <div><Label className="dark:text-slate-400 text-slate-500">{t('integration.form.endpoint')}</Label><Input value={config.endpoint} onChange={(e) => setConfig({ ...config, endpoint: e.target.value })} className={ic} /></div>
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div><Label className="dark:text-slate-400 text-slate-500">{t('integration.form.authMethod')}</Label>
                 <Select value={config.authMethod} onValueChange={(v) => setConfig({ ...config, authMethod: v })}><SelectTrigger className={ic}><SelectValue /></SelectTrigger><SelectContent className={sc}><SelectItem value="API_KEY" className={si}>API Key</SelectItem><SelectItem value="BASIC" className={si}>Basic Auth</SelectItem><SelectItem value="OAUTH" className={si}>OAuth 2.0</SelectItem></SelectContent></Select></div>
               <div><Label className="dark:text-slate-400 text-slate-500">{t('integration.form.protocol')}</Label>
                 <Select value={config.protocol} onValueChange={(v) => setConfig({ ...config, protocol: v })}><SelectTrigger className={ic}><SelectValue /></SelectTrigger><SelectContent className={sc}><SelectItem value="OData" className={si}>OData</SelectItem><SelectItem value="RFC" className={si}>RFC</SelectItem><SelectItem value="IDOC" className={si}>IDOC</SelectItem><SelectItem value="REST" className={si}>REST</SelectItem></SelectContent></Select></div>
             </div>
             <div><Label className="dark:text-slate-400 text-slate-500">{t('integration.form.apiKey')}</Label><Input type="password" value={config.apiKey} onChange={(e) => setConfig({ ...config, apiKey: e.target.value })} className={ic} /></div>
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div><Label className="dark:text-slate-400 text-slate-500">{t('integration.form.sapSystemId')}</Label><Input value={config.sapSystemId} onChange={(e) => setConfig({ ...config, sapSystemId: e.target.value })} className={ic} /></div>
               <div><Label className="dark:text-slate-400 text-slate-500">{t('integration.form.client')}</Label><Input value={config.client} onChange={(e) => setConfig({ ...config, client: e.target.value })} className={ic} /></div>
             </div>

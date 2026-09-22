@@ -211,7 +211,7 @@ function IMDGTab() {
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="grid grid-cols-3 gap-3 text-xs">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs">
             <div className="flex items-center gap-2">
               <div className="w-3 h-3 rounded-sm bg-amber-500/40" />
               <span className="text-slate-300">AWAY — Separate by at least 3m vertically</span>
@@ -403,7 +403,7 @@ function UAERegulationsTab() {
             </div>
           </div>
           <Separator className="bg-slate-800" />
-          <div className="grid grid-cols-2 gap-3 text-xs">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
             <div>
               <p className="text-[10px] uppercase tracking-wider text-slate-500 font-semibold mb-1">Registration Threshold</p>
               <p className="text-slate-300">AED 375,000 mandatory / AED 187,500 voluntary</p>
@@ -514,7 +514,7 @@ export function StandardsPage() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold text-slate-100 dark:text-slate-100">
+        <h1 className="text-xl md:text-2xl font-bold text-slate-100 dark:text-slate-100">
           {t('header.standards')}
         </h1>
         <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">

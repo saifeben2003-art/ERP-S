@@ -668,7 +668,7 @@ export function ScannerPage() {
               <Separator className="bg-slate-200 dark:bg-slate-700/50" />
 
               {/* Details Grid */}
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 {!!(scanResult.data as Record<string, unknown>).location && (
                   <div className="flex items-center gap-2">
                     <MapPin className="w-4 h-4 text-slate-400" />
@@ -779,7 +779,7 @@ export function ScannerPage() {
               <Separator className="bg-slate-200 dark:bg-slate-700/50" />
 
               {/* Details Grid */}
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 {(scanResult.data as Record<string, string>).zone && (
                   <div className="flex items-center gap-2">
                     <MapPin className="w-4 h-4 text-slate-400" />

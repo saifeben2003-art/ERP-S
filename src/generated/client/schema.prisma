@@ -82,6 +82,15 @@ model CargoItem {
   storageDays     Int       @default(0)
   isDeleted       Boolean   @default(false)
 
+  // Shipment tracking fields
+  airWaybillNumber   String? // AWB number (e.g., 074-12345678 for Emirates SkyCargo)
+  billOfLadingNumber String? // B/L number for sea freight
+  shippingLine       String? // Shipping line name (e.g., "Maersk", "MSC", "Emirates SkyCargo")
+  eta                DateTime? // Estimated time of arrival
+  etd                DateTime? // Estimated time of departure
+  portOfLoading      String? // Port/airport of loading
+  portOfDischarge    String? // Port/airport of discharge
+
   // Timestamps
   receivedAt   DateTime?
   dispatchedAt DateTime?

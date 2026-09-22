@@ -225,7 +225,7 @@ export function UsersPage({ t, language }: Props) {
 
       {/* Add Dialog */}
       <Dialog open={showAdd} onOpenChange={setShowAdd}>
-        <DialogContent className="bg-slate-900 border-slate-700">
+        <DialogContent className="w-[95vw] max-w-md bg-slate-900 border-slate-700">
           <DialogHeader><DialogTitle className="text-slate-100">Add User</DialogTitle><DialogDescription className="text-slate-400">Create a new system user</DialogDescription></DialogHeader>
           <div className="space-y-4 py-2">
             <div className="space-y-2"><Label className="text-slate-300">{t('auth.name')}</Label><Input value={addForm.name} onChange={e => setAddForm(p => ({ ...p, name: e.target.value }))} className="bg-slate-800/50 border-slate-700 text-white" /></div>
@@ -249,7 +249,7 @@ export function UsersPage({ t, language }: Props) {
 
       {/* Edit Dialog */}
       <Dialog open={!!editUser} onOpenChange={() => setEditUser(null)}>
-        <DialogContent className="bg-slate-900 border-slate-700">
+        <DialogContent className="w-[95vw] max-w-md bg-slate-900 border-slate-700">
           <DialogHeader><DialogTitle className="text-slate-100">Edit User</DialogTitle><DialogDescription className="text-slate-400">Update user settings</DialogDescription></DialogHeader>
           <div className="space-y-4 py-2">
             <div className="space-y-2"><Label className="text-slate-300">{t('auth.name')}</Label><Input value={editForm.name} onChange={e => setEditForm(p => ({ ...p, name: e.target.value }))} className="bg-slate-800/50 border-slate-700 text-white" /></div>
@@ -271,7 +271,7 @@ export function UsersPage({ t, language }: Props) {
 
       {/* Delete Dialog */}
       <Dialog open={!!deleteUser} onOpenChange={() => setDeleteUser(null)}>
-        <DialogContent className="bg-slate-900 border-slate-700">
+        <DialogContent className="w-[95vw] max-w-md bg-slate-900 border-slate-700">
           <DialogHeader><DialogTitle className="text-red-400">{t('common.confirmDelete')}</DialogTitle><DialogDescription className="text-slate-400">Delete {deleteUser?.name}? This cannot be undone.</DialogDescription></DialogHeader>
           <DialogFooter>
             <Button variant="ghost" onClick={() => setDeleteUser(null)} className="text-slate-400">{t('common.cancel')}</Button>

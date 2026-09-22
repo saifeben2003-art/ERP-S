@@ -281,6 +281,31 @@ const translations: Record<string, string> = {
   'cargo.toast.deleteFailed': 'فشل في حذف البضاعة',
   'cargo.toast.saveFailed': 'فشل في الحفظ',
   'cargo.toast.exported': 'تم تصدير البضائع بنجاح',
+  'cargo.airWaybill': 'رقم بول الشحن الجوي',
+  'cargo.billOfLading': 'رقم بول الشحن البحري',
+  'cargo.shippingLine': 'خط الشحن',
+  'cargo.vesselName': 'اسم السفينة/الرحلة',
+  'cargo.eta': 'الوصول المتوقع',
+  'cargo.etd': 'المغادرة المتوقعة',
+  'cargo.portOfLoading': 'ميناء التحميل',
+  'cargo.portOfDischarge': 'ميناء التفريغ',
+  'cargo.trackShipment': 'تتبع الشحنة',
+  'cargo.shipmentTracking': 'تتبع الشحن',
+  'cargo.form.airWaybill': 'رقم بول الشحن الجوي (AWB)',
+  'cargo.form.billOfLading': 'رقم بول الشحن البحري (B/L)',
+  'cargo.form.shippingLine': 'خط الشحن',
+  'cargo.form.vesselFlight': 'اسم السفينة/رقم الرحلة',
+  'cargo.form.eta': 'الوصول المتوقع (ETA)',
+  'cargo.form.etd': 'المغادرة المتوقعة (ETD)',
+  'cargo.form.portOfLoading': 'ميناء/مطار التحميل',
+  'cargo.form.portOfDischarge': 'ميناء/مطار التفريغ',
+  'cargo.form.awbPlaceholder': 'مثال: 074-12345678',
+  'cargo.form.blPlaceholder': 'رقم بول الشحن البحري',
+  'cargo.tracking.airCargo': 'شحن جوي',
+  'cargo.tracking.seaFreight': 'شحن بحري',
+  'cargo.tracking.trackOnSite': 'تتبع على الموقع',
+  'cargo.tracking.noTracking': 'لا يتوفر تتبع',
+  'cargo.tracking.genericTrack': 'تتبع عام',
 
   // ===== Projects Page =====
   'projects.title': 'المشاريع',
@@ -318,6 +343,8 @@ const translations: Record<string, string> = {
   'projects.toast.createFailed': 'فشل في إنشاء المشروع',
   'projects.toast.cargoFetchFailed': 'فشل في جلب بضائع المشروع',
   'projects.toast.exported': 'تم تصدير المشاريع بنجاح',
+  'invoices.searchPlaceholder': 'بحث برقم الفاتورة أو العميل...',
+  'invoices.fetchFailed': 'فشل تحميل الفواتير',
 
   // ===== Enhanced Detail Views =====
   'detail.overview': 'نظرة عامة',
@@ -631,6 +658,22 @@ const translations: Record<string, string> = {
   'movements.dateFrom': 'من تاريخ',
   'movements.dateTo': 'إلى تاريخ',
   'movements.toast.exported': 'تم تصدير الحركات بنجاح',
+
+  // ===== Notifications =====
+  'notifications.title': 'الإشعارات',
+  'notifications.markAllRead': 'قراءة الكل',
+  'notifications.empty': 'لا توجد إشعارات',
+  'notifications.refresh': 'تحديث',
+  'notifications.certExpired': 'شهادة منتهية',
+  'notifications.certExpiredDesc': 'انتهت الشهادة في',
+  'notifications.certExpiring': 'شهادة تنتهي قريباً',
+  'notifications.certExpiringDesc': 'تنتهي الشهادة خلال',
+  'notifications.invoiceOverdue': 'فاتورة متأخرة',
+  'notifications.overdueSince': 'متأخرة منذ',
+  'notifications.capacityWarning': 'تحذير سعة',
+  'notifications.capacityDesc': 'السعة المستخدمة',
+  'notifications.days': 'يوم',
+  'notifications.justNow': 'الآن',
 };
 
 // ==================== HELPER: Translate enum values ====================

@@ -30,6 +30,7 @@ import {
 import { Checkbox } from '@/components/ui/checkbox';
 import { toast } from 'sonner';
 import { useTranslation, translateLocationType, translateStatus } from '@/lib/translations';
+import { useAppStore } from '@/lib/store';
 import { cn } from '@/lib/utils';
 import type { Location, LocationType, CargoItem } from '@/types/wms';
 
@@ -180,6 +181,8 @@ export function LocationsPage() {
   const [detailLoading, setDetailLoading] = useState(false);
   const [selectedRows, setSelectedRows] = useState<Set<string>>(new Set());
   const { t } = useTranslation();
+  const globalSearch = useAppStore((s) => s.globalSearch);
+  const effectiveSearch = searchQuery || globalSearch;
 
   const fetchLocations = useCallback(async () => {
     setLoading(true);
@@ -195,8 +198,8 @@ export function LocationsPage() {
   useEffect(() => { fetchLocations(); }, [fetchLocations]);
 
   const filteredLocations = locations.filter((loc) => {
-    if (!searchQuery) return true;
-    const q = searchQuery.toLowerCase();
+    if (!effectiveSearch) return true;
+    const q = effectiveSearch.toLowerCase();
     return loc.code.toLowerCase().includes(q) || loc.name.toLowerCase().includes(q) || (loc.zone && loc.zone.toLowerCase().includes(q));
   });
 
@@ -287,7 +290,7 @@ export function LocationsPage() {
       {/* ===== Header ===== */}
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100">{t('locations.title')}</h1>
+          <h1 className="text-xl md:text-2xl font-bold text-slate-900 dark:text-slate-100">{t('locations.title')}</h1>
           <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">{t('locations.subtitle')}</p>
         </div>
         <Button onClick={() => { setForm(emptyForm); setShowAdd(true); }} className="bg-amber-500 hover:bg-amber-600 text-slate-900 font-medium transition-all duration-200 hover:shadow-md">
@@ -520,7 +523,7 @@ export function LocationsPage() {
                         <Badge variant="outline" className={cn('shrink-0 text-[10px]', typeStyles[loc.type])}>{translateLocationType(loc.type)}</Badge>
                       </div>
 
-                      <div className="grid grid-cols-2 gap-2 text-xs text-slate-500 dark:text-slate-400">
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs text-slate-500 dark:text-slate-400">
                         {loc.zone && <div className="flex items-center gap-1.5"><Layers className="h-3 w-3 text-slate-400 dark:text-slate-500" />{loc.zone}</div>}
                         {loc.maxWeight && <div className="flex items-center gap-1.5"><Weight className="h-3 w-3 text-slate-400 dark:text-slate-500" />{loc.maxWeight}{t('common.tonnes')}</div>}
                         {loc.area && <div className="flex items-center gap-1.5"><Maximize className="h-3 w-3 text-slate-400 dark:text-slate-500" />{loc.area}m²</div>}
@@ -622,7 +625,7 @@ export function LocationsPage() {
                         </Badge>
                       </div>
                       {detailLoading ? (
-                        <div className="grid grid-cols-2 gap-3">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                           {Array.from({ length: 4 }).map((_, i) => (
                             <Skeleton key={i} className="h-20 w-full bg-slate-100 dark:bg-slate-800 rounded-lg" />
                           ))}
@@ -633,7 +636,7 @@ export function LocationsPage() {
                           <p className="text-xs">{t('detail.location.noCargo')}</p>
                         </div>
                       ) : (
-                        <div className="grid grid-cols-2 gap-3 max-h-[320px] overflow-y-auto">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 max-h-[320px] overflow-y-auto">
                           {detailCargo.map((c) => (
                             <CargoCard key={c.id} cargo={c} />
                           ))}
@@ -683,7 +686,7 @@ export function LocationsPage() {
 
       {/* ===== Add/Edit Dialog ===== */}
       <Dialog open={showAdd || !!editing} onOpenChange={(open) => { if (!open) { setShowAdd(false); setEditing(null); setForm(emptyForm); } }}>
-        <DialogContent className="border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 max-w-lg">
+        <DialogContent className="w-[95vw] max-w-lg border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900">
           <DialogHeader><DialogTitle className="text-slate-900 dark:text-slate-100">{editing ? t('locations.editLocation') : t('locations.addNewLocation')}</DialogTitle></DialogHeader>
           <div className="grid gap-4 py-4">
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -739,7 +742,7 @@ export function LocationsPage() {
 
       {/* ===== Delete Dialog ===== */}
       <Dialog open={!!deleting} onOpenChange={(open) => { if (!open) setDeleting(null); }}>
-        <DialogContent className="border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 max-w-md">
+        <DialogContent className="w-[95vw] max-w-md border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900">
           <DialogHeader><DialogTitle className="text-slate-900 dark:text-slate-100">{t('common.confirmDelete')}</DialogTitle></DialogHeader>
           <p className="text-sm text-slate-500 dark:text-slate-400">
             {t('locations.delete.message')} <span className="text-amber-600 dark:text-amber-400 font-medium">{deleting?.code}</span>{t('locations.delete.warning')}

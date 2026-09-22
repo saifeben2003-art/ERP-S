@@ -359,7 +359,7 @@ export function ReportsPage() {
       {/* ===== PAGE HEADER ===== */}
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="text-2xl font-bold dark:text-slate-100 text-slate-900">{lt('reports.title')}</h1>
+          <h1 className="text-xl md:text-2xl font-bold dark:text-slate-100 text-slate-900">{lt('reports.title')}</h1>
           <p className="text-sm dark:text-slate-500 text-slate-400 mt-1">{lt('reports.subtitle')}</p>
         </div>
         <DropdownMenu>

@@ -30,6 +30,7 @@ import {
 } from '@/components/ui/select';
 import { toast } from 'sonner';
 import { useTranslation, translateEquipmentType, translateStatus } from '@/lib/translations';
+import { useAppStore } from '@/lib/store';
 import type { Equipment, EquipmentType, EquipmentStatus } from '@/types/wms';
 
 // ==================== CONSTANTS ====================
@@ -96,6 +97,8 @@ export function EquipmentPage() {
   const [selectedRows, setSelectedRows] = useState<Set<string>>(new Set());
   const [statusChanging, setStatusChanging] = useState(false);
   const { t } = useTranslation();
+  const globalSearch = useAppStore((s) => s.globalSearch);
+  const effectiveSearch = searchQuery || globalSearch;
 
   const cardBorder = 'dark:border-slate-800 border-slate-200 dark:bg-slate-900/50 bg-white';
   const textPrimary = 'dark:text-slate-100 text-slate-900';
@@ -127,8 +130,8 @@ export function EquipmentPage() {
   useEffect(() => { fetchEquipment(); }, [fetchEquipment]);
 
   const filteredEquipment = useMemo(() => {
-    if (!searchQuery) return equipment;
-    const q = searchQuery.toLowerCase();
+    if (!effectiveSearch) return equipment;
+    const q = effectiveSearch.toLowerCase();
     return equipment.filter(
       (eq) =>
         eq.name.toLowerCase().includes(q) ||
@@ -136,7 +139,7 @@ export function EquipmentPage() {
         (eq.manufacturer && eq.manufacturer.toLowerCase().includes(q)) ||
         (eq.model && eq.model.toLowerCase().includes(q))
     );
-  }, [equipment, searchQuery]);
+  }, [equipment, effectiveSearch]);
 
   const handleDetailStatusChange = async (newStatus: string) => {
     if (!detailEquip || newStatus === detailEquip.status) return;
@@ -249,7 +252,7 @@ export function EquipmentPage() {
       {/* Header */}
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className={`text-2xl font-bold ${textPrimary}`}>{t('equipment.title')}</h1>
+          <h1 className={`text-xl md:text-2xl font-bold ${textPrimary}`}>{t('equipment.title')}</h1>
           <p className={`text-sm ${textSecondary} mt-1`}>{t('equipment.subtitle')}</p>
         </div>
         <Button onClick={() => { setForm(emptyForm); setShowAdd(true); }} className="bg-amber-500 hover:bg-amber-600 text-slate-900 font-medium transition-all duration-200 hover:shadow-md">
@@ -260,18 +263,18 @@ export function EquipmentPage() {
       {/* Filters & Search */}
       <div className="flex flex-wrap gap-3 items-center">
         <div className="relative flex-1 min-w-[200px] max-w-sm">
-          <Search className={`absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 ${textTertiary}`} />
-          <Input placeholder={t('equipment.subtitle')} value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} className={`${inputCls} pl-3 pr-9 text-sm`} />
+          <Search className={`absolute start-3 top-1/2 -translate-y-1/2 h-4 w-4 ${textTertiary}`} />
+          <Input placeholder={t('common.search') + '...'} value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} className={`${inputCls} pe-3 ps-9 text-sm`} />
         </div>
         <Select value={typeFilter || 'ALL'} onValueChange={(v) => setTypeFilter(v === 'ALL' ? '' : v)}>
-          <SelectTrigger className={`w-44 ${inputCls} text-sm`}><SelectValue placeholder={t('common.allTypes')} /></SelectTrigger>
+          <SelectTrigger className={`w-full sm:w-44 ${inputCls} text-sm`}><SelectValue placeholder={t('common.allTypes')} /></SelectTrigger>
           <SelectContent className={selectContentCls}>
             <SelectItem value="ALL" className={selectItemCls}>{t('common.allTypes')}</SelectItem>
             {equipmentTypes.map((et) => <SelectItem key={et} value={et} className={selectItemCls}>{translateEquipmentType(et)}</SelectItem>)}
           </SelectContent>
         </Select>
         <Select value={statusFilter || 'ALL'} onValueChange={(v) => setStatusFilter(v === 'ALL' ? '' : v)}>
-          <SelectTrigger className={`w-44 ${inputCls} text-sm`}><SelectValue placeholder={t('common.allStatuses')} /></SelectTrigger>
+          <SelectTrigger className={`w-full sm:w-44 ${inputCls} text-sm`}><SelectValue placeholder={t('common.allStatuses')} /></SelectTrigger>
           <SelectContent className={selectContentCls}>
             <SelectItem value="ALL" className={selectItemCls}>{t('common.allStatuses')}</SelectItem>
             {equipmentStatuses.map((s) => <SelectItem key={s} value={s} className={selectItemCls}>{translateStatus(s)}</SelectItem>)}
@@ -295,7 +298,7 @@ export function EquipmentPage() {
       {/* Table */}
       <Card className={`${cardBorder} transition-all duration-200`}>
         <CardContent className="p-0">
-          <div className="max-h-[500px] overflow-y-auto">
+          <div className="max-h-[500px] overflow-y-auto overflow-x-auto">
             <Table>
               <TableHeader>
                 <TableRow className={`${rowBorder} hover:bg-transparent`}>
@@ -570,7 +573,7 @@ export function EquipmentPage() {
 
       {/* ==================== ADD/EDIT DIALOG ==================== */}
       <Dialog open={showAdd || !!editing} onOpenChange={(open) => { if (!open) { setShowAdd(false); setEditing(null); setForm(emptyForm); } }}>
-        <DialogContent className={`dark:border-slate-700 border-slate-200 dark:bg-slate-900 bg-white max-h-[90vh] overflow-y-auto max-w-lg`}>
+        <DialogContent className={`dark:border-slate-700 border-slate-200 dark:bg-slate-900 bg-white w-[95vw] max-w-lg max-h-[90vh] overflow-y-auto`}>
           <DialogHeader>
             <DialogTitle className={textPrimary}>{editing ? t('equipment.editEquipment') : t('equipment.addNewEquipment')}</DialogTitle>
           </DialogHeader>
@@ -682,7 +685,7 @@ export function EquipmentPage() {
 
       {/* ==================== DELETE DIALOG ==================== */}
       <Dialog open={!!deleting} onOpenChange={(open) => { if (!open) setDeleting(null); }}>
-        <DialogContent className={`dark:border-slate-700 border-slate-200 dark:bg-slate-900 bg-white max-w-md`}>
+        <DialogContent className={`dark:border-slate-700 border-slate-200 dark:bg-slate-900 bg-white w-[95vw] max-w-md`}>
           <DialogHeader><DialogTitle className={textPrimary}>{t('common.confirmDelete')}</DialogTitle></DialogHeader>
           <p className={`text-sm ${textSecondary}`}>
             {t('equipment.delete.message')} <span className="text-amber-400 font-medium">{deleting?.equipmentCode}</span>{t('equipment.delete.cannotUndo')}

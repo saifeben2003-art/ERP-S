@@ -30,6 +30,7 @@ import {
 import { Skeleton } from '@/components/ui/skeleton';
 import { toast } from 'sonner';
 import { useTranslation } from '@/lib/translations';
+import { useAppStore } from '@/lib/store';
 
 // ─── Types (matching API/DB schema) ────────────────────────────────────────
 type InvoiceStatus = 'DRAFT' | 'ISSUED' | 'PAID' | 'PARTIAL' | 'OVERDUE' | 'CANCELLED';
@@ -158,12 +159,14 @@ function agingBucket(days: number): string {
 // ─── Component ────────────────────────────────────────────────────────────
 export function InvoicesPage() {
   const { t } = useTranslation();
+  const globalSearch = useAppStore((s) => s.globalSearch);
   const [invoices, setInvoices] = useState<Invoice[]>([]);
   const [agingData, setAgingData] = useState<Record<string, number>>({ CURRENT: 0, '1-30': 0, '31-60': 0, '61-90': 0, '90+': 0 });
   const [loading, setLoading] = useState(true);
   const [statusFilter, setStatusFilter] = useState<string>('ALL');
   const [typeFilter, setTypeFilter] = useState<string>('ALL');
   const [search, setSearch] = useState('');
+  const effectiveSearch = search || globalSearch;
   const [showAdd, setShowAdd] = useState(false);
   const [selected, setSelected] = useState<Invoice | null>(null);
   const [saving, setSaving] = useState(false);
@@ -245,10 +248,10 @@ export function InvoicesPage() {
     return invoices.filter(i => {
       if (statusFilter !== 'ALL' && i.status !== statusFilter) return false;
       if (typeFilter !== 'ALL' && i.type !== typeFilter) return false;
-      if (search && !i.invoiceNumber.toLowerCase().includes(search.toLowerCase()) && !i.clientName.toLowerCase().includes(search.toLowerCase())) return false;
+      if (effectiveSearch && !i.invoiceNumber.toLowerCase().includes(effectiveSearch.toLowerCase()) && !i.clientName.toLowerCase().includes(effectiveSearch.toLowerCase())) return false;
       return true;
     });
-  }, [invoices, statusFilter, typeFilter, search]);
+  }, [invoices, statusFilter, typeFilter, effectiveSearch]);
 
   // Add invoice — FIXED: sends `items` not `lineItems`, includes `clientId`, calculates `lineTotal`
   const handleAdd = async () => {
@@ -454,14 +457,14 @@ export function InvoicesPage() {
       {/* Header */}
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-slate-900 dark:text-slate-100">
+          <h1 className="text-xl md:text-2xl font-bold text-slate-900 dark:text-slate-100">
             {t('header.invoices') ?? 'الفواتير والفوترة'}
           </h1>
           <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
             إدارة الفواتير والمدفوعات والمتابعة — الإمارات (د.إ)
           </p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2">
           <Button variant="outline" size="sm" onClick={handleExport} className="gap-2">
             <Download className="h-4 w-4" /> تصدير
           </Button>
@@ -518,20 +521,20 @@ export function InvoicesPage() {
       {/* Filters — responsive */}
       <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center">
         <div className="relative flex-1 min-w-0 sm:min-w-[200px] sm:max-w-sm">
-          <Search className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
-          <Input placeholder="بحث برقم الفاتورة أو العميل..." value={search} onChange={e => setSearch(e.target.value)} className="pr-9" />
+          <Search className="absolute start-3 top-1/2 -translate-y-1/2 h-4 w-4 dark:text-slate-500 text-slate-400" />
+          <Input placeholder={t('common.search') + '...'} value={search} onChange={e => setSearch(e.target.value)} className="ps-9 dark:border-slate-700 border-slate-300 dark:bg-slate-800 bg-white dark:text-slate-200 text-slate-900 dark:placeholder:text-slate-600 placeholder:text-slate-400" />
         </div>
         <Select value={statusFilter} onValueChange={setStatusFilter}>
-          <SelectTrigger className="w-full sm:w-[160px]"><SelectValue placeholder="الحالة" /></SelectTrigger>
-          <SelectContent>
-            <SelectItem value="ALL">جميع الحالات</SelectItem>
+          <SelectTrigger className="w-full sm:w-[160px] dark:border-slate-700 border-slate-300 dark:bg-slate-800 bg-white"><SelectValue placeholder={t('common.allStatuses')} /></SelectTrigger>
+          <SelectContent className="dark:border-slate-700 border-slate-200 dark:bg-slate-800 bg-white">
+            <SelectItem value="ALL">{t('common.allStatuses')}</SelectItem>
             {Object.entries(STATUS_LABELS).map(([k, v]) => <SelectItem key={k} value={k}>{v}</SelectItem>)}
           </SelectContent>
         </Select>
         <Select value={typeFilter} onValueChange={setTypeFilter}>
-          <SelectTrigger className="w-full sm:w-[180px]"><SelectValue placeholder="النوع" /></SelectTrigger>
-          <SelectContent>
-            <SelectItem value="ALL">جميع الأنواع</SelectItem>
+          <SelectTrigger className="w-full sm:w-[180px] dark:border-slate-700 border-slate-300 dark:bg-slate-800 bg-white"><SelectValue placeholder={t('common.allTypes')} /></SelectTrigger>
+          <SelectContent className="dark:border-slate-700 border-slate-200 dark:bg-slate-800 bg-white">
+            <SelectItem value="ALL">{t('common.allTypes')}</SelectItem>
             {Object.entries(INVOICE_TYPE_LABELS).map(([k, v]) => <SelectItem key={k} value={k}>{v}</SelectItem>)}
           </SelectContent>
         </Select>
@@ -592,7 +595,7 @@ export function InvoicesPage() {
 
       {/* Add Invoice Dialog — responsive */}
       <Dialog open={showAdd} onOpenChange={setShowAdd}>
-        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto" dir="rtl">
+        <DialogContent className="w-[95vw] max-w-2xl max-h-[90vh] overflow-y-auto" dir="rtl">
           <DialogHeader>
             <DialogTitle className="text-slate-900 dark:text-slate-100">إضافة فاتورة جديدة</DialogTitle>
             <DialogDescription className="text-slate-500 dark:text-slate-400">أدخل بيانات الفاتورة — ضريبة القيمة المضافة 5% (الإمارات)</DialogDescription>
@@ -804,7 +807,7 @@ export function InvoicesPage() {
                     <h4 className="text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">المدفوعات</h4>
                     <div className="space-y-2">
                       {selected.payments.map((p: InvoicePayment, i: number) => (
-                        <div key={i} className="flex items-center justify-between text-sm p-2 rounded-lg bg-slate-50 dark:bg-slate-800/50">
+                        <div key={i} className="flex items-center justify-between flex-wrap text-sm p-2 rounded-lg bg-slate-50 dark:bg-slate-800/50 gap-1">
                           <div>
                             <span className="font-medium text-slate-900 dark:text-slate-100">{fmt(p.amount)} د.إ</span>
                             <span className="text-slate-500 dark:text-slate-400 mx-2">—</span>
@@ -850,7 +853,7 @@ export function InvoicesPage() {
 
       {/* Payment Dialog */}
       <Dialog open={showPayment} onOpenChange={setShowPayment}>
-        <DialogContent dir="rtl" className="max-w-md">
+        <DialogContent dir="rtl" className="w-[95vw] max-w-md">
           <DialogHeader>
             <DialogTitle className="text-slate-900 dark:text-slate-100">تسجيل دفعة</DialogTitle>
             <DialogDescription className="text-slate-500 dark:text-slate-400">

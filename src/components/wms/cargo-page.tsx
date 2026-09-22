@@ -8,6 +8,7 @@ import {
   Printer, QrCode, ClipboardList, Ruler, AlertTriangle, PackageSearch,
   ArrowDown, Play, Check, MoreHorizontal, Tags, Tag, FileCheck, FileSpreadsheet,
   FileBadge, Sparkles, Award, Ship, Plane, ArrowRightLeft, RefreshCw,
+  ExternalLink, Globe, CalendarDays,
 } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -36,6 +37,8 @@ import { toast } from 'sonner';
 import {
   useTranslation, translateStatus, translateCategory, translateCommodity, translateMovementType,
 } from '@/lib/translations';
+import { getAirTrackingUrl, getSeaTrackingUrl, getGenericTrackingLink } from '@/lib/tracking-links';
+import { useAppStore } from '@/lib/store';
 import type {
   CargoItem, LiftCategory, CommodityType, CargoStatus, Location, Project, Movement,
 } from '@/types/wms';
@@ -139,6 +142,9 @@ const emptyForm = {
   liftCategory: '' as string, commodityType: '' as string,
   specialHandling: '', clientName: '', poReference: '', blReference: '',
   centerOfGravity: '', liftingPoints: '', projectId: '',
+  // Shipment tracking fields
+  airWaybillNumber: '', billOfLadingNumber: '', shippingLine: '',
+  vesselName: '', eta: '', etd: '', portOfLoading: '', portOfDischarge: '',
 };
 
 // ==================== MAIN COMPONENT ====================
@@ -194,6 +200,8 @@ export function CargoPage() {
   };
 
   const { t } = useTranslation();
+  const globalSearch = useAppStore((s) => s.globalSearch);
+  const effectiveSearch = search || globalSearch;
 
   // ==================== API CALLS ====================
 
@@ -201,7 +209,7 @@ export function CargoPage() {
     setLoading(true);
     const params = new URLSearchParams({
       page: String(page), limit: '20',
-      ...(search && { search }),
+      ...(effectiveSearch && { search: effectiveSearch }),
       ...(statusFilter && { status: statusFilter }),
       ...(categoryFilter && { liftCategory: categoryFilter }),
       ...(commodityFilter && { commodityType: commodityFilter }),
@@ -215,7 +223,7 @@ export function CargoPage() {
       setCargo(items);
       setTotalPages(typeof json.totalPages === 'number' ? json.totalPages : 1);
     } catch (e) { console.error('fetchCargo error:', e); toast.error(t('cargo.toast.fetchFailed')); } finally { setLoading(false); }
-  }, [page, search, statusFilter, categoryFilter, commodityFilter, t]);
+  }, [page, search, globalSearch, statusFilter, categoryFilter, commodityFilter, t]);
 
   const fetchLookups = useCallback(async () => {
     try {
@@ -232,7 +240,7 @@ export function CargoPage() {
 
   useEffect(() => { fetchCargo(); }, [fetchCargo]);
   useEffect(() => { fetchLookups(); }, [fetchLookups]);
-  useEffect(() => { setPage(1); setSelectedRows(new Set()); }, [search, statusFilter, categoryFilter, commodityFilter]);
+  useEffect(() => { setPage(1); setSelectedRows(new Set()); }, [search, globalSearch, statusFilter, categoryFilter, commodityFilter]);
 
   // ==================== CRUD HANDLERS ====================
 
@@ -253,6 +261,15 @@ export function CargoPage() {
       centerOfGravity: form.centerOfGravity || null,
       liftingPoints: form.liftingPoints ? parseInt(form.liftingPoints) : null,
       projectId: form.projectId && form.projectId !== '_none' ? form.projectId : null,
+      // Shipment tracking fields
+      airWaybillNumber: form.airWaybillNumber || null,
+      billOfLadingNumber: form.billOfLadingNumber || null,
+      shippingLine: form.shippingLine || null,
+      vesselName: form.vesselName || null,
+      eta: form.eta || null,
+      etd: form.etd || null,
+      portOfLoading: form.portOfLoading || null,
+      portOfDischarge: form.portOfDischarge || null,
     };
     try {
       const url = editing ? `/api/cargo/${editing.id}` : '/api/cargo';
@@ -294,6 +311,15 @@ export function CargoPage() {
       centerOfGravity: item.centerOfGravity || '',
       liftingPoints: item.liftingPoints ? String(item.liftingPoints) : '',
       projectId: item.projectId || '',
+      // Shipment tracking fields
+      airWaybillNumber: item.airWaybillNumber || '',
+      billOfLadingNumber: item.billOfLadingNumber || '',
+      shippingLine: item.shippingLine || '',
+      vesselName: item.vesselName || '',
+      eta: item.eta ? new Date(item.eta).toISOString().split('T')[0] : '',
+      etd: item.etd ? new Date(item.etd).toISOString().split('T')[0] : '',
+      portOfLoading: item.portOfLoading || '',
+      portOfDischarge: item.portOfDischarge || '',
     });
   };
 
@@ -428,7 +454,7 @@ export function CargoPage() {
       {/* ===== HEADER ===== */}
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="text-2xl font-bold dark:text-slate-100 text-slate-900">{t('cargo.title')}</h1>
+          <h1 className="text-xl md:text-2xl font-bold dark:text-slate-100 text-slate-900">{t('cargo.title')}</h1>
           <p className="text-sm dark:text-slate-400 text-slate-500 mt-1">{t('cargo.subtitle')}</p>
         </div>
         <Button
@@ -445,12 +471,12 @@ export function CargoPage() {
         <CardContent className="p-4">
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
             <div className="relative">
-              <Search className="absolute right-2.5 top-2.5 h-4 w-4 dark:text-slate-500 text-slate-400" />
+              <Search className="absolute start-3 top-1/2 -translate-y-1/2 h-4 w-4 dark:text-slate-500 text-slate-400" />
               <Input
                 placeholder={t('cargo.searchPlaceholder')}
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
-                className="dark:border-slate-700 border-slate-300 dark:bg-slate-800 bg-white dark:text-slate-200 text-slate-900 pr-9 placeholder:dark:text-slate-600 placeholder:text-slate-400"
+                className="dark:border-slate-700 border-slate-300 dark:bg-slate-800 bg-white dark:text-slate-200 text-slate-900 ps-9 placeholder:dark:text-slate-600 placeholder:text-slate-400"
               />
             </div>
             <Select value={statusFilter} onValueChange={setStatusFilter}>
@@ -585,6 +611,11 @@ export function CargoPage() {
                       <TableCell className="py-3 text-xs dark:text-slate-400 text-slate-500 hidden lg:table-cell">{item.location?.code || '—'}</TableCell>
                       <TableCell className="py-3 text-left" onClick={(e) => e.stopPropagation()}>
                         <div className="flex items-center justify-start gap-1">
+                          {(item.airWaybillNumber || item.billOfLadingNumber) && (
+                            <Button variant="ghost" size="icon" className="h-7 w-7 dark:text-cyan-400 text-cyan-600 dark:hover:text-cyan-300 hover:text-cyan-500 dark:hover:bg-slate-800 hover:bg-slate-100 transition-all duration-200" onClick={() => openDetail(item)} title={t('cargo.trackShipment')}>
+                              <Globe className="h-3.5 w-3.5" />
+                            </Button>
+                          )}
                           <Button variant="ghost" size="icon" className="h-7 w-7 dark:text-slate-500 text-slate-400 dark:hover:text-cyan-400 hover:text-cyan-600 dark:hover:bg-slate-800 hover:bg-slate-100 transition-all duration-200" onClick={() => openDetail(item)}>
                             <Eye className="h-3.5 w-3.5" />
                           </Button>
@@ -1185,6 +1216,108 @@ export function CargoPage() {
                   </div>
                   )}
 
+                  {/* ===== SHIPMENT TRACKING ===== */}
+                  {(detailCargo.airWaybillNumber || detailCargo.billOfLadingNumber || detailCargo.shippingLine || detailCargo.eta || detailCargo.etd || detailCargo.portOfLoading || detailCargo.portOfDischarge) && (
+                  <div className="rounded-xl border dark:border-slate-800 border-slate-200 dark:bg-slate-900/50 bg-white p-4 shadow-sm">
+                    <h3 className="text-xs font-semibold dark:text-slate-300 text-slate-600 flex items-center gap-1.5 mb-3">
+                      <Globe className="h-3.5 w-3.5 dark:text-amber-400 text-amber-600" />
+                      {t('cargo.shipmentTracking')}
+                    </h3>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
+                      {detailCargo.airWaybillNumber && (() => {
+                        const tracking = getAirTrackingUrl(detailCargo.airWaybillNumber);
+                        const genericUrl = getGenericTrackingLink(detailCargo.airWaybillNumber, 'air');
+                        return (
+                          <div className="col-span-2 sm:col-span-1">
+                            <span className="dark:text-slate-500 text-slate-400 text-xs">{t('cargo.airWaybill')}</span>
+                            <div className="flex items-center gap-2 mt-0.5">
+                              <Plane className="h-3.5 w-3.5 dark:text-purple-400 text-purple-600 flex-shrink-0" />
+                              <span className="dark:text-slate-200 text-slate-800 font-mono text-xs">{detailCargo.airWaybillNumber}</span>
+                              {tracking?.trackingUrl && (
+                                <a href={tracking.trackingUrl} target="_blank" rel="noopener noreferrer"
+                                  className="inline-flex items-center gap-0.5 text-[10px] dark:text-cyan-400 text-cyan-600 hover:underline"
+                                  onClick={(e) => e.stopPropagation()}>
+                                  <ExternalLink className="h-3 w-3" />
+                                  {t('cargo.tracking.trackOnSite')}
+                                </a>
+                              )}
+                              <a href={genericUrl} target="_blank" rel="noopener noreferrer"
+                                className="inline-flex items-center gap-0.5 text-[10px] dark:text-slate-400 text-slate-500 hover:underline"
+                                onClick={(e) => e.stopPropagation()}>
+                                <Globe className="h-3 w-3" />
+                                {t('cargo.tracking.genericTrack')}
+                              </a>
+                            </div>
+                          </div>
+                        );
+                      })()}
+                      {detailCargo.billOfLadingNumber && (() => {
+                        const tracking = getSeaTrackingUrl(detailCargo.billOfLadingNumber, detailCargo.shippingLine || undefined);
+                        const genericUrl = getGenericTrackingLink(detailCargo.billOfLadingNumber, 'sea');
+                        return (
+                          <div className="col-span-2 sm:col-span-1">
+                            <span className="dark:text-slate-500 text-slate-400 text-xs">{t('cargo.billOfLading')}</span>
+                            <div className="flex items-center gap-2 mt-0.5">
+                              <Ship className="h-3.5 w-3.5 dark:text-blue-400 text-blue-600 flex-shrink-0" />
+                              <span className="dark:text-slate-200 text-slate-800 font-mono text-xs">{detailCargo.billOfLadingNumber}</span>
+                              {tracking?.trackingUrl && (
+                                <a href={tracking.trackingUrl} target="_blank" rel="noopener noreferrer"
+                                  className="inline-flex items-center gap-0.5 text-[10px] dark:text-cyan-400 text-cyan-600 hover:underline"
+                                  onClick={(e) => e.stopPropagation()}>
+                                  <ExternalLink className="h-3 w-3" />
+                                  {t('cargo.tracking.trackOnSite')}
+                                </a>
+                              )}
+                              <a href={genericUrl} target="_blank" rel="noopener noreferrer"
+                                className="inline-flex items-center gap-0.5 text-[10px] dark:text-slate-400 text-slate-500 hover:underline"
+                                onClick={(e) => e.stopPropagation()}>
+                                <Globe className="h-3 w-3" />
+                                {t('cargo.tracking.genericTrack')}
+                              </a>
+                            </div>
+                          </div>
+                        );
+                      })()}
+                      {detailCargo.shippingLine && (
+                        <div>
+                          <span className="dark:text-slate-500 text-slate-400 text-xs">{t('cargo.shippingLine')}</span>
+                          <p className="dark:text-slate-200 text-slate-800 mt-0.5">{detailCargo.shippingLine}</p>
+                        </div>
+                      )}
+                      {detailCargo.etd && (
+                        <div>
+                          <span className="dark:text-slate-500 text-slate-400 text-xs">{t('cargo.etd')}</span>
+                          <p className="dark:text-slate-200 text-slate-800 mt-0.5 flex items-center gap-1">
+                            <CalendarDays className="h-3 w-3 dark:text-slate-400 text-slate-500" />
+                            {new Date(detailCargo.etd).toLocaleDateString()}
+                          </p>
+                        </div>
+                      )}
+                      {detailCargo.eta && (
+                        <div>
+                          <span className="dark:text-slate-500 text-slate-400 text-xs">{t('cargo.eta')}</span>
+                          <p className="dark:text-slate-200 text-slate-800 mt-0.5 flex items-center gap-1">
+                            <CalendarDays className="h-3 w-3 dark:text-slate-400 text-slate-500" />
+                            {new Date(detailCargo.eta).toLocaleDateString()}
+                          </p>
+                        </div>
+                      )}
+                      {detailCargo.portOfLoading && (
+                        <div>
+                          <span className="dark:text-slate-500 text-slate-400 text-xs">{t('cargo.portOfLoading')}</span>
+                          <p className="dark:text-slate-200 text-slate-800 mt-0.5">{detailCargo.portOfLoading}</p>
+                        </div>
+                      )}
+                      {detailCargo.portOfDischarge && (
+                        <div>
+                          <span className="dark:text-slate-500 text-slate-400 text-xs">{t('cargo.portOfDischarge')}</span>
+                          <p className="dark:text-slate-200 text-slate-800 mt-0.5">{detailCargo.portOfDischarge}</p>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                  )}
+
                   {/* ===== SPECIAL HANDLING ===== */}
                   {detailCargo.specialHandling && (
                     <div className="rounded-xl border dark:border-amber-500/20 border-amber-200 dark:bg-amber-500/5 bg-amber-50 p-4 shadow-sm">
@@ -1273,7 +1406,7 @@ export function CargoPage() {
           setTransferRemarks('');
         }
       }}>
-        <DialogContent className="dark:border-slate-700 border-slate-200 dark:bg-slate-900 bg-white max-w-md shadow-xl">
+        <DialogContent className="w-[95vw] max-w-md dark:border-slate-700 border-slate-200 dark:bg-slate-900 bg-white shadow-xl">
           <DialogHeader>
             <DialogTitle className="dark:text-slate-100 text-slate-900">نقل البضاعة</DialogTitle>
           </DialogHeader>
@@ -1315,7 +1448,7 @@ export function CargoPage() {
 
       {/* ===== ADD/EDIT DIALOG ===== */}
       <Dialog open={showAdd || !!editing} onOpenChange={(open) => { if (!open) { setShowAdd(false); setEditing(null); setForm(emptyForm); } }}>
-        <DialogContent className="dark:border-slate-700 border-slate-200 dark:bg-slate-900 bg-white max-h-[90vh] overflow-y-auto max-w-2xl shadow-xl">
+        <DialogContent className="w-[95vw] max-w-2xl dark:border-slate-700 border-slate-200 dark:bg-slate-900 bg-white max-h-[90vh] overflow-y-auto shadow-xl">
           <DialogHeader>
             <DialogTitle className="dark:text-slate-100 text-slate-900">
               {editing ? t('cargo.editCargo') : t('cargo.addNewCargo')}
@@ -1420,6 +1553,68 @@ export function CargoPage() {
                 className="dark:border-slate-700 border-slate-300 dark:bg-slate-800 bg-white dark:text-slate-200 text-slate-900 mt-1 min-h-[80px]"
                 placeholder={t('cargo.form.specialHandlingPlaceholder')} />
             </div>
+
+            {/* ===== Shipment Tracking Section ===== */}
+            <div className="sm:col-span-2 mt-2">
+              <Separator className="dark:bg-slate-700 bg-slate-200 mb-3" />
+              <div className="flex items-center gap-1.5 mb-3">
+                <Globe className="h-4 w-4 dark:text-amber-400 text-amber-600" />
+                <span className="text-sm font-semibold dark:text-slate-200 text-slate-800">{t('cargo.shipmentTracking')}</span>
+              </div>
+            </div>
+            <div>
+              <Label className="dark:text-slate-400 text-slate-600">{t('cargo.form.airWaybill')}</Label>
+              <Input value={form.airWaybillNumber} onChange={(e) => setForm({ ...form, airWaybillNumber: e.target.value })}
+                className="dark:border-slate-700 border-slate-300 dark:bg-slate-800 bg-white dark:text-slate-200 text-slate-900 mt-1 font-mono"
+                placeholder={t('cargo.form.awbPlaceholder')} />
+            </div>
+            <div>
+              <Label className="dark:text-slate-400 text-slate-600">{t('cargo.form.billOfLading')}</Label>
+              <Input value={form.billOfLadingNumber} onChange={(e) => setForm({ ...form, billOfLadingNumber: e.target.value })}
+                className="dark:border-slate-700 border-slate-300 dark:bg-slate-800 bg-white dark:text-slate-200 text-slate-900 mt-1 font-mono"
+                placeholder={t('cargo.form.blPlaceholder')} />
+            </div>
+            <div>
+              <Label className="dark:text-slate-400 text-slate-600">{t('cargo.form.shippingLine')}</Label>
+              <Select value={form.shippingLine} onValueChange={(v) => setForm({ ...form, shippingLine: v })}>
+                <SelectTrigger className="dark:border-slate-700 border-slate-300 dark:bg-slate-800 bg-white dark:text-slate-200 text-slate-900 mt-1">
+                  <SelectValue placeholder={t('common.select')} />
+                </SelectTrigger>
+                <SelectContent className="dark:border-slate-700 border-slate-200 dark:bg-slate-800 bg-white">
+                  <SelectItem value="_none" className="dark:text-slate-200 text-slate-700 dark:focus:bg-slate-700 focus:bg-slate-100">{t('common.none')}</SelectItem>
+                  {['Emirates SkyCargo', 'Etihad Cargo', 'Saudia Cargo', 'Maersk', 'MSC', 'CMA CGM', 'Hapag-Lloyd', 'OOCL', 'ZIM', 'DP World', 'DHL', 'UPS', 'Aramex'].map((line) => (
+                    <SelectItem key={line} value={line} className="dark:text-slate-200 text-slate-700 dark:focus:bg-slate-700 focus:bg-slate-100">{line}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <Label className="dark:text-slate-400 text-slate-600">{t('cargo.form.vesselFlight')}</Label>
+              <Input value={form.vesselName} onChange={(e) => setForm({ ...form, vesselName: e.target.value })}
+                className="dark:border-slate-700 border-slate-300 dark:bg-slate-800 bg-white dark:text-slate-200 text-slate-900 mt-1" />
+            </div>
+            <div>
+              <Label className="dark:text-slate-400 text-slate-600">{t('cargo.form.etd')}</Label>
+              <Input type="date" value={form.etd} onChange={(e) => setForm({ ...form, etd: e.target.value })}
+                className="dark:border-slate-700 border-slate-300 dark:bg-slate-800 bg-white dark:text-slate-200 text-slate-900 mt-1" />
+            </div>
+            <div>
+              <Label className="dark:text-slate-400 text-slate-600">{t('cargo.form.eta')}</Label>
+              <Input type="date" value={form.eta} onChange={(e) => setForm({ ...form, eta: e.target.value })}
+                className="dark:border-slate-700 border-slate-300 dark:bg-slate-800 bg-white dark:text-slate-200 text-slate-900 mt-1" />
+            </div>
+            <div>
+              <Label className="dark:text-slate-400 text-slate-600">{t('cargo.form.portOfLoading')}</Label>
+              <Input value={form.portOfLoading} onChange={(e) => setForm({ ...form, portOfLoading: e.target.value })}
+                className="dark:border-slate-700 border-slate-300 dark:bg-slate-800 bg-white dark:text-slate-200 text-slate-900 mt-1"
+                placeholder="e.g., Jebel Ali, Dubai" />
+            </div>
+            <div>
+              <Label className="dark:text-slate-400 text-slate-600">{t('cargo.form.portOfDischarge')}</Label>
+              <Input value={form.portOfDischarge} onChange={(e) => setForm({ ...form, portOfDischarge: e.target.value })}
+                className="dark:border-slate-700 border-slate-300 dark:bg-slate-800 bg-white dark:text-slate-200 text-slate-900 mt-1"
+                placeholder="e.g., Rotterdam, Hamburg" />
+            </div>
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => { setShowAdd(false); setEditing(null); setForm(emptyForm); }}
@@ -1437,7 +1632,7 @@ export function CargoPage() {
 
       {/* ===== DELETE CONFIRMATION ===== */}
       <Dialog open={!!deleting} onOpenChange={(open) => { if (!open) setDeleting(null); }}>
-        <DialogContent className="dark:border-slate-700 border-slate-200 dark:bg-slate-900 bg-white max-w-md shadow-xl">
+        <DialogContent className="w-[95vw] max-w-md dark:border-slate-700 border-slate-200 dark:bg-slate-900 bg-white shadow-xl">
           <DialogHeader>
             <DialogTitle className="dark:text-slate-100 text-slate-900">{t('common.confirmDelete')}</DialogTitle>
           </DialogHeader>

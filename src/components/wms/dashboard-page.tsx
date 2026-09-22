@@ -140,7 +140,7 @@ function KpiCard({
             ) : (
               <>
                 <p className="text-[11px] font-medium dark:text-slate-500 text-slate-400 uppercase tracking-wider">{label}</p>
-                <p className="text-3xl font-extrabold tracking-tight dark:text-slate-100 text-slate-900 leading-none">
+                <p className="text-2xl md:text-3xl font-extrabold tracking-tight dark:text-slate-100 text-slate-900 leading-none">
                   {typeof value === 'number' ? value.toLocaleString() : value}
                   {suffix && (
                     <span className="text-xs font-semibold dark:text-slate-500 text-slate-400 ml-1">{suffix}</span>
@@ -540,7 +540,7 @@ export function DashboardPage({ onNavigate }: DashboardPageProps) {
       {/* ─── Page Header with Date Range & Refresh ─── */}
       <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-bold dark:text-slate-100 text-slate-900">{t('dashboard.title')}</h1>
+          <h1 className="text-xl md:text-2xl font-bold dark:text-slate-100 text-slate-900">{t('dashboard.title')}</h1>
           <p className="text-sm dark:text-slate-500 text-slate-400 mt-1">{t('dashboard.subtitle')}</p>
         </div>
         <div className="flex items-center gap-2">
@@ -600,7 +600,7 @@ export function DashboardPage({ onNavigate }: DashboardPageProps) {
 
       {/* ─── KPI Cards ─── */}
       <SectionHeader title={locale === 'ar' ? 'المؤشرات' : 'Key Metrics'} icon={TrendingUp} />
-      <div className="grid grid-cols-2 gap-3 sm:gap-4 md:grid-cols-3 xl:grid-cols-6">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 md:grid-cols-3 xl:grid-cols-6">
         {kpis.map((kpi) => (
           <KpiCard
             key={kpi.key}

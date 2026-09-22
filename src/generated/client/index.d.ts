@@ -3071,6 +3071,13 @@ export namespace Prisma {
     departureDate: Date | null
     storageDays: number | null
     isDeleted: boolean | null
+    airWaybillNumber: string | null
+    billOfLadingNumber: string | null
+    shippingLine: string | null
+    eta: Date | null
+    etd: Date | null
+    portOfLoading: string | null
+    portOfDischarge: string | null
     receivedAt: Date | null
     dispatchedAt: Date | null
     createdAt: Date | null
@@ -3116,6 +3123,13 @@ export namespace Prisma {
     departureDate: Date | null
     storageDays: number | null
     isDeleted: boolean | null
+    airWaybillNumber: string | null
+    billOfLadingNumber: string | null
+    shippingLine: string | null
+    eta: Date | null
+    etd: Date | null
+    portOfLoading: string | null
+    portOfDischarge: string | null
     receivedAt: Date | null
     dispatchedAt: Date | null
     createdAt: Date | null
@@ -3161,6 +3175,13 @@ export namespace Prisma {
     departureDate: number
     storageDays: number
     isDeleted: number
+    airWaybillNumber: number
+    billOfLadingNumber: number
+    shippingLine: number
+    eta: number
+    etd: number
+    portOfLoading: number
+    portOfDischarge: number
     receivedAt: number
     dispatchedAt: number
     createdAt: number
@@ -3236,6 +3257,13 @@ export namespace Prisma {
     departureDate?: true
     storageDays?: true
     isDeleted?: true
+    airWaybillNumber?: true
+    billOfLadingNumber?: true
+    shippingLine?: true
+    eta?: true
+    etd?: true
+    portOfLoading?: true
+    portOfDischarge?: true
     receivedAt?: true
     dispatchedAt?: true
     createdAt?: true
@@ -3281,6 +3309,13 @@ export namespace Prisma {
     departureDate?: true
     storageDays?: true
     isDeleted?: true
+    airWaybillNumber?: true
+    billOfLadingNumber?: true
+    shippingLine?: true
+    eta?: true
+    etd?: true
+    portOfLoading?: true
+    portOfDischarge?: true
     receivedAt?: true
     dispatchedAt?: true
     createdAt?: true
@@ -3326,6 +3361,13 @@ export namespace Prisma {
     departureDate?: true
     storageDays?: true
     isDeleted?: true
+    airWaybillNumber?: true
+    billOfLadingNumber?: true
+    shippingLine?: true
+    eta?: true
+    etd?: true
+    portOfLoading?: true
+    portOfDischarge?: true
     receivedAt?: true
     dispatchedAt?: true
     createdAt?: true
@@ -3458,6 +3500,13 @@ export namespace Prisma {
     departureDate: Date | null
     storageDays: number
     isDeleted: boolean
+    airWaybillNumber: string | null
+    billOfLadingNumber: string | null
+    shippingLine: string | null
+    eta: Date | null
+    etd: Date | null
+    portOfLoading: string | null
+    portOfDischarge: string | null
     receivedAt: Date | null
     dispatchedAt: Date | null
     createdAt: Date
@@ -3522,6 +3571,13 @@ export namespace Prisma {
     departureDate?: boolean
     storageDays?: boolean
     isDeleted?: boolean
+    airWaybillNumber?: boolean
+    billOfLadingNumber?: boolean
+    shippingLine?: boolean
+    eta?: boolean
+    etd?: boolean
+    portOfLoading?: boolean
+    portOfDischarge?: boolean
     receivedAt?: boolean
     dispatchedAt?: boolean
     createdAt?: boolean
@@ -3571,6 +3627,13 @@ export namespace Prisma {
     departureDate?: boolean
     storageDays?: boolean
     isDeleted?: boolean
+    airWaybillNumber?: boolean
+    billOfLadingNumber?: boolean
+    shippingLine?: boolean
+    eta?: boolean
+    etd?: boolean
+    portOfLoading?: boolean
+    portOfDischarge?: boolean
     receivedAt?: boolean
     dispatchedAt?: boolean
     createdAt?: boolean
@@ -3618,6 +3681,13 @@ export namespace Prisma {
     departureDate?: boolean
     storageDays?: boolean
     isDeleted?: boolean
+    airWaybillNumber?: boolean
+    billOfLadingNumber?: boolean
+    shippingLine?: boolean
+    eta?: boolean
+    etd?: boolean
+    portOfLoading?: boolean
+    portOfDischarge?: boolean
     receivedAt?: boolean
     dispatchedAt?: boolean
     createdAt?: boolean
@@ -3665,13 +3735,20 @@ export namespace Prisma {
     departureDate?: boolean
     storageDays?: boolean
     isDeleted?: boolean
+    airWaybillNumber?: boolean
+    billOfLadingNumber?: boolean
+    shippingLine?: boolean
+    eta?: boolean
+    etd?: boolean
+    portOfLoading?: boolean
+    portOfDischarge?: boolean
     receivedAt?: boolean
     dispatchedAt?: boolean
     createdAt?: boolean
     updatedAt?: boolean
   }
 
-  export type CargoItemOmit<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetOmit<"id" | "cargoCode" | "description" | "weight" | "length" | "width" | "height" | "volume" | "liftCategory" | "centerOfGravity" | "liftingPoints" | "specialHandling" | "hazardClass" | "commodityType" | "status" | "locationId" | "projectId" | "clientName" | "poReference" | "blReference" | "transportWeight" | "transportLength" | "transportWidth" | "transportHeight" | "barcode" | "containerNumber" | "containerType" | "sealNumber" | "customsStatus" | "customsRef" | "vesselName" | "voyageNumber" | "flightNumber" | "transportMode" | "arrivalDate" | "departureDate" | "storageDays" | "isDeleted" | "receivedAt" | "dispatchedAt" | "createdAt" | "updatedAt", ExtArgs["result"]["cargoItem"]>
+  export type CargoItemOmit<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = $Extensions.GetOmit<"id" | "cargoCode" | "description" | "weight" | "length" | "width" | "height" | "volume" | "liftCategory" | "centerOfGravity" | "liftingPoints" | "specialHandling" | "hazardClass" | "commodityType" | "status" | "locationId" | "projectId" | "clientName" | "poReference" | "blReference" | "transportWeight" | "transportLength" | "transportWidth" | "transportHeight" | "barcode" | "containerNumber" | "containerType" | "sealNumber" | "customsStatus" | "customsRef" | "vesselName" | "voyageNumber" | "flightNumber" | "transportMode" | "arrivalDate" | "departureDate" | "storageDays" | "isDeleted" | "airWaybillNumber" | "billOfLadingNumber" | "shippingLine" | "eta" | "etd" | "portOfLoading" | "portOfDischarge" | "receivedAt" | "dispatchedAt" | "createdAt" | "updatedAt", ExtArgs["result"]["cargoItem"]>
   export type CargoItemInclude<ExtArgs extends $Extensions.InternalArgs = $Extensions.DefaultArgs> = {
     location?: boolean | CargoItem$locationArgs<ExtArgs>
     project?: boolean | CargoItem$projectArgs<ExtArgs>
@@ -3733,6 +3810,13 @@ export namespace Prisma {
       departureDate: Date | null
       storageDays: number
       isDeleted: boolean
+      airWaybillNumber: string | null
+      billOfLadingNumber: string | null
+      shippingLine: string | null
+      eta: Date | null
+      etd: Date | null
+      portOfLoading: string | null
+      portOfDischarge: string | null
       receivedAt: Date | null
       dispatchedAt: Date | null
       createdAt: Date
@@ -4201,6 +4285,13 @@ export namespace Prisma {
     readonly departureDate: FieldRef<"CargoItem", 'DateTime'>
     readonly storageDays: FieldRef<"CargoItem", 'Int'>
     readonly isDeleted: FieldRef<"CargoItem", 'Boolean'>
+    readonly airWaybillNumber: FieldRef<"CargoItem", 'String'>
+    readonly billOfLadingNumber: FieldRef<"CargoItem", 'String'>
+    readonly shippingLine: FieldRef<"CargoItem", 'String'>
+    readonly eta: FieldRef<"CargoItem", 'DateTime'>
+    readonly etd: FieldRef<"CargoItem", 'DateTime'>
+    readonly portOfLoading: FieldRef<"CargoItem", 'String'>
+    readonly portOfDischarge: FieldRef<"CargoItem", 'String'>
     readonly receivedAt: FieldRef<"CargoItem", 'DateTime'>
     readonly dispatchedAt: FieldRef<"CargoItem", 'DateTime'>
     readonly createdAt: FieldRef<"CargoItem", 'DateTime'>
@@ -15901,6 +15992,13 @@ export namespace Prisma {
     departureDate: 'departureDate',
     storageDays: 'storageDays',
     isDeleted: 'isDeleted',
+    airWaybillNumber: 'airWaybillNumber',
+    billOfLadingNumber: 'billOfLadingNumber',
+    shippingLine: 'shippingLine',
+    eta: 'eta',
+    etd: 'etd',
+    portOfLoading: 'portOfLoading',
+    portOfDischarge: 'portOfDischarge',
     receivedAt: 'receivedAt',
     dispatchedAt: 'dispatchedAt',
     createdAt: 'createdAt',
@@ -16294,6 +16392,13 @@ export namespace Prisma {
     departureDate?: DateTimeNullableFilter<"CargoItem"> | Date | string | null
     storageDays?: IntFilter<"CargoItem"> | number
     isDeleted?: BoolFilter<"CargoItem"> | boolean
+    airWaybillNumber?: StringNullableFilter<"CargoItem"> | string | null
+    billOfLadingNumber?: StringNullableFilter<"CargoItem"> | string | null
+    shippingLine?: StringNullableFilter<"CargoItem"> | string | null
+    eta?: DateTimeNullableFilter<"CargoItem"> | Date | string | null
+    etd?: DateTimeNullableFilter<"CargoItem"> | Date | string | null
+    portOfLoading?: StringNullableFilter<"CargoItem"> | string | null
+    portOfDischarge?: StringNullableFilter<"CargoItem"> | string | null
     receivedAt?: DateTimeNullableFilter<"CargoItem"> | Date | string | null
     dispatchedAt?: DateTimeNullableFilter<"CargoItem"> | Date | string | null
     createdAt?: DateTimeFilter<"CargoItem"> | Date | string
@@ -16342,6 +16447,13 @@ export namespace Prisma {
     departureDate?: SortOrderInput | SortOrder
     storageDays?: SortOrder
     isDeleted?: SortOrder
+    airWaybillNumber?: SortOrderInput | SortOrder
+    billOfLadingNumber?: SortOrderInput | SortOrder
+    shippingLine?: SortOrderInput | SortOrder
+    eta?: SortOrderInput | SortOrder
+    etd?: SortOrderInput | SortOrder
+    portOfLoading?: SortOrderInput | SortOrder
+    portOfDischarge?: SortOrderInput | SortOrder
     receivedAt?: SortOrderInput | SortOrder
     dispatchedAt?: SortOrderInput | SortOrder
     createdAt?: SortOrder
@@ -16393,6 +16505,13 @@ export namespace Prisma {
     departureDate?: DateTimeNullableFilter<"CargoItem"> | Date | string | null
     storageDays?: IntFilter<"CargoItem"> | number
     isDeleted?: BoolFilter<"CargoItem"> | boolean
+    airWaybillNumber?: StringNullableFilter<"CargoItem"> | string | null
+    billOfLadingNumber?: StringNullableFilter<"CargoItem"> | string | null
+    shippingLine?: StringNullableFilter<"CargoItem"> | string | null
+    eta?: DateTimeNullableFilter<"CargoItem"> | Date | string | null
+    etd?: DateTimeNullableFilter<"CargoItem"> | Date | string | null
+    portOfLoading?: StringNullableFilter<"CargoItem"> | string | null
+    portOfDischarge?: StringNullableFilter<"CargoItem"> | string | null
     receivedAt?: DateTimeNullableFilter<"CargoItem"> | Date | string | null
     dispatchedAt?: DateTimeNullableFilter<"CargoItem"> | Date | string | null
     createdAt?: DateTimeFilter<"CargoItem"> | Date | string
@@ -16441,6 +16560,13 @@ export namespace Prisma {
     departureDate?: SortOrderInput | SortOrder
     storageDays?: SortOrder
     isDeleted?: SortOrder
+    airWaybillNumber?: SortOrderInput | SortOrder
+    billOfLadingNumber?: SortOrderInput | SortOrder
+    shippingLine?: SortOrderInput | SortOrder
+    eta?: SortOrderInput | SortOrder
+    etd?: SortOrderInput | SortOrder
+    portOfLoading?: SortOrderInput | SortOrder
+    portOfDischarge?: SortOrderInput | SortOrder
     receivedAt?: SortOrderInput | SortOrder
     dispatchedAt?: SortOrderInput | SortOrder
     createdAt?: SortOrder
@@ -16494,6 +16620,13 @@ export namespace Prisma {
     departureDate?: DateTimeNullableWithAggregatesFilter<"CargoItem"> | Date | string | null
     storageDays?: IntWithAggregatesFilter<"CargoItem"> | number
     isDeleted?: BoolWithAggregatesFilter<"CargoItem"> | boolean
+    airWaybillNumber?: StringNullableWithAggregatesFilter<"CargoItem"> | string | null
+    billOfLadingNumber?: StringNullableWithAggregatesFilter<"CargoItem"> | string | null
+    shippingLine?: StringNullableWithAggregatesFilter<"CargoItem"> | string | null
+    eta?: DateTimeNullableWithAggregatesFilter<"CargoItem"> | Date | string | null
+    etd?: DateTimeNullableWithAggregatesFilter<"CargoItem"> | Date | string | null
+    portOfLoading?: StringNullableWithAggregatesFilter<"CargoItem"> | string | null
+    portOfDischarge?: StringNullableWithAggregatesFilter<"CargoItem"> | string | null
     receivedAt?: DateTimeNullableWithAggregatesFilter<"CargoItem"> | Date | string | null
     dispatchedAt?: DateTimeNullableWithAggregatesFilter<"CargoItem"> | Date | string | null
     createdAt?: DateTimeWithAggregatesFilter<"CargoItem"> | Date | string
@@ -17662,6 +17795,13 @@ export namespace Prisma {
     departureDate?: Date | string | null
     storageDays?: number
     isDeleted?: boolean
+    airWaybillNumber?: string | null
+    billOfLadingNumber?: string | null
+    shippingLine?: string | null
+    eta?: Date | string | null
+    etd?: Date | string | null
+    portOfLoading?: string | null
+    portOfDischarge?: string | null
     receivedAt?: Date | string | null
     dispatchedAt?: Date | string | null
     createdAt?: Date | string
@@ -17710,6 +17850,13 @@ export namespace Prisma {
     departureDate?: Date | string | null
     storageDays?: number
     isDeleted?: boolean
+    airWaybillNumber?: string | null
+    billOfLadingNumber?: string | null
+    shippingLine?: string | null
+    eta?: Date | string | null
+    etd?: Date | string | null
+    portOfLoading?: string | null
+    portOfDischarge?: string | null
     receivedAt?: Date | string | null
     dispatchedAt?: Date | string | null
     createdAt?: Date | string
@@ -17754,6 +17901,13 @@ export namespace Prisma {
     departureDate?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     storageDays?: IntFieldUpdateOperationsInput | number
     isDeleted?: BoolFieldUpdateOperationsInput | boolean
+    airWaybillNumber?: NullableStringFieldUpdateOperationsInput | string | null
+    billOfLadingNumber?: NullableStringFieldUpdateOperationsInput | string | null
+    shippingLine?: NullableStringFieldUpdateOperationsInput | string | null
+    eta?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    etd?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    portOfLoading?: NullableStringFieldUpdateOperationsInput | string | null
+    portOfDischarge?: NullableStringFieldUpdateOperationsInput | string | null
     receivedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     dispatchedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
@@ -17802,6 +17956,13 @@ export namespace Prisma {
     departureDate?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     storageDays?: IntFieldUpdateOperationsInput | number
     isDeleted?: BoolFieldUpdateOperationsInput | boolean
+    airWaybillNumber?: NullableStringFieldUpdateOperationsInput | string | null
+    billOfLadingNumber?: NullableStringFieldUpdateOperationsInput | string | null
+    shippingLine?: NullableStringFieldUpdateOperationsInput | string | null
+    eta?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    etd?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    portOfLoading?: NullableStringFieldUpdateOperationsInput | string | null
+    portOfDischarge?: NullableStringFieldUpdateOperationsInput | string | null
     receivedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     dispatchedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
@@ -17848,6 +18009,13 @@ export namespace Prisma {
     departureDate?: Date | string | null
     storageDays?: number
     isDeleted?: boolean
+    airWaybillNumber?: string | null
+    billOfLadingNumber?: string | null
+    shippingLine?: string | null
+    eta?: Date | string | null
+    etd?: Date | string | null
+    portOfLoading?: string | null
+    portOfDischarge?: string | null
     receivedAt?: Date | string | null
     dispatchedAt?: Date | string | null
     createdAt?: Date | string
@@ -17891,6 +18059,13 @@ export namespace Prisma {
     departureDate?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     storageDays?: IntFieldUpdateOperationsInput | number
     isDeleted?: BoolFieldUpdateOperationsInput | boolean
+    airWaybillNumber?: NullableStringFieldUpdateOperationsInput | string | null
+    billOfLadingNumber?: NullableStringFieldUpdateOperationsInput | string | null
+    shippingLine?: NullableStringFieldUpdateOperationsInput | string | null
+    eta?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    etd?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    portOfLoading?: NullableStringFieldUpdateOperationsInput | string | null
+    portOfDischarge?: NullableStringFieldUpdateOperationsInput | string | null
     receivedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     dispatchedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
@@ -17936,6 +18111,13 @@ export namespace Prisma {
     departureDate?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     storageDays?: IntFieldUpdateOperationsInput | number
     isDeleted?: BoolFieldUpdateOperationsInput | boolean
+    airWaybillNumber?: NullableStringFieldUpdateOperationsInput | string | null
+    billOfLadingNumber?: NullableStringFieldUpdateOperationsInput | string | null
+    shippingLine?: NullableStringFieldUpdateOperationsInput | string | null
+    eta?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    etd?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    portOfLoading?: NullableStringFieldUpdateOperationsInput | string | null
+    portOfDischarge?: NullableStringFieldUpdateOperationsInput | string | null
     receivedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     dispatchedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
@@ -19454,6 +19636,13 @@ export namespace Prisma {
     departureDate?: SortOrder
     storageDays?: SortOrder
     isDeleted?: SortOrder
+    airWaybillNumber?: SortOrder
+    billOfLadingNumber?: SortOrder
+    shippingLine?: SortOrder
+    eta?: SortOrder
+    etd?: SortOrder
+    portOfLoading?: SortOrder
+    portOfDischarge?: SortOrder
     receivedAt?: SortOrder
     dispatchedAt?: SortOrder
     createdAt?: SortOrder
@@ -19513,6 +19702,13 @@ export namespace Prisma {
     departureDate?: SortOrder
     storageDays?: SortOrder
     isDeleted?: SortOrder
+    airWaybillNumber?: SortOrder
+    billOfLadingNumber?: SortOrder
+    shippingLine?: SortOrder
+    eta?: SortOrder
+    etd?: SortOrder
+    portOfLoading?: SortOrder
+    portOfDischarge?: SortOrder
     receivedAt?: SortOrder
     dispatchedAt?: SortOrder
     createdAt?: SortOrder
@@ -19558,6 +19754,13 @@ export namespace Prisma {
     departureDate?: SortOrder
     storageDays?: SortOrder
     isDeleted?: SortOrder
+    airWaybillNumber?: SortOrder
+    billOfLadingNumber?: SortOrder
+    shippingLine?: SortOrder
+    eta?: SortOrder
+    etd?: SortOrder
+    portOfLoading?: SortOrder
+    portOfDischarge?: SortOrder
     receivedAt?: SortOrder
     dispatchedAt?: SortOrder
     createdAt?: SortOrder
@@ -21315,6 +21518,13 @@ export namespace Prisma {
     departureDate?: Date | string | null
     storageDays?: number
     isDeleted?: boolean
+    airWaybillNumber?: string | null
+    billOfLadingNumber?: string | null
+    shippingLine?: string | null
+    eta?: Date | string | null
+    etd?: Date | string | null
+    portOfLoading?: string | null
+    portOfDischarge?: string | null
     receivedAt?: Date | string | null
     dispatchedAt?: Date | string | null
     createdAt?: Date | string
@@ -21361,6 +21571,13 @@ export namespace Prisma {
     departureDate?: Date | string | null
     storageDays?: number
     isDeleted?: boolean
+    airWaybillNumber?: string | null
+    billOfLadingNumber?: string | null
+    shippingLine?: string | null
+    eta?: Date | string | null
+    etd?: Date | string | null
+    portOfLoading?: string | null
+    portOfDischarge?: string | null
     receivedAt?: Date | string | null
     dispatchedAt?: Date | string | null
     createdAt?: Date | string
@@ -21525,6 +21742,13 @@ export namespace Prisma {
     departureDate?: DateTimeNullableFilter<"CargoItem"> | Date | string | null
     storageDays?: IntFilter<"CargoItem"> | number
     isDeleted?: BoolFilter<"CargoItem"> | boolean
+    airWaybillNumber?: StringNullableFilter<"CargoItem"> | string | null
+    billOfLadingNumber?: StringNullableFilter<"CargoItem"> | string | null
+    shippingLine?: StringNullableFilter<"CargoItem"> | string | null
+    eta?: DateTimeNullableFilter<"CargoItem"> | Date | string | null
+    etd?: DateTimeNullableFilter<"CargoItem"> | Date | string | null
+    portOfLoading?: StringNullableFilter<"CargoItem"> | string | null
+    portOfDischarge?: StringNullableFilter<"CargoItem"> | string | null
     receivedAt?: DateTimeNullableFilter<"CargoItem"> | Date | string | null
     dispatchedAt?: DateTimeNullableFilter<"CargoItem"> | Date | string | null
     createdAt?: DateTimeFilter<"CargoItem"> | Date | string
@@ -21600,6 +21824,13 @@ export namespace Prisma {
     departureDate?: Date | string | null
     storageDays?: number
     isDeleted?: boolean
+    airWaybillNumber?: string | null
+    billOfLadingNumber?: string | null
+    shippingLine?: string | null
+    eta?: Date | string | null
+    etd?: Date | string | null
+    portOfLoading?: string | null
+    portOfDischarge?: string | null
     receivedAt?: Date | string | null
     dispatchedAt?: Date | string | null
     createdAt?: Date | string
@@ -21646,6 +21877,13 @@ export namespace Prisma {
     departureDate?: Date | string | null
     storageDays?: number
     isDeleted?: boolean
+    airWaybillNumber?: string | null
+    billOfLadingNumber?: string | null
+    shippingLine?: string | null
+    eta?: Date | string | null
+    etd?: Date | string | null
+    portOfLoading?: string | null
+    portOfDischarge?: string | null
     receivedAt?: Date | string | null
     dispatchedAt?: Date | string | null
     createdAt?: Date | string
@@ -21715,6 +21953,13 @@ export namespace Prisma {
     departureDate?: Date | string | null
     storageDays?: number
     isDeleted?: boolean
+    airWaybillNumber?: string | null
+    billOfLadingNumber?: string | null
+    shippingLine?: string | null
+    eta?: Date | string | null
+    etd?: Date | string | null
+    portOfLoading?: string | null
+    portOfDischarge?: string | null
     receivedAt?: Date | string | null
     dispatchedAt?: Date | string | null
     createdAt?: Date | string
@@ -21762,6 +22007,13 @@ export namespace Prisma {
     departureDate?: Date | string | null
     storageDays?: number
     isDeleted?: boolean
+    airWaybillNumber?: string | null
+    billOfLadingNumber?: string | null
+    shippingLine?: string | null
+    eta?: Date | string | null
+    etd?: Date | string | null
+    portOfLoading?: string | null
+    portOfDischarge?: string | null
     receivedAt?: Date | string | null
     dispatchedAt?: Date | string | null
     createdAt?: Date | string
@@ -21919,6 +22171,13 @@ export namespace Prisma {
     departureDate?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     storageDays?: IntFieldUpdateOperationsInput | number
     isDeleted?: BoolFieldUpdateOperationsInput | boolean
+    airWaybillNumber?: NullableStringFieldUpdateOperationsInput | string | null
+    billOfLadingNumber?: NullableStringFieldUpdateOperationsInput | string | null
+    shippingLine?: NullableStringFieldUpdateOperationsInput | string | null
+    eta?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    etd?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    portOfLoading?: NullableStringFieldUpdateOperationsInput | string | null
+    portOfDischarge?: NullableStringFieldUpdateOperationsInput | string | null
     receivedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     dispatchedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
@@ -21966,6 +22225,13 @@ export namespace Prisma {
     departureDate?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     storageDays?: IntFieldUpdateOperationsInput | number
     isDeleted?: BoolFieldUpdateOperationsInput | boolean
+    airWaybillNumber?: NullableStringFieldUpdateOperationsInput | string | null
+    billOfLadingNumber?: NullableStringFieldUpdateOperationsInput | string | null
+    shippingLine?: NullableStringFieldUpdateOperationsInput | string | null
+    eta?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    etd?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    portOfLoading?: NullableStringFieldUpdateOperationsInput | string | null
+    portOfDischarge?: NullableStringFieldUpdateOperationsInput | string | null
     receivedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     dispatchedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
@@ -22626,6 +22892,13 @@ export namespace Prisma {
     departureDate?: Date | string | null
     storageDays?: number
     isDeleted?: boolean
+    airWaybillNumber?: string | null
+    billOfLadingNumber?: string | null
+    shippingLine?: string | null
+    eta?: Date | string | null
+    etd?: Date | string | null
+    portOfLoading?: string | null
+    portOfDischarge?: string | null
     receivedAt?: Date | string | null
     dispatchedAt?: Date | string | null
     createdAt?: Date | string
@@ -22705,6 +22978,13 @@ export namespace Prisma {
     departureDate?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     storageDays?: IntFieldUpdateOperationsInput | number
     isDeleted?: BoolFieldUpdateOperationsInput | boolean
+    airWaybillNumber?: NullableStringFieldUpdateOperationsInput | string | null
+    billOfLadingNumber?: NullableStringFieldUpdateOperationsInput | string | null
+    shippingLine?: NullableStringFieldUpdateOperationsInput | string | null
+    eta?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    etd?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    portOfLoading?: NullableStringFieldUpdateOperationsInput | string | null
+    portOfDischarge?: NullableStringFieldUpdateOperationsInput | string | null
     receivedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     dispatchedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
@@ -22751,6 +23031,13 @@ export namespace Prisma {
     departureDate?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     storageDays?: IntFieldUpdateOperationsInput | number
     isDeleted?: BoolFieldUpdateOperationsInput | boolean
+    airWaybillNumber?: NullableStringFieldUpdateOperationsInput | string | null
+    billOfLadingNumber?: NullableStringFieldUpdateOperationsInput | string | null
+    shippingLine?: NullableStringFieldUpdateOperationsInput | string | null
+    eta?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    etd?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    portOfLoading?: NullableStringFieldUpdateOperationsInput | string | null
+    portOfDischarge?: NullableStringFieldUpdateOperationsInput | string | null
     receivedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     dispatchedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
@@ -22796,6 +23083,13 @@ export namespace Prisma {
     departureDate?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     storageDays?: IntFieldUpdateOperationsInput | number
     isDeleted?: BoolFieldUpdateOperationsInput | boolean
+    airWaybillNumber?: NullableStringFieldUpdateOperationsInput | string | null
+    billOfLadingNumber?: NullableStringFieldUpdateOperationsInput | string | null
+    shippingLine?: NullableStringFieldUpdateOperationsInput | string | null
+    eta?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    etd?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    portOfLoading?: NullableStringFieldUpdateOperationsInput | string | null
+    portOfDischarge?: NullableStringFieldUpdateOperationsInput | string | null
     receivedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     dispatchedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
@@ -22948,6 +23242,13 @@ export namespace Prisma {
     departureDate?: Date | string | null
     storageDays?: number
     isDeleted?: boolean
+    airWaybillNumber?: string | null
+    billOfLadingNumber?: string | null
+    shippingLine?: string | null
+    eta?: Date | string | null
+    etd?: Date | string | null
+    portOfLoading?: string | null
+    portOfDischarge?: string | null
     receivedAt?: Date | string | null
     dispatchedAt?: Date | string | null
     createdAt?: Date | string
@@ -22991,6 +23292,13 @@ export namespace Prisma {
     departureDate?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     storageDays?: IntFieldUpdateOperationsInput | number
     isDeleted?: BoolFieldUpdateOperationsInput | boolean
+    airWaybillNumber?: NullableStringFieldUpdateOperationsInput | string | null
+    billOfLadingNumber?: NullableStringFieldUpdateOperationsInput | string | null
+    shippingLine?: NullableStringFieldUpdateOperationsInput | string | null
+    eta?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    etd?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    portOfLoading?: NullableStringFieldUpdateOperationsInput | string | null
+    portOfDischarge?: NullableStringFieldUpdateOperationsInput | string | null
     receivedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     dispatchedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
@@ -23037,6 +23345,13 @@ export namespace Prisma {
     departureDate?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     storageDays?: IntFieldUpdateOperationsInput | number
     isDeleted?: BoolFieldUpdateOperationsInput | boolean
+    airWaybillNumber?: NullableStringFieldUpdateOperationsInput | string | null
+    billOfLadingNumber?: NullableStringFieldUpdateOperationsInput | string | null
+    shippingLine?: NullableStringFieldUpdateOperationsInput | string | null
+    eta?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    etd?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    portOfLoading?: NullableStringFieldUpdateOperationsInput | string | null
+    portOfDischarge?: NullableStringFieldUpdateOperationsInput | string | null
     receivedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     dispatchedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string
@@ -23082,6 +23397,13 @@ export namespace Prisma {
     departureDate?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     storageDays?: IntFieldUpdateOperationsInput | number
     isDeleted?: BoolFieldUpdateOperationsInput | boolean
+    airWaybillNumber?: NullableStringFieldUpdateOperationsInput | string | null
+    billOfLadingNumber?: NullableStringFieldUpdateOperationsInput | string | null
+    shippingLine?: NullableStringFieldUpdateOperationsInput | string | null
+    eta?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    etd?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
+    portOfLoading?: NullableStringFieldUpdateOperationsInput | string | null
+    portOfDischarge?: NullableStringFieldUpdateOperationsInput | string | null
     receivedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     dispatchedAt?: NullableDateTimeFieldUpdateOperationsInput | Date | string | null
     createdAt?: DateTimeFieldUpdateOperationsInput | Date | string

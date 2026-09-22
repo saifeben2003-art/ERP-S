@@ -21,6 +21,7 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sh
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { toast } from 'sonner';
 import { useTranslation, translateMovementType, translateCategory, translateStatus } from '@/lib/translations';
+import { useAppStore } from '@/lib/store';
 import type { Movement, MovementType, CargoItem, Location, Equipment, LiftCategory } from '@/types/wms';
 
 // ==================== CONSTANTS ====================
@@ -107,11 +108,13 @@ function StatCard({ icon: Icon, label, value, accent }: {
 
 export function MovementsPage() {
   const { t } = useTranslation();
+  const globalSearch = useAppStore((s) => s.globalSearch);
 
   // State
   const [movements, setMovements] = useState<Movement[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
+  const effectiveSearch = search || globalSearch;
   const [typeFilter, setTypeFilter] = useState('');
   const [dateFrom, setDateFrom] = useState('');
   const [dateTo, setDateTo] = useState('');
@@ -150,7 +153,7 @@ export function MovementsPage() {
     setLoading(true);
     const params = new URLSearchParams({
       limit: '100',
-      ...(search && { search }),
+      ...(effectiveSearch && { search: effectiveSearch }),
       ...(typeFilter && { type: typeFilter }),
       ...(dateFrom && { dateFrom }),
       ...(dateTo && { dateTo }),
@@ -178,7 +181,7 @@ export function MovementsPage() {
     } finally {
       setLoading(false);
     }
-  }, [search, typeFilter, dateFrom, dateTo, t]);
+  }, [search, globalSearch, typeFilter, dateFrom, dateTo, t]);
 
   const fetchLookups = useCallback(async () => {
     try {
@@ -270,7 +273,7 @@ export function MovementsPage() {
   // ==================== RENDER: STATS BAR ====================
 
   const renderStatsBar = () => (
-    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
+    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
       <StatCard icon={Activity} label={`${t('movements.stats.today')} — ${t('movements.stats.movements')}`} value={stats.today} accent="bg-amber-500/10 text-amber-500" />
       <StatCard icon={Clock} label={`${t('movements.stats.thisWeek')} — ${t('movements.stats.movements')}`} value={stats.week} accent="bg-cyan-500/10 text-cyan-500" />
       <StatCard icon={Download} label={t('movements.stats.received')} value={stats.receive} accent="bg-emerald-500/10 text-emerald-500" />
@@ -380,7 +383,7 @@ export function MovementsPage() {
             <Badge variant="outline" className="text-[10px] bg-emerald-500/10 text-emerald-500 dark:text-emerald-400 border-emerald-500/20">{translateStatus(c.status)}</Badge>
           </div>
           <p className="text-sm dark:text-slate-300 text-slate-700 leading-relaxed">{c.description}</p>
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div className="flex items-center gap-2">
               <div className="flex items-center justify-center h-6 w-6 rounded bg-cyan-500/10">
                 <Weight className="h-3.5 w-3.5 text-cyan-500" />
@@ -532,7 +535,7 @@ export function MovementsPage() {
             {/* Movement ref + type badge + live indicator */}
             <div className="flex items-start justify-between gap-3">
               <div>
-                <SheetTitle className="text-2xl font-bold font-mono text-amber-500 dark:text-amber-400">{m.movementRef}</SheetTitle>
+                <SheetTitle className="text-xl md:text-2xl font-bold font-mono text-amber-500 dark:text-amber-400">{m.movementRef}</SheetTitle>
                 <div className="flex items-center gap-2 mt-2">
                   <Badge variant="outline" className={`text-xs ${typeStyles[m.type]}`}>
                     <TypeIcon type={m.type} className="h-3.5 w-3.5 mr-1.5" />
@@ -637,7 +640,7 @@ export function MovementsPage() {
             <span className="text-[11px] font-medium text-emerald-500">{t('movements.live')}</span>
           </div>
           <div>
-            <h1 className="text-2xl font-bold dark:text-slate-100 text-slate-900">{t('movements.title')}</h1>
+            <h1 className="text-xl md:text-2xl font-bold dark:text-slate-100 text-slate-900">{t('movements.title')}</h1>
             <p className="text-sm dark:text-slate-500 text-slate-400 mt-0.5">{t('movements.subtitle')}</p>
           </div>
         </div>
@@ -676,12 +679,12 @@ export function MovementsPage() {
         <CardContent className="p-4">
           <div className="grid gap-3 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5">
             <div className="relative">
-              <Search className="absolute right-2.5 top-2.5 h-4 w-4 dark:text-slate-500 text-slate-400" />
+              <Search className="absolute start-3 top-1/2 -translate-y-1/2 h-4 w-4 dark:text-slate-500 text-slate-400" />
               <Input
                 placeholder={t('movements.searchPlaceholder')}
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
-                className="dark:border-slate-700 border-slate-300 dark:bg-slate-800 bg-slate-50 pr-9 dark:text-slate-200 text-slate-900 dark:placeholder:text-slate-600 placeholder:text-slate-400"
+                className="dark:border-slate-700 border-slate-300 dark:bg-slate-800 bg-slate-50 ps-9 dark:text-slate-200 text-slate-900 dark:placeholder:text-slate-600 placeholder:text-slate-400"
               />
             </div>
             <Select value={typeFilter || 'ALL'} onValueChange={(v) => setTypeFilter(v === 'ALL' ? '' : v)}>
@@ -779,7 +782,7 @@ export function MovementsPage() {
 
       {/* Add Movement Dialog */}
       <Dialog open={showAdd} onOpenChange={(open) => { if (!open) { setShowAdd(false); setForm(emptyForm); } }}>
-        <DialogContent className="dark:border-slate-700 border-slate-200 dark:bg-slate-900 bg-white max-h-[90vh] overflow-y-auto max-w-lg">
+        <DialogContent className="w-[95vw] max-w-lg dark:border-slate-700 border-slate-200 dark:bg-slate-900 bg-white max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="dark:text-slate-100 text-slate-900">{t('movements.recordNewMovement')}</DialogTitle>
           </DialogHeader>

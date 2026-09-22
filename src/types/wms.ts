@@ -57,6 +57,14 @@ export interface CargoItem {
   departureDate: string | null;
   storageDays: number;
   isDeleted: boolean;
+  // Shipment tracking fields
+  airWaybillNumber: string | null;
+  billOfLadingNumber: string | null;
+  shippingLine: string | null;
+  eta: string | null;
+  etd: string | null;
+  portOfLoading: string | null;
+  portOfDischarge: string | null;
   createdAt: string;
   updatedAt: string;
   location?: Location | null;

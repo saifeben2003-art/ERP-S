@@ -4,7 +4,7 @@ import { useEffect, useState, useCallback, useMemo } from 'react';
 import {
   Plus, Package, Ship, MapPin, ArrowRight, Weight, Volume2, Users, Calendar, Loader2,
   Pencil, Download, ArrowLeft, ClipboardCheck, Warehouse, ArrowRightLeft, PackageCheck,
-  CheckCircle2, Truck, MoveRight, Clock, UserCircle, Eye,
+  CheckCircle2, Truck, MoveRight, Clock, UserCircle, Eye, Search,
 } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -23,6 +23,7 @@ import {
 } from '@/components/ui/table';
 import { toast } from 'sonner';
 import { useTranslation, translateStatus, translateCategory, translateMovementType } from '@/lib/translations';
+import { useAppStore } from '@/lib/store';
 import type { Project, ProjectStatus, CargoItem, Movement } from '@/types/wms';
 
 // ==================== CONSTANTS ====================
@@ -100,6 +101,7 @@ export function ProjectsPage() {
   const [projects, setProjects] = useState<Project[]>([]);
   const [loading, setLoading] = useState(true);
   const [statusFilter, setStatusFilter] = useState('');
+  const [searchQuery, setSearchQuery] = useState('');
   const [showAdd, setShowAdd] = useState(false);
   const [selectedProject, setSelectedProject] = useState<Project | null>(null);
   const [projectCargo, setProjectCargo] = useState<CargoItem[]>([]);
@@ -109,17 +111,19 @@ export function ProjectsPage() {
   const [form, setForm] = useState(emptyForm);
   const [submitting, setSubmitting] = useState(false);
   const { t } = useTranslation();
+  const globalSearch = useAppStore((s) => s.globalSearch);
+  const effectiveSearch = searchQuery || globalSearch;
 
   const fetchProjects = useCallback(async () => {
     setLoading(true);
-    const params = new URLSearchParams({ limit: '100', ...(statusFilter && { status: statusFilter }) });
+    const params = new URLSearchParams({ limit: '100', ...(statusFilter && { status: statusFilter }), ...(effectiveSearch && { search: effectiveSearch }) });
     try {
       const res = await fetch(`/api/projects?${params}`);
       const data: ProjectListResponse = await res.json();
       if (!res.ok) { setProjects([]); return; }
       setProjects(data.items || []);
     } catch { toast.error(t('projects.toast.fetchFailed')); } finally { setLoading(false); }
-  }, [statusFilter, t]);
+  }, [statusFilter, effectiveSearch, t]);
 
   useEffect(() => { fetchProjects(); }, [fetchProjects]);
 
@@ -217,7 +221,7 @@ export function ProjectsPage() {
       {/* Page Header */}
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="text-2xl font-bold dark:text-slate-100 text-slate-900">{t('projects.title')}</h1>
+          <h1 className="text-xl md:text-2xl font-bold dark:text-slate-100 text-slate-900">{t('projects.title')}</h1>
           <p className="text-sm dark:text-slate-500 text-slate-400 mt-1">{t('projects.subtitle')}</p>
         </div>
         <Button onClick={() => { setForm(emptyForm); setShowAdd(true); }} className="bg-amber-500 hover:bg-amber-600 text-slate-900 font-medium shadow-lg shadow-amber-500/20 transition-all duration-200 hover:shadow-xl hover:shadow-amber-500/30">
@@ -226,13 +230,24 @@ export function ProjectsPage() {
       </div>
 
       {/* Status Filter Tabs */}
-      <Tabs value={statusFilter} onValueChange={setStatusFilter}>
-        <TabsList className="dark:bg-slate-800/50 bg-slate-100 dark:border-slate-700/50 border border-slate-200 h-auto p-1 flex-wrap gap-1">
-          {statusTabsKeys.map((tab) => (
-            <TabsTrigger key={tab.value} value={tab.value} className="data-[state=active]:bg-amber-500/15 data-[state=active]:text-amber-500 dark:text-slate-400 text-slate-500 text-xs px-3 py-1.5">{t(tab.key)}</TabsTrigger>
-          ))}
-        </TabsList>
-      </Tabs>
+      <div className="flex flex-col sm:flex-row gap-3 items-start sm:items-center">
+        <Tabs value={statusFilter} onValueChange={setStatusFilter} className="flex-1">
+          <TabsList className="dark:bg-slate-800/50 bg-slate-100 dark:border-slate-700/50 border border-slate-200 h-auto p-1 flex-wrap gap-1">
+            {statusTabsKeys.map((tab) => (
+              <TabsTrigger key={tab.value} value={tab.value} className="data-[state=active]:bg-amber-500/15 data-[state=active]:text-amber-500 dark:text-slate-400 text-slate-500 text-xs px-3 py-1.5">{t(tab.key)}</TabsTrigger>
+            ))}
+          </TabsList>
+        </Tabs>
+        <div className="relative w-full sm:w-64">
+          <Search className="absolute start-3 top-1/2 -translate-y-1/2 h-4 w-4 dark:text-slate-500 text-slate-400" />
+          <Input
+            placeholder={t('common.search') + '...'}
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="h-9 w-full dark:border-slate-700 border-slate-300 dark:bg-slate-800/50 bg-white text-sm ps-9 dark:text-slate-200 text-slate-900 placeholder:dark:text-slate-600 placeholder:text-slate-400 focus-visible:ring-amber-500/30"
+          />
+        </div>
+      </div>
 
       {/* ========== PROJECT DETAIL VIEW ========== */}
       {selectedProject ? (
@@ -755,7 +770,7 @@ export function ProjectsPage() {
                   </div>
 
                   {/* Client & Vessel */}
-                  <div className="grid grid-cols-2 gap-2 text-xs">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
                     <div className="flex items-center gap-1.5 dark:text-slate-400 text-slate-500">
                       <Users className="h-3 w-3 dark:text-slate-600 text-slate-300" />
                       <span className="truncate">{p.clientName}</span>
@@ -815,7 +830,7 @@ export function ProjectsPage() {
 
       {/* Add Project Dialog */}
       <Dialog open={showAdd} onOpenChange={(open) => { if (!open) { setShowAdd(false); setForm(emptyForm); } }}>
-        <DialogContent className="dark:border-slate-700 border-slate-200 dark:bg-slate-900 bg-white max-w-lg">
+        <DialogContent className="w-[95vw] max-w-lg dark:border-slate-700 border-slate-200 dark:bg-slate-900 bg-white">
           <DialogHeader><DialogTitle className="dark:text-slate-100 text-slate-900">{t('projects.addNewProject')}</DialogTitle></DialogHeader>
           <div className="grid gap-4 py-4">
             <div>

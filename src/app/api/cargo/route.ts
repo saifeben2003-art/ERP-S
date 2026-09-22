@@ -117,6 +117,14 @@ export async function POST(request: NextRequest) {
         transportHeight: body.transportHeight ? parseFloat(body.transportHeight) : null,
         receivedAt: body.receivedAt ? new Date(body.receivedAt) : null,
         dispatchedAt: body.dispatchedAt ? new Date(body.dispatchedAt) : null,
+        // Shipment tracking fields
+        airWaybillNumber: body.airWaybillNumber || null,
+        billOfLadingNumber: body.billOfLadingNumber || null,
+        shippingLine: body.shippingLine || null,
+        eta: body.eta ? new Date(body.eta) : null,
+        etd: body.etd ? new Date(body.etd) : null,
+        portOfLoading: body.portOfLoading || null,
+        portOfDischarge: body.portOfDischarge || null,
       },
     });
 
